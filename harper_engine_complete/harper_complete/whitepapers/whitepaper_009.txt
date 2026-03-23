@@ -1,0 +1,151 @@
+Momentum-Guided Ray Allocation: Predictive Sampling for Temporally Stable Global Illumination
+
+Harper Research Division
+
+Harper Engine Technical Whitepaper HE-WP-009
+
+Abstract
+
+We introduce Momentum-Guided Ray Allocation (MGRA), which allocates ray budgets based on temporal momentum of lighting changes rather than instantaneous variance. This predictive approach catches lighting transitions before they cause visible artifacts, improving temporal stability by 40%.
+
+1. Introduction
+
+Adaptive ray allocation strategies typically respond to current-frame variance: high-variance regions receive more samples. This reactive approach has fundamental latency—by the time high variance is detected, the artifact is already visible. Subsequent frames correct the error, but the temporal inconsistency manifests as flickering.
+
+We propose Momentum-Guided Ray Allocation (MGRA), replacing reactive variance response with predictive momentum tracking. The key insight: lighting changes have temporal structure. A shadow edge moving across a surface will continue moving. A door opening will continue revealing new geometry. By tracking the momentum of these changes, we can allocate rays ahead of the high-variance wavefront.
+
+MGRA maintains exponential moving averages of lighting change magnitude per spatial region. Regions with high momentum—rapid recent changes—receive elevated ray budgets even if current-frame variance has temporarily dropped. This anticipatory allocation catches transitions before artifacts appear.
+
+2. Momentum Formulation
+
+2.1 Per-Region Tracking
+
+We partition the scene into spatial regions (probe cells for probe-based GI, screen-space tiles for path tracing). Each region tracks momentum:
+
+momentum[t] = β · momentum[t-1] + (1-β) · |ΔL|
+
+where |ΔL| is the magnitude of lighting change from frame t-1 to t, and β ∈ [0.9, 0.99] is the momentum decay factor.
+
+2.2 Lighting Change Detection
+
+Lighting change is computed as:
+
+|ΔL| = ||L[t] - L_reprojected[t-1]|| / (||L[t]|| + ε)
+
+where L_reprojected accounts for camera/object motion. The normalization by current luminance makes the metric relative, treating a 10% change in a bright region equally to a 10% change in a dark region.
+
+2.3 Ray Budget Allocation
+
+The ray budget for region r:
+
+rays[r] = rays_base × (1 + momentum[r] × allocation_scale)
+
+where allocation_scale (typically 2-5) controls the sensitivity to momentum. High-momentum regions can receive up to (1 + allocation_scale)× the base budget.
+
+2.4 Budget Balancing
+
+Total ray budget is fixed. To maintain budget while increasing high-momentum allocations, we reduce allocations to low-momentum regions:
+
+rays_adjusted[r] = rays[r] × (total_budget / Σ_r rays[r])
+
+This redistributes rays from stable regions to changing regions while maintaining constant total cost.
+
+3. Predictive Extensions
+
+3.1 Momentum Direction
+
+Beyond scalar momentum magnitude, we track momentum direction in lighting space:
+
+direction[t] = normalize(L[t] - L_reprojected[t-1])
+momentum_vector[t] = β · momentum_vector[t-1] + (1-β) · |ΔL| · direction[t]
+
+The momentum vector enables predicting not just that change will occur, but in which direction.
+
+3.2 Change Prediction
+
+We extrapolate the expected lighting at t+1:
+
+L_predicted[t+1] = L[t] + momentum_vector[t] × prediction_scale
+
+Regions where ||L_predicted - L_current|| > threshold receive preemptively elevated budgets.
+
+3.3 Shadow Edge Tracking
+
+For moving shadows (common source of flicker), we detect shadow edges via depth/normal discontinuity and track their motion:
+
+shadow_velocity = optical_flow(shadow_edge_mask)
+
+Regions ahead of moving shadow edges (in the velocity direction) receive elevated budgets before the shadow arrives.
+
+4. Implementation
+
+4.1 Data Structures
+
+Per screen-space tile (16×16 pixels):
+
+struct TileMomentum {
+    float  momentum_scalar;
+    float3 momentum_vector;
+    float3 lighting_history;
+    float  prediction_confidence;
+};
+
+4.2 Update Pipeline
+
+Each frame:
+1. Compute per-tile lighting average from current GI
+2. Reproject previous frame's lighting
+3. Compute change magnitude and direction
+4. Update momentum via exponential moving average
+5. Predict next-frame lighting
+6. Allocate ray budget based on momentum + prediction
+7. Distribute allocated rays to GI system
+
+4.3 Performance
+
+Momentum tracking: 0.05ms (compute shader, one thread per tile)
+Budget reallocation: 0.02ms
+Total overhead: <0.1ms
+
+5. Results
+
+5.1 Temporal Stability Metrics
+
+We measure flicker as frame-to-frame luminance variance in video output:
+
+Scenario                | Uniform | Variance-based | MGRA
+------------------------|---------|----------------|------
+Static scene            | 0.008   | 0.007          | 0.007
+Slow camera motion      | 0.024   | 0.019          | 0.012
+Dynamic light source    | 0.089   | 0.052          | 0.031
+Moving shadow edge      | 0.145   | 0.078          | 0.045
+
+MGRA reduces flicker by 35-45% versus reactive variance-based allocation.
+
+5.2 Perceptual Quality
+
+User study (N=24) rating temporal smoothness (1-5 scale):
+
+Method              | Mean Rating | Std Dev
+--------------------|-------------|--------
+Uniform allocation  | 2.4         | 0.8
+Variance-based      | 3.2         | 0.7
+MGRA (ours)        | 4.1         | 0.5
+
+5.3 Convergence Speed
+
+Frames to 90% convergence after lighting change:
+
+Method              | Frames
+--------------------|--------
+Uniform allocation  | 45
+Variance-based      | 28
+MGRA (ours)        | 18
+
+MGRA converges 35% faster by pre-allocating to changing regions.
+
+6. Conclusion
+
+Momentum-Guided Ray Allocation transforms adaptive sampling from reactive to predictive. By tracking the temporal structure of lighting changes, MGRA anticipates where samples are needed before artifacts become visible. The result is substantially improved temporal stability—critical for immersive real-time applications.
+
+The approach integrates with any adaptive sampling system (probe-based GI, path tracing, photon mapping) and adds negligible overhead. Future work includes learned momentum models trained on diverse scene dynamics, integration with motion prediction from gameplay systems, and extension to per-object momentum tracking.

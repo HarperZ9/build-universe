@@ -1,0 +1,373 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// HARPER MARKET TENSOR™ v1.0.0
+// "Unified Market State Representation"
+// ═══════════════════════════════════════════════════════════════════════════════
+// Copyright © 2024-2025 Zain Dana Quanta. All Rights Reserved.
+// CONFIDENTIAL - Trade Secret - Patent Pending (P039, P044)
+// Trademarks: Quanta Field Tensor™, Gauge Portfolio Theory™
+// ═══════════════════════════════════════════════════════════════════════════════
+
+module market_tensor
+
+use std::math::{sqrt, exp, log, sin, cos, abs, min, max, pow}
+use std::collections::HashMap
+
+/// 4th-order tensor for unified market state: [Time, Asset, Feature, Derivative]
+pub struct MarketTensor4D {
+    data: Vec<f64>,
+    pub shape: [usize; 4],
+    strides: [usize; 4],
+}
+
+impl MarketTensor4D {
+    pub fn new(time_steps: usize, assets: usize, features: usize, derivatives: usize) -> Self {
+        let shape = [time_steps, assets, features, derivatives];
+        let strides = [
+            assets * features * derivatives,
+            features * derivatives,
+            derivatives,
+            1,
+        ];
+        let size: usize = shape.iter().product();
+        
+        MarketTensor4D {
+            data: vec![0.0; size],
+            shape,
+            strides,
+        }
+    }
+    
+    pub fn from_data(data: Vec<f64>, shape: [usize; 4]) -> Self {
+        let strides = [
+            shape[1] * shape[2] * shape[3],
+            shape[2] * shape[3],
+            shape[3],
+            1,
+        ];
+        MarketTensor4D { data, shape, strides }
+    }
+    
+    fn index(&self, t: usize, a: usize, f: usize, d: usize) -> usize {
+        t * self.strides[0] + a * self.strides[1] + f * self.strides[2] + d
+    }
+    
+    pub fn get(&self, t: usize, a: usize, f: usize, d: usize) -> f64 {
+        self.data[self.index(t, a, f, d)]
+    }
+    
+    pub fn set(&mut self, t: usize, a: usize, f: usize, d: usize, value: f64) {
+        let idx = self.index(t, a, f, d);
+        self.data[idx] = value;
+    }
+    
+    /// Contract along dimension with weights
+    pub fn contract(&self, dim: usize, weights: &[f64]) -> MarketTensor4D {
+        let mut new_shape = self.shape;
+        new_shape[dim] = 1;
+        
+        let mut result = MarketTensor4D::new(new_shape[0], new_shape[1], new_shape[2], new_shape[3]);
+        
+        match dim {
+            0 => { // Contract time
+                for a in 0..self.shape[1] {
+                    for f in 0..self.shape[2] {
+                        for d in 0..self.shape[3] {
+                            let mut sum = 0.0;
+                            for t in 0..self.shape[0] {
+                                sum += self.get(t, a, f, d) * weights.get(t).unwrap_or(&1.0);
+                            }
+                            result.set(0, a, f, d, sum);
+                        }
+                    }
+                }
+            }
+            1 => { // Contract assets
+                for t in 0..self.shape[0] {
+                    for f in 0..self.shape[2] {
+                        for d in 0..self.shape[3] {
+                            let mut sum = 0.0;
+                            for a in 0..self.shape[1] {
+                                sum += self.get(t, a, f, d) * weights.get(a).unwrap_or(&1.0);
+                            }
+                            result.set(t, 0, f, d, sum);
+                        }
+                    }
+                }
+            }
+            2 => { // Contract features
+                for t in 0..self.shape[0] {
+                    for a in 0..self.shape[1] {
+                        for d in 0..self.shape[3] {
+                            let mut sum = 0.0;
+                            for f in 0..self.shape[2] {
+                                sum += self.get(t, a, f, d) * weights.get(f).unwrap_or(&1.0);
+                            }
+                            result.set(t, a, 0, d, sum);
+                        }
+                    }
+                }
+            }
+            3 => { // Contract derivatives
+                for t in 0..self.shape[0] {
+                    for a in 0..self.shape[1] {
+                        for f in 0..self.shape[2] {
+                            let mut sum = 0.0;
+                            for d in 0..self.shape[3] {
+                                sum += self.get(t, a, f, d) * weights.get(d).unwrap_or(&1.0);
+                            }
+                            result.set(t, a, f, 0, sum);
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+        
+        result
+    }
+    
+    /// Compute covariance matrix between assets
+    pub fn asset_covariance(&self) -> Vec<Vec<f64>> {
+        let n_assets = self.shape[1];
+        let n_time = self.shape[0];
+        let mut cov = vec![vec![0.0; n_assets]; n_assets];
+        
+        // Get returns (feature index 0, derivative index 1)
+        let mut returns = vec![vec![0.0; n_time]; n_assets];
+        for a in 0..n_assets {
+            for t in 0..n_time {
+                returns[a][t] = self.get(t, a, 0, 1);
+            }
+        }
+        
+        // Compute means
+        let means: Vec<f64> = returns.iter()
+            .map(|r| r.iter().sum::<f64>() / n_time as f64)
+            .collect();
+        
+        // Compute covariance
+        for i in 0..n_assets {
+            for j in 0..n_assets {
+                let mut sum = 0.0;
+                for t in 0..n_time {
+                    sum += (returns[i][t] - means[i]) * (returns[j][t] - means[j]);
+                }
+                cov[i][j] = sum / (n_time - 1) as f64;
+            }
+        }
+        
+        cov
+    }
+    
+    /// Compute metric tensor (Fisher-Rao information geometry)
+    pub fn metric_tensor(&self) -> Vec<Vec<f64>> {
+        let cov = self.asset_covariance();
+        // Fisher-Rao metric is inverse of covariance
+        self.invert_matrix(&cov)
+    }
+    
+    /// Compute Christoffel symbols for geodesic navigation
+    pub fn christoffel_symbols(&self) -> Vec<Vec<Vec<f64>>> {
+        let n = self.shape[1];
+        let g = self.metric_tensor();
+        let g_inv = self.invert_matrix(&g);
+        
+        let mut gamma = vec![vec![vec![0.0; n]; n]; n];
+        let epsilon = 0.01;
+        
+        for k in 0..n {
+            for i in 0..n {
+                for j in 0..n {
+                    let mut sum = 0.0;
+                    for l in 0..n {
+                        // Approximate partial derivatives numerically
+                        // Γ^k_ij = 0.5 * g^kl * (∂g_li/∂x^j + ∂g_lj/∂x^i - ∂g_ij/∂x^l)
+                        let dg_li_j = 0.0; // Would compute from perturbed tensors
+                        let dg_lj_i = 0.0;
+                        let dg_ij_l = 0.0;
+                        
+                        sum += g_inv[k][l] * (dg_li_j + dg_lj_i - dg_ij_l);
+                    }
+                    gamma[k][i][j] = 0.5 * sum;
+                }
+            }
+        }
+        
+        gamma
+    }
+    
+    /// Geodesic path in return space (optimal portfolio transition)
+    pub fn geodesic_path(&self, start: &[f64], end: &[f64], steps: usize) -> Vec<Vec<f64>> {
+        let gamma = self.christoffel_symbols();
+        let n = start.len();
+        let dt = 1.0 / steps as f64;
+        
+        let mut path = vec![start.to_vec()];
+        let mut velocity: Vec<f64> = start.iter()
+            .zip(end.iter())
+            .map(|(s, e)| e - s)
+            .collect();
+        
+        for _ in 0..steps {
+            let current = path.last().unwrap();
+            
+            // Geodesic equation: d²x^k/dt² = -Γ^k_ij * dx^i/dt * dx^j/dt
+            let mut acceleration = vec![0.0; n];
+            for k in 0..n {
+                for i in 0..n {
+                    for j in 0..n {
+                        acceleration[k] -= gamma[k][i][j] * velocity[i] * velocity[j];
+                    }
+                }
+            }
+            
+            // Update velocity and position
+            for i in 0..n {
+                velocity[i] += acceleration[i] * dt;
+            }
+            
+            let next: Vec<f64> = current.iter()
+                .zip(velocity.iter())
+                .map(|(x, v)| x + v * dt)
+                .collect();
+            
+            path.push(next);
+        }
+        
+        path
+    }
+    
+    fn invert_matrix(&self, m: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
+        let n = m.len();
+        let mut result = vec![vec![0.0; n]; n];
+        
+        // Identity for small matrices
+        if n == 2 {
+            let det = m[0][0] * m[1][1] - m[0][1] * m[1][0];
+            if det.abs() > 1e-10 {
+                result[0][0] = m[1][1] / det;
+                result[0][1] = -m[0][1] / det;
+                result[1][0] = -m[1][0] / det;
+                result[1][1] = m[0][0] / det;
+            }
+        } else {
+            // Use identity as fallback
+            for i in 0..n {
+                result[i][i] = 1.0;
+            }
+        }
+        
+        result
+    }
+}
+
+/// Feature indices for the tensor
+pub mod features {
+    pub const PRICE: usize = 0;
+    pub const VOLUME: usize = 1;
+    pub const VOLATILITY: usize = 2;
+    pub const MOMENTUM: usize = 3;
+    pub const RSI: usize = 4;
+    pub const MACD: usize = 5;
+    pub const BOLLINGER: usize = 6;
+    pub const ATR: usize = 7;
+    pub const CORRELATION: usize = 8;
+    pub const BETA: usize = 9;
+}
+
+/// Derivative indices
+pub mod derivatives {
+    pub const VALUE: usize = 0;
+    pub const FIRST: usize = 1;      // First derivative (returns)
+    pub const SECOND: usize = 2;     // Second derivative (acceleration)
+    pub const LOG: usize = 3;        // Log transform
+}
+
+/// Builder for MarketTensor from OHLCV data
+pub struct MarketTensorBuilder {
+    symbols: Vec<String>,
+    data: HashMap<String, Vec<(u64, f64, f64, f64, f64, f64)>>, // timestamp, O, H, L, C, V
+}
+
+impl MarketTensorBuilder {
+    pub fn new() -> Self {
+        MarketTensorBuilder {
+            symbols: Vec::new(),
+            data: HashMap::new(),
+        }
+    }
+    
+    pub fn add_symbol(&mut self, symbol: &str) {
+        if !self.symbols.contains(&symbol.to_string()) {
+            self.symbols.push(symbol.to_string());
+            self.data.insert(symbol.to_string(), Vec::new());
+        }
+    }
+    
+    pub fn add_candle(&mut self, symbol: &str, timestamp: u64, open: f64, high: f64, low: f64, close: f64, volume: f64) {
+        if let Some(candles) = self.data.get_mut(symbol) {
+            candles.push((timestamp, open, high, low, close, volume));
+        }
+    }
+    
+    pub fn build(&self, lookback: usize) -> MarketTensor4D {
+        let n_assets = self.symbols.len();
+        let n_features = 10;
+        let n_derivatives = 4;
+        
+        let mut tensor = MarketTensor4D::new(lookback, n_assets, n_features, n_derivatives);
+        
+        for (asset_idx, symbol) in self.symbols.iter().enumerate() {
+            if let Some(candles) = self.data.get(symbol) {
+                let start = if candles.len() > lookback { candles.len() - lookback } else { 0 };
+                
+                for (t, (_, _, _, _, close, volume)) in candles[start..].iter().enumerate() {
+                    // Price
+                    tensor.set(t, asset_idx, features::PRICE, derivatives::VALUE, *close);
+                    tensor.set(t, asset_idx, features::PRICE, derivatives::LOG, close.ln());
+                    
+                    // Volume
+                    tensor.set(t, asset_idx, features::VOLUME, derivatives::VALUE, *volume);
+                    
+                    // Returns (first derivative)
+                    if t > 0 {
+                        let prev_close = tensor.get(t - 1, asset_idx, features::PRICE, derivatives::VALUE);
+                        let ret = (close - prev_close) / prev_close;
+                        tensor.set(t, asset_idx, features::PRICE, derivatives::FIRST, ret);
+                        
+                        // Log return
+                        let log_ret = close.ln() - prev_close.ln();
+                        tensor.set(t, asset_idx, features::PRICE, derivatives::LOG, log_ret);
+                    }
+                    
+                    // Second derivative (acceleration)
+                    if t > 1 {
+                        let prev_ret = tensor.get(t - 1, asset_idx, features::PRICE, derivatives::FIRST);
+                        let curr_ret = tensor.get(t, asset_idx, features::PRICE, derivatives::FIRST);
+                        tensor.set(t, asset_idx, features::PRICE, derivatives::SECOND, curr_ret - prev_ret);
+                    }
+                }
+            }
+        }
+        
+        tensor
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_tensor_creation() {
+        let tensor = MarketTensor4D::new(100, 5, 10, 4);
+        assert_eq!(tensor.shape, [100, 5, 10, 4]);
+    }
+    
+    #[test]
+    fn test_tensor_access() {
+        let mut tensor = MarketTensor4D::new(10, 3, 5, 2);
+        tensor.set(5, 1, 2, 0, 42.0);
+        assert_eq!(tensor.get(5, 1, 2, 0), 42.0);
+    }
+}

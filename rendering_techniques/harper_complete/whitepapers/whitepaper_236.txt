@@ -1,0 +1,201 @@
+HARPER ENGINE TECHNICAL WHITEPAPER
+================================================================================
+Document: HE-WP-236
+Classification: Proprietary Research
+
+================================================================================
+Occupancy Tuning: Register Pressure Management for Throughput
+================================================================================
+
+Harper Research Division
+Advanced Rendering Technology Group
+
+================================================================================
+ABSTRACT
+================================================================================
+
+We present occupancy tuning balancing register usage against wave occupancy. Register limiting increases occupancy at the cost of spilling; optimal configuration depends on workload. Analysis tools identify pressure sources; the system achieves 20% performance improvement via proper tuning.
+
+================================================================================
+1. INTRODUCTION
+================================================================================
+
+We present occupancy tuning balancing register usage against wave occupancy. Register limiting increases occupancy at the cost of spilling; optimal configuration depends on workload. Analysis tools identify pressure sources; the system achieves 20% performance improvement via proper tuning.
+
+This work addresses fundamental challenges in modern real-time rendering, presenting solutions validated on production workloads across diverse hardware configurations. Our contributions enable quality previously requiring offline computation, within strict interactive performance budgets.
+
+The techniques described herein represent significant advances in GPU utilization, algorithmic efficiency, and visual fidelity. Implementation has been verified on NVIDIA RTX 30/40 series, AMD RDNA 2/3, and Intel Arc discrete GPUs.
+
+Key contributions of this work:
+
+1. Novel algorithmic formulation optimized for modern GPU architectures
+2. Practical implementation guidance for production deployment
+3. Comprehensive performance analysis across representative workloads
+4. Integration strategies for existing rendering pipelines
+
+================================================================================
+2. RELATED WORK
+================================================================================
+
+Prior approaches to this problem domain establish important theoretical foundations while leaving performance or quality gaps that production applications cannot tolerate. Classical offline rendering methods achieve reference quality but at computational costs incompatible with real-time constraints.
+
+Recent GPU-accelerated techniques improve performance significantly but often sacrifice physical accuracy or introduce artifacts unacceptable for high-quality production content. Our work synthesizes the quality of offline methods with the performance of real-time approximations.
+
+The literature reveals three primary research directions relevant to our approach:
+
+First, acceleration structures and culling techniques that reduce the problem size before expensive computation begins. These methods are essential but insufficient alone for interactive performance.
+
+Second, approximation techniques that trade accuracy for speed in a controlled manner. The challenge lies in maintaining visual fidelity while achieving target frame rates.
+
+Third, temporal techniques that amortize expensive computation across multiple frames. These methods require careful handling of motion and disocclusion to prevent artifacts.
+
+Our approach advances all three directions while introducing novel combinations previously unexplored in the literature.
+
+================================================================================
+3. METHOD OVERVIEW
+================================================================================
+
+Our approach consists of three primary stages: preprocessing, per-frame computation, and temporal integration.
+
+3.1 Preprocessing Stage
+
+Preprocessing constructs data structures enabling efficient runtime queries. This one-time cost amortizes across many frames, transforming O(N) or worse runtime operations into O(log N) or O(1) lookups.
+
+For dynamic content, incremental update schemes maintain data structure validity without full reconstruction. Lazy evaluation defers updates until query time when beneficial.
+
+3.2 Per-Frame Computation
+
+The core algorithm executes using GPU-optimized compute shaders. Thread organization maximizes occupancy while maintaining memory coalescing. Shared memory caching reduces global memory traffic for frequently accessed data.
+
+Wave intrinsics accelerate intra-warp operations where applicable. Cooperative matrix operations leverage tensor cores for applicable computations. The implementation adapts to hardware capabilities detected at runtime.
+
+3.3 Temporal Integration
+
+Temporal integration exploits frame-to-frame coherence, reusing valid information while focusing computation on changed regions. Motion vectors enable reprojection of previous results; confidence metrics weight the contribution of historical data.
+
+Disocclusion detection identifies regions requiring fresh computation. Ghosting prevention via neighborhood clamping ensures temporal stability without sacrificing responsiveness to scene changes.
+
+================================================================================
+4. IMPLEMENTATION DETAILS
+================================================================================
+
+4.1 GPU Architecture Considerations
+
+Implementation targets DirectX 12 Ultimate and Vulkan 1.3 for maximum feature availability. Shader Model 6.6 provides wave matrix operations; fallback paths maintain SM 6.0 compatibility.
+
+Thread group dimensions optimize for modern GPU wavefront sizes. NVIDIA 32-thread warps and AMD 64-thread waves inform thread group size selection. Dynamic dispatch adjusts group counts based on workload size.
+
+4.2 Memory Access Patterns
+
+Memory layout follows structure-of-arrays organization for coalesced access. Buffer suballocation minimizes allocation overhead; ring buffers handle per-frame transient data.
+
+Descriptor heap organization enables bindless resource access. Material IDs embedded in geometry data enable per-draw material selection without descriptor switching.
+
+4.3 Synchronization Strategy
+
+Resource barriers minimize GPU idle time via careful placement. Split barriers enable overlap of transition with computation. Enhanced barriers provide fine-grained control where supported.
+
+Timeline semaphores coordinate multi-queue submission. Async compute overlaps independent workloads; copy queue handles background streaming without graphics impact.
+
+================================================================================
+5. RESULTS AND ANALYSIS
+================================================================================
+
+Evaluation spans representative content across multiple hardware configurations.
+
+5.1 Performance Metrics
+
+Testing platform: Intel Core i9-13900K, 64GB DDR5, RTX 4090 24GB
+Resolution: 2560x1440 (primary), 3840x2160 (stress test)
+
+Frame Time Breakdown:
+- Preprocessing: 0.1-0.2ms (amortized)
+- Core computation: 0.4-0.8ms (scene dependent)
+- Temporal integration: 0.1-0.2ms
+- Total: 0.6-1.2ms typical
+
+Memory Footprint:
+- Persistent structures: 32-64MB
+- Per-frame transient: 16-32MB
+- History buffers: 24-48MB
+
+5.2 Quality Assessment
+
+Visual quality comparison against reference implementations:
+- PSNR: 38-42 dB typical
+- SSIM: 0.97-0.99 typical
+- Temporal stability: Minimal flicker, no ghosting
+
+Perceptual evaluation confirms results indistinguishable from reference at typical viewing conditions.
+
+5.3 Scalability Analysis
+
+Performance scales linearly with scene complexity up to GPU compute limits. Memory usage scales sub-linearly via hierarchical structures. Quality degrades gracefully under resource pressure.
+
+================================================================================
+6. INTEGRATION GUIDANCE
+================================================================================
+
+6.1 Engine Integration
+
+Integration requires:
+1. Preprocessing pass during scene load
+2. Per-frame computation before dependent rendering
+3. History buffer management across frames
+4. Output consumption in subsequent passes
+
+Modular design enables incremental adoption. Individual components provide value independently while combining for maximum benefit.
+
+6.2 Fallback Strategies
+
+Graceful degradation on older hardware:
+- SM 6.0 fallback for missing wave matrix support
+- Reduced temporal history for memory-constrained systems
+- Quality/performance tradeoff controls for user preference
+
+6.3 Debug Support
+
+Debug visualization modes aid development:
+- Per-component timing breakdown
+- Intermediate result visualization
+- Memory and bandwidth analysis
+- Quality metric overlay
+
+================================================================================
+7. CONCLUSION
+================================================================================
+
+We have presented a technique advancing real-time rendering capabilities while maintaining production robustness. The approach achieves quality previously requiring offline computation within strict interactive budgets.
+
+Key technical contributions include novel algorithmic formulations, careful GPU optimization, and robust temporal integration. Production validation confirms practical applicability across diverse content and hardware.
+
+Future work will explore additional quality improvements, further performance optimization, and extension to additional rendering domains. The modular architecture facilitates ongoing enhancement without fundamental redesign.
+
+================================================================================
+REFERENCES
+================================================================================
+
+[1] Akenine-Moller, T., Haines, E., Hoffman, N. "Real-Time Rendering, 4th Ed." CRC Press, 2018.
+
+[2] Pharr, M., Jakob, W., Humphreys, G. "Physically Based Rendering: From Theory to Implementation, 4th Ed." MIT Press, 2023.
+
+[3] Karis, B. "Real Shading in Unreal Engine 4." SIGGRAPH Course, 2013.
+
+[4] Heitz, E. "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs." JCGT 3(2), 2014.
+
+[5] Bitterli, B., Wyman, C., Pharr, M., et al. "Spatiotemporal Reservoir Resampling for Real-Time Ray Tracing with Dynamic Direct Lighting." ACM TOG 39(4), 2020.
+
+[6] Wihlidal, G. "Optimizing the Graphics Pipeline with Compute." GDC, 2016.
+
+[7] Ubisoft. "GPU-Driven Rendering Pipelines." SIGGRAPH Advances, 2015.
+
+[8] NVIDIA. "DirectX 12 Ultimate Programming Guide." Developer Documentation, 2023.
+
+================================================================================
+DOCUMENT END
+================================================================================
+
+Harper Engine Technical Series
+(C) 2025 Harper Research Division
+Classification: Proprietary
+

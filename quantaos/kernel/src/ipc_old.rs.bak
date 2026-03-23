@@ -1,0 +1,1143 @@
+// ===============================================================================
+// QUANTAOS KERNEL - INTER-PROCESS COMMUNICATION
+// ===============================================================================
+// Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
+// CONFIDENTIAL - Trade Secret - Patent Pending
+// ===============================================================================
+
+#![allow(dead_code)]
+
+//! Inter-Process Communication (IPC) mechanisms.
+//!
+//! Provides multiple IPC primitives:
+//! - Pipes (unidirectional byte streams)
+//! - Message queues (structured message passing)
+//! - Shared memory (memory-mapped regions)
+//! - Signals (asynchronous notifications)
+//! - Semaphores (counting synchronization)
+//! - Unix domain sockets
+
+use alloc::boxed::Box;
+use alloc::collections::{BTreeMap, VecDeque};
+use alloc::string::{String, ToString};
+use alloc::sync::Arc;
+use alloc::vec::Vec;
+use core::sync::atomic::{AtomicI32, AtomicU32, AtomicU64, Ordering};
+use spin::{Mutex, RwLock};
+
+use crate::process::Pid;
+
+// =============================================================================
+// ERROR CODES
+// =============================================================================
+
+/// IPC error codes
+pub mod errno {
+    pub const EPERM: i32 = 1;      // Operation not permitted
+    pub const ENOENT: i32 = 2;     // No such file or entry
+    pub const ESRCH: i32 = 3;      // No such process
+    pub const EINTR: i32 = 4;      // Interrupted system call
+    pub const EIO: i32 = 5;        // I/O error
+    pub const EAGAIN: i32 = 11;    // Try again (would block)
+    pub const ENOMEM: i32 = 12;    // Out of memory
+    pub const EACCES: i32 = 13;    // Permission denied
+    pub const EEXIST: i32 = 17;    // File exists
+    pub const EINVAL: i32 = 22;    // Invalid argument
+    pub const EMFILE: i32 = 24;    // Too many open files
+    pub const ENOSPC: i32 = 28;    // No space left
+    pub const EPIPE: i32 = 32;     // Broken pipe
+    pub const EWOULDBLOCK: i32 = 11; // Same as EAGAIN
+    pub const EMSGSIZE: i32 = 90;  // Message too long
+    pub const EIDRM: i32 = 43;     // Identifier removed
+    pub const ENOMSG: i32 = 42;    // No message of desired type
+}
+
+// =============================================================================
+// PIPES
+// =============================================================================
+
+/// Pipe buffer size (64KB)
+const PIPE_BUFFER_SIZE: usize = 64 * 1024;
+
+/// Maximum number of pipes
+const MAX_PIPES: usize = 4096;
+
+/// Pipe state
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PipeState {
+    Open,
+    ReadClosed,
+    WriteClosed,
+    Closed,
+}
+
+/// Pipe buffer
+pub struct Pipe {
+    /// Internal buffer
+    buffer: Box<[u8; PIPE_BUFFER_SIZE]>,
+    /// Read position
+    read_pos: usize,
+    /// Write position
+    write_pos: usize,
+    /// Number of bytes in buffer
+    count: usize,
+    /// Readers count
+    readers: AtomicU32,
+    /// Writers count
+    writers: AtomicU32,
+    /// State
+    state: PipeState,
+    /// Non-blocking mode for read end
+    read_nonblock: bool,
+    /// Non-blocking mode for write end
+    write_nonblock: bool,
+}
+
+impl Pipe {
+    /// Create new pipe
+    pub fn new() -> Self {
+        Self {
+            buffer: Box::new([0u8; PIPE_BUFFER_SIZE]),
+            read_pos: 0,
+            write_pos: 0,
+            count: 0,
+            readers: AtomicU32::new(1),
+            writers: AtomicU32::new(1),
+            state: PipeState::Open,
+            read_nonblock: false,
+            write_nonblock: false,
+        }
+    }
+
+    /// Write to pipe
+    pub fn write(&mut self, data: &[u8]) -> Result<usize, i32> {
+        if self.readers.load(Ordering::SeqCst) == 0 {
+            return Err(errno::EPIPE);
+        }
+
+        if data.is_empty() {
+            return Ok(0);
+        }
+
+        let available = PIPE_BUFFER_SIZE - self.count;
+        if available == 0 {
+            if self.write_nonblock {
+                return Err(errno::EAGAIN);
+            }
+            // In blocking mode, would wait here
+            return Err(errno::EAGAIN);
+        }
+
+        let to_write = data.len().min(available);
+        let mut written = 0;
+
+        while written < to_write {
+            self.buffer[self.write_pos] = data[written];
+            self.write_pos = (self.write_pos + 1) % PIPE_BUFFER_SIZE;
+            written += 1;
+        }
+
+        self.count += written;
+        Ok(written)
+    }
+
+    /// Read from pipe
+    pub fn read(&mut self, buf: &mut [u8]) -> Result<usize, i32> {
+        if self.count == 0 {
+            if self.writers.load(Ordering::SeqCst) == 0 {
+                return Ok(0); // EOF
+            }
+            if self.read_nonblock {
+                return Err(errno::EAGAIN);
+            }
+            // In blocking mode, would wait here
+            return Err(errno::EAGAIN);
+        }
+
+        let to_read = buf.len().min(self.count);
+        let mut read = 0;
+
+        while read < to_read {
+            buf[read] = self.buffer[self.read_pos];
+            self.read_pos = (self.read_pos + 1) % PIPE_BUFFER_SIZE;
+            read += 1;
+        }
+
+        self.count -= read;
+        Ok(read)
+    }
+
+    /// Close read end
+    pub fn close_read(&mut self) {
+        let prev = self.readers.fetch_sub(1, Ordering::SeqCst);
+        if prev == 1 {
+            self.state = match self.state {
+                PipeState::WriteClosed => PipeState::Closed,
+                _ => PipeState::ReadClosed,
+            };
+        }
+    }
+
+    /// Close write end
+    pub fn close_write(&mut self) {
+        let prev = self.writers.fetch_sub(1, Ordering::SeqCst);
+        if prev == 1 {
+            self.state = match self.state {
+                PipeState::ReadClosed => PipeState::Closed,
+                _ => PipeState::WriteClosed,
+            };
+        }
+    }
+
+    /// Check if closed
+    pub fn is_closed(&self) -> bool {
+        self.state == PipeState::Closed
+    }
+
+    /// Get available bytes to read
+    pub fn available(&self) -> usize {
+        self.count
+    }
+
+    /// Get available space for writing
+    pub fn space(&self) -> usize {
+        PIPE_BUFFER_SIZE - self.count
+    }
+}
+
+/// Pipe handle
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct PipeId(pub u64);
+
+/// Global pipe table
+static PIPES: RwLock<BTreeMap<u64, Arc<Mutex<Pipe>>>> = RwLock::new(BTreeMap::new());
+static NEXT_PIPE_ID: AtomicU64 = AtomicU64::new(1);
+
+/// Create a new pipe, returns (read_fd, write_fd)
+pub fn pipe_create() -> Result<(PipeId, PipeId), i32> {
+    let id = NEXT_PIPE_ID.fetch_add(1, Ordering::SeqCst);
+    let pipe = Arc::new(Mutex::new(Pipe::new()));
+
+    PIPES.write().insert(id, pipe);
+
+    // Same ID for both ends, distinguished by usage
+    Ok((PipeId(id), PipeId(id)))
+}
+
+/// Write to pipe
+pub fn pipe_write(id: PipeId, data: &[u8]) -> Result<usize, i32> {
+    let pipes = PIPES.read();
+    let pipe = pipes.get(&id.0).ok_or(errno::ENOENT)?;
+    let result = pipe.lock().write(data);
+    result
+}
+
+/// Read from pipe
+pub fn pipe_read(id: PipeId, buf: &mut [u8]) -> Result<usize, i32> {
+    let pipes = PIPES.read();
+    let pipe = pipes.get(&id.0).ok_or(errno::ENOENT)?;
+    let result = pipe.lock().read(buf);
+    result
+}
+
+/// Close pipe
+pub fn pipe_close(id: PipeId, is_read_end: bool) {
+    let pipes = PIPES.read();
+    if let Some(pipe) = pipes.get(&id.0) {
+        let mut p = pipe.lock();
+        if is_read_end {
+            p.close_read();
+        } else {
+            p.close_write();
+        }
+
+        if p.is_closed() {
+            drop(p);
+            drop(pipes);
+            PIPES.write().remove(&id.0);
+        }
+    }
+}
+
+// =============================================================================
+// MESSAGE QUEUES
+// =============================================================================
+
+/// Maximum message size
+const MAX_MSG_SIZE: usize = 8192;
+
+/// Maximum messages per queue
+const MAX_MSGS_PER_QUEUE: usize = 256;
+
+/// Message priority (0 = lowest)
+pub type MsgPriority = u32;
+
+/// Message in queue
+#[derive(Clone)]
+pub struct Message {
+    /// Message data
+    pub data: Vec<u8>,
+    /// Message priority (higher = more urgent)
+    pub priority: MsgPriority,
+    /// Message type (for selective receive)
+    pub mtype: i64,
+    /// Sender PID
+    pub sender: Pid,
+    /// Timestamp
+    pub timestamp: u64,
+}
+
+/// Message queue
+pub struct MessageQueue {
+    /// Queue name (for named queues)
+    pub name: Option<String>,
+    /// Messages ordered by priority
+    pub messages: VecDeque<Message>,
+    /// Maximum messages
+    pub max_msgs: usize,
+    /// Maximum message size
+    pub max_msg_size: usize,
+    /// Current message count
+    pub msg_count: usize,
+    /// Total bytes queued
+    pub total_bytes: usize,
+    /// Owner UID
+    pub uid: u32,
+    /// Owner GID
+    pub gid: u32,
+    /// Permissions
+    pub mode: u32,
+    /// Blocked senders (waiting for space)
+    pub blocked_senders: Vec<Pid>,
+    /// Blocked receivers (waiting for message)
+    pub blocked_receivers: Vec<Pid>,
+}
+
+impl MessageQueue {
+    /// Create new message queue
+    pub fn new(name: Option<String>, max_msgs: usize, max_msg_size: usize) -> Self {
+        Self {
+            name,
+            messages: VecDeque::with_capacity(max_msgs),
+            max_msgs,
+            max_msg_size,
+            msg_count: 0,
+            total_bytes: 0,
+            uid: 0,
+            gid: 0,
+            mode: 0o644,
+            blocked_senders: Vec::new(),
+            blocked_receivers: Vec::new(),
+        }
+    }
+
+    /// Send message (non-blocking)
+    pub fn send(&mut self, data: &[u8], priority: MsgPriority, mtype: i64, sender: Pid) -> Result<(), i32> {
+        if data.len() > self.max_msg_size {
+            return Err(errno::EMSGSIZE);
+        }
+
+        if self.msg_count >= self.max_msgs {
+            return Err(errno::EAGAIN);
+        }
+
+        let msg = Message {
+            data: data.to_vec(),
+            priority,
+            mtype,
+            sender,
+            timestamp: 0, // Would use system time
+        };
+
+        // Insert by priority (higher priority = earlier in queue)
+        let pos = self.messages
+            .iter()
+            .position(|m| m.priority < priority)
+            .unwrap_or(self.messages.len());
+
+        self.messages.insert(pos, msg);
+        self.msg_count += 1;
+        self.total_bytes += data.len();
+
+        Ok(())
+    }
+
+    /// Receive message (non-blocking)
+    pub fn receive(&mut self, mtype_filter: i64) -> Result<Message, i32> {
+        if self.messages.is_empty() {
+            return Err(errno::EAGAIN);
+        }
+
+        // Find message matching type filter
+        let pos = if mtype_filter == 0 {
+            // Any message
+            Some(0)
+        } else if mtype_filter > 0 {
+            // Exact type match
+            self.messages.iter().position(|m| m.mtype == mtype_filter)
+        } else {
+            // Any type <= |mtype_filter|
+            let abs_type = -mtype_filter;
+            self.messages.iter().position(|m| m.mtype <= abs_type)
+        };
+
+        match pos {
+            Some(idx) => {
+                let msg = self.messages.remove(idx).unwrap();
+                self.msg_count -= 1;
+                self.total_bytes -= msg.data.len();
+                Ok(msg)
+            }
+            None => Err(errno::ENOMSG),
+        }
+    }
+
+    /// Get queue attributes
+    pub fn get_attr(&self) -> MqAttr {
+        MqAttr {
+            flags: 0,
+            max_msgs: self.max_msgs,
+            max_msg_size: self.max_msg_size,
+            cur_msgs: self.msg_count,
+        }
+    }
+}
+
+/// Message queue attributes
+#[derive(Clone, Copy)]
+pub struct MqAttr {
+    pub flags: u32,
+    pub max_msgs: usize,
+    pub max_msg_size: usize,
+    pub cur_msgs: usize,
+}
+
+/// Message queue handle
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct MqId(pub u64);
+
+/// Global message queue table
+static MSG_QUEUES: RwLock<BTreeMap<u64, Arc<Mutex<MessageQueue>>>> = RwLock::new(BTreeMap::new());
+static NAMED_QUEUES: RwLock<BTreeMap<String, u64>> = RwLock::new(BTreeMap::new());
+static NEXT_MQ_ID: AtomicU64 = AtomicU64::new(1);
+
+/// Create or open a message queue
+pub fn mq_open(name: &str, create: bool, max_msgs: usize, max_msg_size: usize) -> Result<MqId, i32> {
+    let named = NAMED_QUEUES.read();
+
+    if let Some(&id) = named.get(name) {
+        return Ok(MqId(id));
+    }
+
+    drop(named);
+
+    if !create {
+        return Err(errno::ENOENT);
+    }
+
+    let id = NEXT_MQ_ID.fetch_add(1, Ordering::SeqCst);
+    let queue = Arc::new(Mutex::new(MessageQueue::new(
+        Some(name.to_string()),
+        max_msgs.min(MAX_MSGS_PER_QUEUE),
+        max_msg_size.min(MAX_MSG_SIZE),
+    )));
+
+    MSG_QUEUES.write().insert(id, queue);
+    NAMED_QUEUES.write().insert(name.to_string(), id);
+
+    Ok(MqId(id))
+}
+
+/// Send message to queue
+pub fn mq_send(id: MqId, data: &[u8], priority: MsgPriority, sender: Pid) -> Result<(), i32> {
+    let queues = MSG_QUEUES.read();
+    let queue = queues.get(&id.0).ok_or(errno::ENOENT)?;
+    let result = queue.lock().send(data, priority, 0, sender);
+    result
+}
+
+/// Receive message from queue
+pub fn mq_receive(id: MqId, mtype: i64) -> Result<Message, i32> {
+    let queues = MSG_QUEUES.read();
+    let queue = queues.get(&id.0).ok_or(errno::ENOENT)?;
+    let result = queue.lock().receive(mtype);
+    result
+}
+
+/// Close message queue
+pub fn mq_close(_id: MqId) -> Result<(), i32> {
+    // Just decrements reference count in full implementation
+    Ok(())
+}
+
+/// Unlink (delete) message queue
+pub fn mq_unlink(name: &str) -> Result<(), i32> {
+    let mut named = NAMED_QUEUES.write();
+    if let Some(id) = named.remove(name) {
+        MSG_QUEUES.write().remove(&id);
+        Ok(())
+    } else {
+        Err(errno::ENOENT)
+    }
+}
+
+// =============================================================================
+// SHARED MEMORY
+// =============================================================================
+
+/// Shared memory segment
+pub struct SharedMemory {
+    /// Segment name (for named segments)
+    pub name: Option<String>,
+    /// Memory pages (physical addresses)
+    pub pages: Vec<u64>,
+    /// Size in bytes
+    pub size: usize,
+    /// Reference count
+    pub ref_count: AtomicU32,
+    /// Owner UID
+    pub uid: u32,
+    /// Owner GID
+    pub gid: u32,
+    /// Permissions
+    pub mode: u32,
+    /// Attached processes
+    pub attached: Vec<(Pid, u64)>, // (pid, virtual address)
+}
+
+impl SharedMemory {
+    /// Create new shared memory segment
+    pub fn new(name: Option<String>, size: usize) -> Self {
+        let page_size = 4096;
+        let num_pages = (size + page_size - 1) / page_size;
+
+        // Allocate physical pages
+        let mut pages = Vec::with_capacity(num_pages);
+        for _ in 0..num_pages {
+            // Would allocate physical page here
+            pages.push(0); // Placeholder
+        }
+
+        Self {
+            name,
+            pages,
+            size,
+            ref_count: AtomicU32::new(1),
+            uid: 0,
+            gid: 0,
+            mode: 0o644,
+            attached: Vec::new(),
+        }
+    }
+
+    /// Attach to process at virtual address
+    pub fn attach(&mut self, pid: Pid, vaddr: u64) {
+        self.attached.push((pid, vaddr));
+        self.ref_count.fetch_add(1, Ordering::SeqCst);
+    }
+
+    /// Detach from process
+    pub fn detach(&mut self, pid: Pid) {
+        self.attached.retain(|(p, _)| *p != pid);
+        self.ref_count.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
+/// Shared memory handle
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct ShmId(pub u64);
+
+/// Global shared memory table
+static SHM_SEGMENTS: RwLock<BTreeMap<u64, Arc<RwLock<SharedMemory>>>> = RwLock::new(BTreeMap::new());
+static NAMED_SHM: RwLock<BTreeMap<String, u64>> = RwLock::new(BTreeMap::new());
+static NEXT_SHM_ID: AtomicU64 = AtomicU64::new(1);
+
+/// Create or open shared memory
+pub fn shm_open(name: &str, create: bool, size: usize) -> Result<ShmId, i32> {
+    let named = NAMED_SHM.read();
+
+    if let Some(&id) = named.get(name) {
+        return Ok(ShmId(id));
+    }
+
+    drop(named);
+
+    if !create {
+        return Err(errno::ENOENT);
+    }
+
+    let id = NEXT_SHM_ID.fetch_add(1, Ordering::SeqCst);
+    let shm = Arc::new(RwLock::new(SharedMemory::new(Some(name.to_string()), size)));
+
+    SHM_SEGMENTS.write().insert(id, shm);
+    NAMED_SHM.write().insert(name.to_string(), id);
+
+    Ok(ShmId(id))
+}
+
+/// Attach shared memory to process
+pub fn shm_attach(id: ShmId, pid: Pid, vaddr: u64) -> Result<u64, i32> {
+    let segments = SHM_SEGMENTS.read();
+    let shm = segments.get(&id.0).ok_or(errno::ENOENT)?;
+
+    let mut shm_guard = shm.write();
+    shm_guard.attach(pid, vaddr);
+
+    // Would map pages to virtual address here
+    Ok(vaddr)
+}
+
+/// Detach shared memory from process
+pub fn shm_detach(id: ShmId, pid: Pid) -> Result<(), i32> {
+    let segments = SHM_SEGMENTS.read();
+    let shm = segments.get(&id.0).ok_or(errno::ENOENT)?;
+
+    let mut shm_guard = shm.write();
+    shm_guard.detach(pid);
+
+    Ok(())
+}
+
+/// Unlink shared memory
+pub fn shm_unlink(name: &str) -> Result<(), i32> {
+    let mut named = NAMED_SHM.write();
+    if let Some(id) = named.remove(name) {
+        SHM_SEGMENTS.write().remove(&id);
+        Ok(())
+    } else {
+        Err(errno::ENOENT)
+    }
+}
+
+// =============================================================================
+// SIGNALS
+// =============================================================================
+
+/// Signal numbers
+pub mod signal {
+    pub const SIGHUP: i32 = 1;
+    pub const SIGINT: i32 = 2;
+    pub const SIGQUIT: i32 = 3;
+    pub const SIGILL: i32 = 4;
+    pub const SIGTRAP: i32 = 5;
+    pub const SIGABRT: i32 = 6;
+    pub const SIGBUS: i32 = 7;
+    pub const SIGFPE: i32 = 8;
+    pub const SIGKILL: i32 = 9;
+    pub const SIGUSR1: i32 = 10;
+    pub const SIGSEGV: i32 = 11;
+    pub const SIGUSR2: i32 = 12;
+    pub const SIGPIPE: i32 = 13;
+    pub const SIGALRM: i32 = 14;
+    pub const SIGTERM: i32 = 15;
+    pub const SIGSTKFLT: i32 = 16;
+    pub const SIGCHLD: i32 = 17;
+    pub const SIGCONT: i32 = 18;
+    pub const SIGSTOP: i32 = 19;
+    pub const SIGTSTP: i32 = 20;
+    pub const SIGTTIN: i32 = 21;
+    pub const SIGTTOU: i32 = 22;
+    pub const SIGURG: i32 = 23;
+    pub const SIGXCPU: i32 = 24;
+    pub const SIGXFSZ: i32 = 25;
+    pub const SIGVTALRM: i32 = 26;
+    pub const SIGPROF: i32 = 27;
+    pub const SIGWINCH: i32 = 28;
+    pub const SIGIO: i32 = 29;
+    pub const SIGPWR: i32 = 30;
+    pub const SIGSYS: i32 = 31;
+
+    pub const SIGRTMIN: i32 = 32;
+    pub const SIGRTMAX: i32 = 64;
+
+    pub const SIG_COUNT: usize = 65;
+}
+
+/// Signal action
+#[derive(Clone, Copy)]
+pub enum SigAction {
+    /// Default action
+    Default,
+    /// Ignore signal
+    Ignore,
+    /// Custom handler
+    Handler(u64), // Function pointer
+    /// Signal-specific info handler
+    SigInfo(u64),
+}
+
+/// Signal set (bitmask)
+#[derive(Clone, Copy, Default)]
+pub struct SigSet(u64);
+
+impl SigSet {
+    pub fn new() -> Self {
+        Self(0)
+    }
+
+    pub fn add(&mut self, sig: i32) {
+        if sig >= 1 && sig < 64 {
+            self.0 |= 1 << (sig - 1);
+        }
+    }
+
+    pub fn remove(&mut self, sig: i32) {
+        if sig >= 1 && sig < 64 {
+            self.0 &= !(1 << (sig - 1));
+        }
+    }
+
+    pub fn contains(&self, sig: i32) -> bool {
+        if sig >= 1 && sig < 64 {
+            (self.0 & (1 << (sig - 1))) != 0
+        } else {
+            false
+        }
+    }
+
+    pub fn fill(&mut self) {
+        self.0 = !0;
+    }
+
+    pub fn clear(&mut self) {
+        self.0 = 0;
+    }
+}
+
+/// Process signal state
+pub struct SignalState {
+    /// Pending signals
+    pub pending: SigSet,
+    /// Blocked signals
+    pub blocked: SigSet,
+    /// Signal actions
+    pub actions: [SigAction; signal::SIG_COUNT],
+}
+
+impl SignalState {
+    pub fn new() -> Self {
+        Self {
+            pending: SigSet::new(),
+            blocked: SigSet::new(),
+            actions: [SigAction::Default; signal::SIG_COUNT],
+        }
+    }
+}
+
+/// Send signal to process
+pub fn kill(pid: Pid, sig: i32) -> Result<(), i32> {
+    if sig < 1 || sig >= signal::SIG_COUNT as i32 {
+        return Err(errno::EINVAL);
+    }
+
+    // Use the process module's signal delivery
+    crate::process::send_signal(pid, sig).map_err(|_| errno::ESRCH)
+}
+
+/// Set signal action
+pub fn sigaction(sig: i32, action: SigAction) -> Result<SigAction, i32> {
+    if sig < 1 || sig >= signal::SIG_COUNT as i32 {
+        return Err(errno::EINVAL);
+    }
+
+    // Can't change SIGKILL or SIGSTOP
+    if sig == signal::SIGKILL || sig == signal::SIGSTOP {
+        return Err(errno::EINVAL);
+    }
+
+    // Get current process
+    let pid = crate::process::current().ok_or(errno::ESRCH)?;
+
+    // Convert SigAction to handler address
+    let handler = match action {
+        SigAction::Default => crate::process::signal::SIG_DFL,
+        SigAction::Ignore => crate::process::signal::SIG_IGN,
+        SigAction::Handler(addr) | SigAction::SigInfo(addr) => addr,
+    };
+
+    // Set the handler and get old one
+    let old_handler = crate::process::set_signal_handler(pid, sig, handler)
+        .map_err(|_| errno::EINVAL)?;
+
+    // Convert old handler to SigAction
+    let old_action = match old_handler {
+        crate::process::signal::SIG_DFL => SigAction::Default,
+        crate::process::signal::SIG_IGN => SigAction::Ignore,
+        addr => SigAction::Handler(addr),
+    };
+
+    Ok(old_action)
+}
+
+/// Block/unblock signals
+pub fn sigprocmask(how: i32, set: &SigSet) -> Result<SigSet, i32> {
+    // Get current process
+    let pid = crate::process::current().ok_or(errno::ESRCH)?;
+
+    // Set the blocked mask
+    let old_mask = crate::process::set_signal_blocked(pid, how, set.0)
+        .map_err(|_| errno::EINVAL)?;
+
+    Ok(SigSet(old_mask))
+}
+
+// =============================================================================
+// SEMAPHORES
+// =============================================================================
+
+/// Named semaphore
+pub struct Semaphore {
+    /// Semaphore name
+    pub name: Option<String>,
+    /// Current value
+    pub value: AtomicI32,
+    /// Maximum value
+    pub max_value: i32,
+    /// Waiting processes
+    pub waiters: Mutex<Vec<Pid>>,
+}
+
+impl Semaphore {
+    /// Create new semaphore
+    pub fn new(name: Option<String>, initial: i32) -> Self {
+        Self {
+            name,
+            value: AtomicI32::new(initial),
+            max_value: i32::MAX,
+            waiters: Mutex::new(Vec::new()),
+        }
+    }
+
+    /// Wait (decrement) - non-blocking
+    pub fn try_wait(&self) -> Result<(), i32> {
+        loop {
+            let current = self.value.load(Ordering::SeqCst);
+            if current <= 0 {
+                return Err(errno::EAGAIN);
+            }
+            if self.value.compare_exchange(
+                current,
+                current - 1,
+                Ordering::SeqCst,
+                Ordering::SeqCst,
+            ).is_ok() {
+                return Ok(());
+            }
+        }
+    }
+
+    /// Post (increment)
+    pub fn post(&self) -> Result<(), i32> {
+        let prev = self.value.fetch_add(1, Ordering::SeqCst);
+        if prev >= self.max_value {
+            self.value.fetch_sub(1, Ordering::SeqCst);
+            return Err(errno::ENOSPC);
+        }
+
+        // Wake one waiter if any
+        let mut waiters = self.waiters.lock();
+        if !waiters.is_empty() {
+            let _pid = waiters.remove(0);
+            // Would wake up the process
+        }
+
+        Ok(())
+    }
+
+    /// Get current value
+    pub fn get_value(&self) -> i32 {
+        self.value.load(Ordering::SeqCst)
+    }
+}
+
+/// Semaphore handle
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct SemId(pub u64);
+
+/// Global semaphore table
+static SEMAPHORES: RwLock<BTreeMap<u64, Arc<Semaphore>>> = RwLock::new(BTreeMap::new());
+static NAMED_SEMS: RwLock<BTreeMap<String, u64>> = RwLock::new(BTreeMap::new());
+static NEXT_SEM_ID: AtomicU64 = AtomicU64::new(1);
+
+/// Open or create semaphore
+pub fn sem_open(name: &str, create: bool, initial: i32) -> Result<SemId, i32> {
+    let named = NAMED_SEMS.read();
+
+    if let Some(&id) = named.get(name) {
+        return Ok(SemId(id));
+    }
+
+    drop(named);
+
+    if !create {
+        return Err(errno::ENOENT);
+    }
+
+    let id = NEXT_SEM_ID.fetch_add(1, Ordering::SeqCst);
+    let sem = Arc::new(Semaphore::new(Some(name.to_string()), initial));
+
+    SEMAPHORES.write().insert(id, sem);
+    NAMED_SEMS.write().insert(name.to_string(), id);
+
+    Ok(SemId(id))
+}
+
+/// Wait on semaphore (non-blocking)
+pub fn sem_trywait(id: SemId) -> Result<(), i32> {
+    let sems = SEMAPHORES.read();
+    let sem = sems.get(&id.0).ok_or(errno::ENOENT)?;
+    sem.try_wait()
+}
+
+/// Post to semaphore
+pub fn sem_post(id: SemId) -> Result<(), i32> {
+    let sems = SEMAPHORES.read();
+    let sem = sems.get(&id.0).ok_or(errno::ENOENT)?;
+    sem.post()
+}
+
+/// Get semaphore value
+pub fn sem_getvalue(id: SemId) -> Result<i32, i32> {
+    let sems = SEMAPHORES.read();
+    let sem = sems.get(&id.0).ok_or(errno::ENOENT)?;
+    Ok(sem.get_value())
+}
+
+/// Close semaphore
+pub fn sem_close(_id: SemId) -> Result<(), i32> {
+    // Decrements reference count
+    Ok(())
+}
+
+/// Unlink semaphore
+pub fn sem_unlink(name: &str) -> Result<(), i32> {
+    let mut named = NAMED_SEMS.write();
+    if let Some(id) = named.remove(name) {
+        SEMAPHORES.write().remove(&id);
+        Ok(())
+    } else {
+        Err(errno::ENOENT)
+    }
+}
+
+// =============================================================================
+// EVENTFD
+// =============================================================================
+
+/// Event file descriptor for signaling between processes/threads
+pub struct EventFd {
+    /// Counter value
+    pub counter: AtomicU64,
+    /// Semaphore mode (decrement by 1 vs read full value)
+    pub semaphore: bool,
+    /// Non-blocking mode
+    pub nonblock: bool,
+    /// Waiting readers
+    pub readers: Mutex<Vec<Pid>>,
+}
+
+impl EventFd {
+    /// Create new eventfd
+    pub fn new(initial: u64, semaphore: bool, nonblock: bool) -> Self {
+        Self {
+            counter: AtomicU64::new(initial),
+            semaphore,
+            nonblock,
+            readers: Mutex::new(Vec::new()),
+        }
+    }
+
+    /// Write (add) to counter
+    pub fn write(&self, value: u64) -> Result<(), i32> {
+        if value == u64::MAX {
+            return Err(errno::EINVAL);
+        }
+
+        loop {
+            let current = self.counter.load(Ordering::SeqCst);
+            let new_value = current.checked_add(value).ok_or(errno::EAGAIN)?;
+
+            if self.counter.compare_exchange(
+                current,
+                new_value,
+                Ordering::SeqCst,
+                Ordering::SeqCst,
+            ).is_ok() {
+                // Wake readers
+                let mut readers = self.readers.lock();
+                readers.clear(); // Would wake all
+                return Ok(());
+            }
+        }
+    }
+
+    /// Read from counter
+    pub fn read(&self) -> Result<u64, i32> {
+        loop {
+            let current = self.counter.load(Ordering::SeqCst);
+
+            if current == 0 {
+                if self.nonblock {
+                    return Err(errno::EAGAIN);
+                }
+                // Would block here
+                return Err(errno::EAGAIN);
+            }
+
+            let (new_value, return_value) = if self.semaphore {
+                (current - 1, 1)
+            } else {
+                (0, current)
+            };
+
+            if self.counter.compare_exchange(
+                current,
+                new_value,
+                Ordering::SeqCst,
+                Ordering::SeqCst,
+            ).is_ok() {
+                return Ok(return_value);
+            }
+        }
+    }
+}
+
+/// Eventfd handle
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct EventFdId(pub u64);
+
+/// Global eventfd table
+static EVENTFDS: RwLock<BTreeMap<u64, Arc<EventFd>>> = RwLock::new(BTreeMap::new());
+static NEXT_EVENTFD_ID: AtomicU64 = AtomicU64::new(1);
+
+/// Create eventfd
+pub fn eventfd_create(initial: u64, flags: u32) -> Result<EventFdId, i32> {
+    let semaphore = (flags & 1) != 0;
+    let nonblock = (flags & 2) != 0;
+
+    let id = NEXT_EVENTFD_ID.fetch_add(1, Ordering::SeqCst);
+    let eventfd = Arc::new(EventFd::new(initial, semaphore, nonblock));
+
+    EVENTFDS.write().insert(id, eventfd);
+
+    Ok(EventFdId(id))
+}
+
+/// Write to eventfd
+pub fn eventfd_write(id: EventFdId, value: u64) -> Result<(), i32> {
+    let fds = EVENTFDS.read();
+    let fd = fds.get(&id.0).ok_or(errno::ENOENT)?;
+    fd.write(value)
+}
+
+/// Read from eventfd
+pub fn eventfd_read(id: EventFdId) -> Result<u64, i32> {
+    let fds = EVENTFDS.read();
+    let fd = fds.get(&id.0).ok_or(errno::ENOENT)?;
+    fd.read()
+}
+
+// =============================================================================
+// FUTEX (Fast Userspace Mutex)
+// =============================================================================
+
+/// Futex operations
+pub mod futex_op {
+    pub const FUTEX_WAIT: i32 = 0;
+    pub const FUTEX_WAKE: i32 = 1;
+    pub const FUTEX_REQUEUE: i32 = 3;
+    pub const FUTEX_CMP_REQUEUE: i32 = 4;
+    pub const FUTEX_WAKE_OP: i32 = 5;
+    pub const FUTEX_WAIT_BITSET: i32 = 9;
+    pub const FUTEX_WAKE_BITSET: i32 = 10;
+    pub const FUTEX_PRIVATE_FLAG: i32 = 128;
+}
+
+/// Futex wait queue entry
+struct FutexWaiter {
+    pid: Pid,
+    bitset: u32,
+}
+
+/// Futex wait queues (keyed by address)
+static FUTEX_QUEUES: RwLock<BTreeMap<u64, Vec<FutexWaiter>>> = RwLock::new(BTreeMap::new());
+
+/// Futex wait
+pub fn futex_wait(addr: u64, expected: u32, bitset: u32, pid: Pid) -> Result<(), i32> {
+    // Read current value at address
+    let current = unsafe { *(addr as *const u32) };
+
+    if current != expected {
+        return Err(errno::EAGAIN);
+    }
+
+    // Add to wait queue
+    let mut queues = FUTEX_QUEUES.write();
+    let queue = queues.entry(addr).or_insert_with(Vec::new);
+    queue.push(FutexWaiter { pid, bitset });
+
+    // Would actually block here
+    Ok(())
+}
+
+/// Futex wake
+pub fn futex_wake(addr: u64, count: i32, bitset: u32) -> Result<i32, i32> {
+    let mut queues = FUTEX_QUEUES.write();
+
+    if let Some(queue) = queues.get_mut(&addr) {
+        let mut woken = 0i32;
+        let mut i = 0;
+
+        while i < queue.len() && woken < count {
+            if (queue[i].bitset & bitset) != 0 {
+                let _waiter = queue.remove(i);
+                // Would wake the process
+                woken += 1;
+            } else {
+                i += 1;
+            }
+        }
+
+        if queue.is_empty() {
+            queues.remove(&addr);
+        }
+
+        Ok(woken)
+    } else {
+        Ok(0)
+    }
+}
+
+// =============================================================================
+// INITIALIZATION
+// =============================================================================
+
+/// Initialize IPC subsystem
+pub fn init() {
+    crate::kprintln!("[IPC] Initializing inter-process communication...");
+    crate::kprintln!("[IPC] IPC subsystem ready");
+}
+
+// =============================================================================
+// STATISTICS
+// =============================================================================
+
+/// Get number of active pipes
+pub fn pipe_count() -> usize {
+    PIPES.read().len()
+}
+
+/// Get number of message queues
+pub fn mq_count() -> usize {
+    MSG_QUEUES.read().len()
+}
+
+/// Get number of shared memory segments
+pub fn shm_count() -> usize {
+    SHM_SEGMENTS.read().len()
+}
+
+/// Get number of semaphores
+pub fn sem_count() -> usize {
+    SEMAPHORES.read().len()
+}

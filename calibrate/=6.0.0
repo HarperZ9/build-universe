@@ -1,0 +1,8 @@
+Defaulting to user installation because normal site-packages is not writeable
+Requirement already satisfied: pyinstaller in c:\users\zain\appdata\local\packages\pythonsoftwarefoundation.python.3.13_qbz5n2kfra8p0\localcache\local-packages\python313\site-packages (6.17.0)
+Requirement already satisfied: altgraph in c:\users\zain\appdata\local\packages\pythonsoftwarefoundation.python.3.13_qbz5n2kfra8p0\localcache\local-packages\python313\site-packages (from pyinstaller) (0.17.5)
+Requirement already satisfied: packaging>=22.0 in c:\users\zain\appdata\local\packages\pythonsoftwarefoundation.python.3.13_qbz5n2kfra8p0\localcache\local-packages\python313\site-packages (from pyinstaller) (25.0)
+Requirement already satisfied: pefile>=2022.5.30 in c:\users\zain\appdata\local\packages\pythonsoftwarefoundation.python.3.13_qbz5n2kfra8p0\localcache\local-packages\python313\site-packages (from pyinstaller) (2024.8.26)
+Requirement already satisfied: pyinstaller-hooks-contrib>=2025.9 in c:\users\zain\appdata\local\packages\pythonsoftwarefoundation.python.3.13_qbz5n2kfra8p0\localcache\local-packages\python313\site-packages (from pyinstaller) (2025.10)
+Requirement already satisfied: pywin32-ctypes>=0.2.1 in c:\users\zain\appdata\local\packages\pythonsoftwarefoundation.python.3.13_qbz5n2kfra8p0\localcache\local-packages\python313\site-packages (from pyinstaller) (0.2.3)
+Requirement already satisfied: setuptools>=42.0.0 in c:\users\zain\appdata\local\packages\pythonsoftwarefoundation.python.3.13_qbz5n2kfra8p0\localcache\local-packages\python313\site-packages (from pyinstaller) (80.9.0)

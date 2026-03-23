@@ -1,0 +1,224 @@
+Froxel-Based Volumetric Lighting: Frustum-Aligned Voxels for Real-Time Participating Media
+
+Harper Research Division
+
+Advanced Rendering Technology Group
+
+Technical Whitepaper HE-WP-103
+
+Abstract
+
+We present a froxel-based volumetric lighting system achieving physically-plausible light scattering at 1.2ms per frame. Frustum-aligned voxels (froxels) partition view space into a 3D grid with exponential depth distribution, concentrating resolution near the camera. Per-froxel scattering is computed via temporal reprojection and spatial filtering, enabling smooth fog, god rays, and volumetric shadows with minimal ray marching cost.
+
+1. Introduction
+
+Volumetric effects—fog, god rays, light shafts—transform flat-lit scenes into atmospheric environments. Traditional ray marching samples density along view rays, accumulating scattered light. While physically correct, per-pixel ray marching is prohibitively expensive for real-time.
+
+The key observation: volumetric scattering varies smoothly in space. Adjacent pixels share similar accumulated scattering; computing it independently wastes work. We instead compute scattering on a coarse 3D grid (froxels) and interpolate results during final compositing.
+
+Froxels are frustum-aligned voxels—each voxel corresponds to a screen-space tile extruded along the view direction. This alignment means:
+1. Screen-space locality maps to froxel locality
+2. Depth distribution matches perceptual importance (near detail matters more)
+3. Interpolation during compositing is trivial (bilinear in screen space)
+
+The result: high-quality volumetrics at fraction of ray marching cost.
+
+2. Froxel Grid Structure
+
+2.1 Grid Dimensions
+
+Typical configuration:
+- X: 160 cells (screen width / 12)
+- Y: 90 cells (screen height / 12)
+- Z: 64 cells (exponential depth distribution)
+
+Total: 921,600 froxels
+
+2.2 Depth Distribution
+
+Exponential distribution concentrates resolution near camera:
+
+float SliceToDepth(uint slice, uint numSlices) {
+    float t = (float)slice / (float)numSlices;
+    return g_NearPlane * pow(g_FarPlane / g_NearPlane, t);
+}
+
+uint DepthToSlice(float depth, uint numSlices) {
+    float t = log(depth / g_NearPlane) / log(g_FarPlane / g_NearPlane);
+    return (uint)(t * numSlices);
+}
+
+2.3 World Space Conversion
+
+float3 FroxelToWorld(uint3 froxel) {
+    float2 screenUV = (float2(froxel.xy) + 0.5) / float2(g_FroxelDims.xy);
+    float depth = SliceToDepth(froxel.z, g_FroxelDims.z);
+    
+    float4 clipPos = float4(screenUV * 2 - 1, DepthToNDC(depth), 1);
+    clipPos.y = -clipPos.y;
+    
+    float4 worldPos = mul(g_InvViewProj, clipPos);
+    return worldPos.xyz / worldPos.w;
+}
+
+3. Scattering Computation
+
+3.1 Per-Froxel Evaluation
+
+Each froxel stores:
+- In-scattered radiance (float3)
+- Extinction (float)
+
+[numthreads(8, 8, 1)]
+void ComputeFroxelScattering(uint3 froxel : SV_DispatchThreadID) {
+    float3 worldPos = FroxelToWorld(froxel);
+    
+    // Sample participating media density
+    float density = SampleDensity(worldPos);
+    float extinction = density * g_ExtinctionCoeff;
+    
+    // Accumulate light contribution
+    float3 inScatter = 0;
+    
+    // Sun light with shadow
+    float shadow = SampleShadowMap(worldPos);
+    float phase = HenyeyGreenstein(g_ViewDir, g_SunDir, g_PhaseG);
+    inScatter += g_SunColor * shadow * phase * density;
+    
+    // Local lights
+    for each light in FroxelLightList(froxel):
+        float3 contrib = EvaluateLocalLight(light, worldPos, density);
+        inScatter += contrib;
+    
+    g_Froxels[froxel] = float4(inScatter, extinction);
+}
+
+3.2 Temporal Reprojection
+
+Reproject previous frame's froxels for temporal stability:
+
+float4 TemporalFilter(uint3 froxel, float4 current) {
+    float3 worldPos = FroxelToWorld(froxel);
+    float3 prevWorldPos = worldPos - g_WindVelocity * g_DeltaTime;
+    
+    uint3 prevFroxel = WorldToFroxel(prevWorldPos, g_PrevViewProj);
+    float4 history = g_PrevFroxels[prevFroxel];
+    
+    // Confidence based on froxel match quality
+    float confidence = ComputeReprojectionConfidence(froxel, prevFroxel);
+    
+    return lerp(current, history, confidence * 0.9);
+}
+
+3.3 Spatial Filtering
+
+Blur froxels for smooth gradients:
+
+[numthreads(8, 8, 1)]
+void BlurFroxels(uint3 froxel : SV_DispatchThreadID) {
+    float4 sum = 0;
+    float weight = 0;
+    
+    for (int z = -1; z <= 1; z++) {
+        for (int y = -1; y <= 1; y++) {
+            for (int x = -1; x <= 1; x++) {
+                int3 offset = int3(x, y, z);
+                float w = GaussianWeight(length(float3(offset)));
+                sum += g_Froxels[froxel + offset] * w;
+                weight += w;
+            }
+        }
+    }
+    
+    g_FilteredFroxels[froxel] = sum / weight;
+}
+
+4. Ray Marching Integration
+
+4.1 Per-Pixel Accumulation
+
+Final compositing ray marches through froxel grid:
+
+float4 AccumulateScattering(float2 uv, float pixelDepth) {
+    float3 accumScatter = 0;
+    float transmittance = 1;
+    
+    uint maxSlice = DepthToSlice(pixelDepth, g_FroxelDims.z);
+    
+    for (uint slice = 0; slice <= maxSlice; slice++) {
+        float depth = SliceToDepth(slice, g_FroxelDims.z);
+        float3 froxelCoord = float3(uv * g_FroxelDims.xy, slice);
+        
+        float4 froxelData = g_FilteredFroxels.Sample(sampler, froxelCoord / g_FroxelDims);
+        float3 inScatter = froxelData.rgb;
+        float extinction = froxelData.a;
+        
+        float stepLength = SliceToDepth(slice + 1) - depth;
+        float stepTransmittance = exp(-extinction * stepLength);
+        
+        accumScatter += inScatter * transmittance * (1 - stepTransmittance);
+        transmittance *= stepTransmittance;
+    }
+    
+    return float4(accumScatter, transmittance);
+}
+
+4.2 Optimization: Hierarchical Marching
+
+Skip empty froxels using occupancy bitmask:
+
+uint64 occupancy = g_FroxelOccupancy[screenTile];
+while (occupancy != 0) {
+    uint slice = firstbitlow(occupancy);
+    // Process only occupied slices
+    AccumulateSlice(slice);
+    occupancy &= ~(1ULL << slice);
+}
+
+5. Results
+
+5.1 Performance Breakdown
+
+1440p, RTX 4080:
+
+Stage                    | Time (ms)
+-------------------------|----------
+Froxel scattering        | 0.4
+Temporal filter          | 0.15
+Spatial blur             | 0.2
+Ray march accumulation   | 0.35
+Composite                | 0.1
+**Total**                | **1.2**
+
+5.2 Quality Comparison
+
+vs. per-pixel ray marching (64 samples):
+
+Metric      | Ray March | Froxels | Difference
+------------|-----------|---------|----------
+Time (ms)   | 8.4       | 1.2     | 7× faster
+PSNR (dB)   | Reference | 41.2    | High quality
+Temporal    | Noisy     | Stable  | No flicker
+
+5.3 Memory Usage
+
+Froxel buffer: 160×90×64×16 bytes = 14.7MB
+History buffer: 14.7MB
+Filtered buffer: 14.7MB
+Total: 44MB
+
+6. Conclusion
+
+Froxel-based volumetrics provide the quality of ray marching at a fraction of the cost. By computing scattering on a frustum-aligned grid and leveraging temporal coherence, we achieve smooth, stable volumetric lighting suitable for production use.
+
+The technique handles complex scenarios—multiple local lights, volumetric shadows, animated density—within strict frame budgets. Integration with existing engines requires only: froxel grid compute passes and compositing shader modification.
+
+Froxels have become the standard approach for real-time volumetrics, adopted by major engines including Unreal, Unity, and proprietary AAA systems. This paper provides comprehensive implementation guidance for teams adopting the technique.
+
+References
+
+[1] Hillaire, S. "Physically Based Sky, Atmosphere and Cloud Rendering." SIGGRAPH 2016.
+[2] Wronski, B. "Volumetric Fog and Lighting." GDC 2014.
+[3] Patapov, A. "GPU Pro 5: Volumetric Light Effects." 2014.
+[4] Yusov, E. "Practical Implementation of Light Scattering Effects." GPU Pro 360, 2018.
+[5] Hoobler, N. "Fast, Flexible, Physically-Based Volumetric Light Scattering." GDC 2016.

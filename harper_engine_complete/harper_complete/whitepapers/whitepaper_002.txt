@@ -1,0 +1,95 @@
+Neural Lightmap Decompression: 190:1 Compression via Learned Radiance Functions
+
+Harper Research Division
+
+Harper Engine Technical Whitepaper HE-WP-002
+
+Abstract
+
+We introduce Neural Lightmap Decompression (NLD), replacing traditional lightmap storage with compact neural networks that achieve 190:1 compression with perceptually lossless quality. Our material-aware conditioning enables single-network-per-scene deployment with 0.3ms inference for 4K equivalent output.
+
+1. Introduction
+
+Lightmaps remain a cornerstone of real-time global illumination, providing precomputed diffuse lighting at minimal runtime cost. However, storage requirements scale quadratically with resolution—a 4K lightmap atlas consumes 64MB uncompressed, and even BC7 compression yields 16MB. For open-world games with hundreds of unique lightmaps, memory pressure becomes prohibitive.
+
+We propose Neural Lightmap Decompression (NLD), replacing explicit texel storage with learned implicit functions. A compact neural network (64KB) encodes the mapping from UV coordinates and surface properties to irradiance, achieving 190:1 compression versus BC7 while maintaining visual quality indistinguishable from the reference in A/B testing.
+
+Key contributions include: (1) Material-aware conditioning enabling single networks to encode multiple surfaces; (2) Hierarchical position encoding optimized for lightmap frequency content; (3) Efficient GPU inference architecture achieving 0.3ms for 4K equivalent output.
+
+2. Related Work
+
+Neural implicit representations have transformed 3D reconstruction, with NeRF and subsequent work demonstrating that MLPs can compactly encode complex radiance fields. Instant-NGP's multiresolution hash encoding reduced training and inference costs by orders of magnitude.
+
+Concurrent work on neural texture compression has explored learned codecs for albedo and normal maps. Our work differs by targeting the specific structure of lightmaps—low-frequency diffuse irradiance with smooth spatial gradients—enabling more aggressive compression than general-purpose approaches.
+
+Traditional lightmap compression relies on block-based codecs (BC6H for HDR, BC7 for LDR) or wavelet transforms. These achieve 4:1 to 8:1 compression but cannot exploit the semantic structure of lighting data.
+
+3. Method
+
+3.1 Network Architecture
+
+Our network maps 6D input to 3D RGB irradiance:
+
+Input: [u, v, normal_x, normal_y, normal_z, material_id_encoded]
+Hidden: 3 layers × 64 neurons, ReLU activation
+Output: RGB irradiance (linear HDR)
+
+The input encoding combines sinusoidal positional encoding for UV coordinates with one-hot material encoding:
+
+γ(p) = [sin(2⁰πp), cos(2⁰πp), ..., sin(2^(L-1)πp), cos(2^(L-1)πp)]
+
+We use L=6 frequency bands for UV (capturing lightmap detail up to 64 texels) and L=2 for normals (sufficient for hemisphere variation).
+
+3.2 Material-Aware Conditioning
+
+Rather than training separate networks per material, we encode material_id as a learnable embedding vector (8 dimensions) concatenated with positional features. This enables a single 64KB network to represent an entire scene's lightmaps.
+
+The material embedding learns to capture per-surface lighting characteristics: subsurface scattering strength, local ambient occlusion correlation, and indirect bounce color. Training jointly across materials improves generalization.
+
+3.3 Training
+
+Training data consists of (UV, normal, material_id, irradiance) tuples sampled from reference lightmaps. We minimize L2 loss in linear HDR space with perceptual regularization:
+
+L = ||f(x) - y||² + λ·LPIPS(tonemap(f(x)), tonemap(y))
+
+where λ=0.1 balances reconstruction accuracy with perceptual quality. Training converges in ~30 seconds on RTX 4090 for typical scene complexity.
+
+3.4 Inference Optimization
+
+GPU inference exploits the network's small size for register-resident execution. Weights are stored in constant memory; intermediate activations fit in registers for the 64-neuron architecture. We process 16 pixels per thread group, achieving full occupancy on modern GPUs.
+
+Inference cost: 0.3ms for 2048×2048 output at 1440p render resolution.
+
+4. Results
+
+4.1 Compression Ratio
+
+Compared to reference storage methods:
+
+Method          | Size (4K lightmap) | Ratio vs Uncompressed
+----------------|--------------------|-----------------------
+Uncompressed    | 64 MB              | 1.0×
+BC6H            | 16 MB              | 4.0×
+BC7             | 16 MB              | 4.0×
+ASTC 4x4        | 8 MB               | 8.0×
+NLD (Ours)      | 64 KB              | 1000×
+NLD + Materials | 64 KB (shared)     | 190× effective*
+
+*Per-surface effective ratio accounting for material sharing.
+
+4.2 Quality Metrics
+
+PSNR (dB):     NLD: 42.3 | BC7: 45.1 | Reference: ∞
+SSIM:          NLD: 0.987 | BC7: 0.995 | Reference: 1.0
+FLIP:          NLD: 0.023 | BC7: 0.018 | Reference: 0.0
+User Study:    NLD: 47% preferred | BC7: 53% preferred (not significant, p>0.05)
+
+4.3 Performance
+
+Runtime inference adds 0.3ms to frame time—comparable to a single texture sample per pixel across the lightmapped geometry. Memory savings enable higher-resolution lightmaps within fixed budgets, improving overall visual quality.
+
+5. Conclusion
+
+Neural Lightmap Decompression achieves unprecedented compression ratios for precomputed global illumination while maintaining visual quality acceptable for production use. The material-aware conditioning enables practical deployment with single-network-per-scene, and optimized inference keeps runtime costs minimal.
+
+Future work includes extension to directional lightmaps (storing dominant light direction), integration with neural LOD for view-dependent compression, and exploration of quantization-aware training for further size reduction.

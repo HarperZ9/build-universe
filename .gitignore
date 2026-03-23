@@ -1,0 +1,44 @@
+# QuantaLang compiler has its own repo (HarperZ9/quantalang)
+quantalang/
+
+# Calibrate Pro Python artifacts
+calibrate/__pycache__/
+calibrate/*.pyc
+calibrate/build/
+calibrate/dist/
+calibrate/*.egg-info/
+calibrate/.pytest_cache/
+
+# Build artifacts & archives
+target/
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.zip
+*.tar.gz
+*.cube
+*.icc
+build_output.txt
+nul
+
+# Test output
+calibration_output/
+test_simple.c
+
+# Large/generated directories
+harper-engine-complete.zip
+quanta-v4.2.0/
+
+# IDE
+.vscode/
+.idea/
+.claude/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,363 @@
+// ===============================================================================
+// QUANTAOS KERNEL - NEURAL PROCESS SCHEDULER
+// ===============================================================================
+// Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
+// CONFIDENTIAL - Trade Secret - Patent Pending
+// Trademark: NEURAL PROCESS SCHEDULER™
+// ===============================================================================
+
+#![allow(dead_code)]
+
+//! Neural Process Scheduler™ - ML-based priority prediction and scheduling.
+//!
+//! The scheduler uses machine learning to predict process behavior and
+//! optimize scheduling decisions for AI workloads.
+
+use alloc::vec::Vec;
+use spin::Mutex;
+
+use crate::context::{context_switch, switch_to_user};
+use crate::process::Tid;
+
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
+/// Time slice duration in nanoseconds (10ms)
+const TIME_SLICE_NS: u64 = 10_000_000;
+
+/// Number of priority levels
+const PRIORITY_LEVELS: usize = 64;
+
+/// AI workload priority boost
+const AI_PRIORITY_BOOST: i32 = 10;
+
+/// Maximum priority
+const MAX_PRIORITY: i32 = 63;
+
+/// Minimum priority
+const MIN_PRIORITY: i32 = 0;
+
+/// Default priority
+const DEFAULT_PRIORITY: i32 = 32;
+
+// =============================================================================
+// SCHEDULER
+// =============================================================================
+
+/// Global scheduler instance
+static SCHEDULER: Mutex<Scheduler> = Mutex::new(Scheduler::new());
+
+/// Neural Process Scheduler
+pub struct Scheduler {
+    /// Run queues per priority level
+    run_queues: [RunQueue; PRIORITY_LEVELS],
+
+    /// Currently running thread per CPU
+    current: Option<Tid>,
+
+    /// Scheduler statistics
+    stats: SchedulerStats,
+
+    /// Neural priority predictor state
+    predictor: PriorityPredictor,
+
+    /// Idle thread
+    idle_thread: Option<Tid>,
+}
+
+/// Run queue for a single priority level
+pub struct RunQueue {
+    threads: Vec<Tid>,
+}
+
+/// Scheduler statistics
+#[derive(Default)]
+pub struct SchedulerStats {
+    /// Total context switches
+    pub context_switches: u64,
+
+    /// Total time slices expired
+    pub timeslices_expired: u64,
+
+    /// Voluntary yields
+    pub voluntary_yields: u64,
+
+    /// AI priority adjustments
+    pub ai_adjustments: u64,
+}
+
+impl Scheduler {
+    const fn new() -> Self {
+        const EMPTY_QUEUE: RunQueue = RunQueue { threads: Vec::new() };
+
+        Self {
+            run_queues: [EMPTY_QUEUE; PRIORITY_LEVELS],
+            current: None,
+            stats: SchedulerStats {
+                context_switches: 0,
+                timeslices_expired: 0,
+                voluntary_yields: 0,
+                ai_adjustments: 0,
+            },
+            predictor: PriorityPredictor::new(),
+            idle_thread: None,
+        }
+    }
+
+    /// Add a thread to the run queue
+    pub fn enqueue(&mut self, tid: Tid, priority: i32) {
+        let level = (priority.clamp(MIN_PRIORITY, MAX_PRIORITY)) as usize;
+        self.run_queues[level].threads.push(tid);
+    }
+
+    /// Remove a thread from the run queue
+    pub fn dequeue(&mut self, priority: i32) -> Option<Tid> {
+        let level = (priority.clamp(MIN_PRIORITY, MAX_PRIORITY)) as usize;
+        self.run_queues[level].threads.pop()
+    }
+
+    /// Select next thread to run
+    pub fn select_next(&mut self) -> Option<Tid> {
+        // Check from highest priority to lowest
+        for priority in (0..PRIORITY_LEVELS).rev() {
+            if !self.run_queues[priority].threads.is_empty() {
+                return self.run_queues[priority].threads.pop();
+            }
+        }
+
+        // No runnable threads, return idle thread
+        self.idle_thread
+    }
+
+    /// Yield current thread
+    pub fn yield_current(&mut self) {
+        if let Some(tid) = self.current {
+            // Re-enqueue at same priority
+            self.enqueue(tid, DEFAULT_PRIORITY);
+            self.stats.voluntary_yields += 1;
+        }
+    }
+
+    /// Timer tick - handle preemption
+    pub fn tick(&mut self) {
+        self.stats.timeslices_expired += 1;
+
+        // Check if current thread's time slice expired
+        if let Some(_tid) = self.current {
+            // Preempt and reschedule
+            self.schedule();
+        }
+    }
+
+    /// Perform context switch to next thread
+    pub fn schedule(&mut self) {
+        let next = self.select_next();
+
+        if next != self.current {
+            if let Some(next_tid) = next {
+                let old_tid = self.current;
+                self.current = Some(next_tid);
+                self.stats.context_switches += 1;
+
+                // Get old and new context pointers
+                let old_ctx = old_tid.and_then(|tid| crate::process::get_thread_context_ptr(tid));
+                let new_ctx = crate::process::get_thread_context_ptr(next_tid);
+
+                if let Some(new_ptr) = new_ctx {
+                    // Check if switching to user mode
+                    let is_user = crate::process::is_user_thread(next_tid);
+
+                    if let Some(old_ptr) = old_ctx {
+                        // Full context switch
+                        unsafe {
+                            context_switch(old_ptr, new_ptr);
+                        }
+                    } else {
+                        // First switch (no old context to save)
+                        if is_user {
+                            // Switch to user mode
+                            unsafe {
+                                switch_to_user(new_ptr);
+                            }
+                        } else {
+                            // Switch to kernel thread
+                            unsafe {
+                                crate::context::context_switch_first(new_ptr);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Apply AI priority boost to a process
+    pub fn ai_boost(&mut self, tid: Tid, boost: f32) {
+        // Neural scheduler adjusts priority based on AI workload characteristics
+        let _priority_delta = (boost * AI_PRIORITY_BOOST as f32) as i32;
+
+        // Remove from current queue and add to boosted queue
+        // (Simplified - full implementation would track per-thread priority)
+        self.stats.ai_adjustments += 1;
+
+        // Update predictor with this feedback
+        self.predictor.record_boost(tid, boost);
+    }
+}
+
+impl RunQueue {
+    const fn new() -> Self {
+        Self { threads: Vec::new() }
+    }
+}
+
+// =============================================================================
+// NEURAL PRIORITY PREDICTOR
+// =============================================================================
+
+/// ML-based priority prediction
+pub struct PriorityPredictor {
+    /// Historical priority adjustments
+    history: Vec<PriorityEvent>,
+
+    /// Model weights (simplified neural network)
+    weights: [f32; 16],
+}
+
+/// Priority adjustment event for learning
+struct PriorityEvent {
+    tid: Tid,
+    original_priority: i32,
+    adjusted_priority: i32,
+    cpu_burst: u64,
+    io_wait: u64,
+}
+
+impl PriorityPredictor {
+    const fn new() -> Self {
+        Self {
+            history: Vec::new(),
+            weights: [0.0; 16],
+        }
+    }
+
+    /// Predict optimal priority for a thread
+    pub fn predict(&self, _tid: Tid) -> i32 {
+        // Simple heuristic for now
+        // Full implementation would use trained neural network
+        DEFAULT_PRIORITY
+    }
+
+    /// Record a priority boost for learning
+    pub fn record_boost(&mut self, _tid: Tid, _boost: f32) {
+        // Record for future training
+    }
+
+    /// Train the predictor on historical data
+    pub fn train(&mut self) {
+        // Would implement gradient descent on historical data
+    }
+}
+
+// =============================================================================
+// PUBLIC INTERFACE
+// =============================================================================
+
+/// Initialize the scheduler
+pub fn init() {
+    let _sched = SCHEDULER.lock();
+
+    // Create idle thread
+    // sched.idle_thread = Some(create_idle_thread());
+}
+
+/// Enter the scheduler main loop (never returns)
+pub fn run() -> ! {
+    loop {
+        // Poll network stack for I/O
+        crate::net::poll();
+
+        // Run scheduler
+        {
+            let mut sched = SCHEDULER.lock();
+            sched.schedule();
+        }
+
+        // Wait for next interrupt
+        crate::cpu::halt();
+    }
+}
+
+/// Yield the current thread
+pub fn yield_now() {
+    let mut sched = SCHEDULER.lock();
+    sched.yield_current();
+    sched.schedule();
+}
+
+/// Yield CPU (alias for yield_now)
+pub fn yield_cpu() {
+    yield_now();
+}
+
+/// Add a thread to the scheduler
+pub fn add_thread(tid: Tid, priority: i32) {
+    let mut sched = SCHEDULER.lock();
+    sched.enqueue(tid, priority);
+}
+
+/// Remove a thread from the scheduler
+pub fn remove_thread(tid: Tid) {
+    let mut sched = SCHEDULER.lock();
+    // Remove from all queues
+    for queue in &mut sched.run_queues {
+        queue.threads.retain(|&t| t != tid);
+    }
+}
+
+/// Apply AI priority boost
+pub fn ai_priority_boost(tid: Tid, boost: f32) {
+    let mut sched = SCHEDULER.lock();
+    sched.ai_boost(tid, boost);
+}
+
+/// Timer tick handler
+pub fn timer_tick() {
+    let mut sched = SCHEDULER.lock();
+    sched.tick();
+}
+
+/// Timer tick handler with interrupt frame (for preemption)
+pub fn timer_tick_with_frame(frame: &crate::interrupts::InterruptFrame) {
+    // Update current thread's context from interrupt frame
+    if let Some(tid) = crate::process::current_thread() {
+        let ctx = crate::context::context_from_interrupt_frame(frame);
+        crate::process::set_thread_context(tid, ctx);
+    }
+
+    // Process timer tick
+    {
+        let mut sched = SCHEDULER.lock();
+        sched.stats.timeslices_expired += 1;
+
+        // Re-enqueue current thread if it was running
+        if let Some(tid) = sched.current {
+            sched.enqueue(tid, DEFAULT_PRIORITY);
+        }
+    }
+
+    // Note: actual context switch happens when interrupt returns
+    // because we've updated the thread's saved context
+}
+
+/// Get scheduler statistics
+pub fn get_stats() -> SchedulerStats {
+    let sched = SCHEDULER.lock();
+    SchedulerStats {
+        context_switches: sched.stats.context_switches,
+        timeslices_expired: sched.stats.timeslices_expired,
+        voluntary_yields: sched.stats.voluntary_yields,
+        ai_adjustments: sched.stats.ai_adjustments,
+    }
+}

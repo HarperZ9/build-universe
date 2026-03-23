@@ -1,0 +1,211 @@
+Differentiable Rasterization: Gradient Flow Through Traditional Graphics Pipelines
+
+Harper Research Division
+
+Advanced Rendering Technology Group
+
+Technical Whitepaper HE-WP-104
+
+Abstract
+
+We present techniques enabling gradient backpropagation through rasterization, bridging neural rendering with traditional graphics. Soft rasterization replaces hard triangle coverage with differentiable sigmoid falloff; depth discontinuities are handled via edge-aware aggregation. This enables end-to-end training of hybrid pipelines combining learned components (neural materials, deformations) with conventional mesh rendering, achieving 60fps inference with PyTorch-compatible training.
+
+1. Introduction
+
+Traditional rasterization is non-differentiable: vertex positions discretely map to pixel coverage, with no gradient signal when triangles don't cover a pixel. This blocks end-to-end learning of rendering parameters.
+
+Neural rendering sidesteps this via fully differentiable representations (NeRF, 3D Gaussians), but sacrifices rasterization's maturity: shadow maps, deferred shading, MSAA—decades of rendering research become unavailable.
+
+We make rasterization differentiable by:
+1. Soft coverage: Sigmoid falloff at triangle edges
+2. Soft depth: Differentiable depth test via softmax
+3. Gradient aggregation: Multi-sample estimation of derivatives
+
+The result: existing mesh-based assets, shaders, and rendering techniques become learnable. Neural networks can be trained to output mesh deformations, material parameters, or lighting—with gradients flowing back through the full rendering pipeline.
+
+2. Soft Rasterization
+
+2.1 Coverage Function
+
+Hard rasterization: pixel p is covered by triangle T if p lies inside all three edges.
+
+Soft rasterization: coverage is product of sigmoid distances to edges:
+
+float SoftCoverage(float2 p, Triangle T, float sigma) {
+    float d0 = SignedEdgeDistance(p, T.v0, T.v1);
+    float d1 = SignedEdgeDistance(p, T.v1, T.v2);
+    float d2 = SignedEdgeDistance(p, T.v2, T.v0);
+    
+    float c0 = sigmoid(d0 / sigma);
+    float c1 = sigmoid(d1 / sigma);
+    float c2 = sigmoid(d2 / sigma);
+    
+    return c0 * c1 * c2;
+}
+
+Sigma controls softness: small σ approaches hard rasterization; large σ spreads coverage beyond triangle boundary.
+
+2.2 Gradient Flow
+
+The sigmoid function provides smooth gradients:
+
+d/dx sigmoid(x) = sigmoid(x) * (1 - sigmoid(x))
+
+Gradients with respect to vertex positions:
+
+∂Coverage/∂v = Σᵢ (∂Coverage/∂cᵢ) × (∂cᵢ/∂dᵢ) × (∂dᵢ/∂v)
+
+This enables learning vertex positions from rendering loss.
+
+2.3 Implementation
+
+// Forward pass
+float coverage = SoftCoverage(pixel, triangle, sigma);
+float3 color = InterpolateBarycentrics(pixel, triangle, vertexColors);
+output = color * coverage + background * (1 - coverage);
+
+// Backward pass (automatic via autodiff)
+loss.backward();
+// Gradients available: d_loss/d_vertexPositions, d_loss/d_vertexColors
+
+3. Differentiable Depth Test
+
+3.1 The Problem
+
+Depth test is discontinuous: front triangle completely occludes back triangle at depth boundary. No gradient flows to occluded geometry.
+
+3.2 Soft Depth Aggregation
+
+Replace hard depth test with softmax over depth:
+
+float4 SoftDepthBlend(Fragment frags[], uint count, float temperature) {
+    float weights[MAX_FRAGS];
+    float sumWeights = 0;
+    
+    for (uint i = 0; i < count; i++) {
+        weights[i] = exp(-frags[i].depth / temperature);
+        sumWeights += weights[i];
+    }
+    
+    float4 result = 0;
+    for (uint i = 0; i < count; i++) {
+        result += frags[i].color * weights[i] / sumWeights;
+    }
+    
+    return result;
+}
+
+Temperature controls transition sharpness: low temperature approaches hard depth test.
+
+3.3 Per-Pixel Fragment Collection
+
+Collect all fragments at each pixel via:
+- A-buffer (linked lists)
+- K-buffer (fixed array, keep closest K)
+- Stochastic depth (probabilistic selection)
+
+K-buffer with K=8 provides good quality/performance tradeoff.
+
+4. Hybrid Pipeline Architecture
+
+4.1 Forward Pass
+
+class DifferentiableRenderer:
+    def forward(self, vertices, faces, vertex_attrs, camera):
+        # Project vertices (differentiable)
+        clip_verts = self.projection(vertices, camera)
+        
+        # Soft rasterize (differentiable)
+        coverage = self.soft_rasterize(clip_verts, faces)
+        
+        # Interpolate attributes (differentiable)
+        attrs = self.interpolate(vertex_attrs, faces, coverage)
+        
+        # Shade (differentiable neural shader)
+        colors = self.neural_shader(attrs)
+        
+        # Soft depth composite (differentiable)
+        image = self.soft_composite(colors, depths, coverage)
+        
+        return image
+
+4.2 Training Loop
+
+for batch in dataloader:
+    images = batch['images']
+    cameras = batch['cameras']
+    
+    # Learnable parameters
+    deformations = deformation_network(latent_code)
+    vertices = base_mesh.vertices + deformations
+    materials = material_network(vertex_uvs)
+    
+    # Differentiable render
+    rendered = renderer(vertices, faces, materials, cameras)
+    
+    # Loss and backprop
+    loss = mse_loss(rendered, images)
+    loss.backward()  # Gradients flow to deformation_network, material_network
+    optimizer.step()
+
+4.3 Inference Optimization
+
+Training uses soft rasterization for gradients; inference uses hardware rasterization for speed:
+
+if training:
+    output = soft_rasterize(...)  # CUDA, differentiable
+else:
+    output = hardware_rasterize(...)  # DirectX/Vulkan, fast
+
+5. Results
+
+5.1 Inverse Rendering Quality
+
+Reconstruct mesh + materials from images:
+
+Task                    | PSNR  | Chamfer (mm)
+------------------------|-------|-------------
+Mesh reconstruction     | 34.2  | 1.2
+Material estimation     | 31.8  | N/A
+Joint optimization      | 36.1  | 0.8
+
+5.2 Training Performance
+
+Batch size 16, 512×512 images:
+
+Stage                   | Time (ms)
+------------------------|----------
+Soft rasterization      | 12.4
+Shading                 | 3.2
+Depth compositing       | 2.1
+Backward pass           | 18.7
+Total                   | 36.4
+
+~27 training iterations/second on RTX 4090.
+
+5.3 Inference Performance
+
+Hardware rasterization at 1080p: 0.8ms/frame
+Enables real-time deployment of trained models.
+
+6. Conclusion
+
+Differentiable rasterization bridges the gap between neural and traditional rendering. By making coverage and depth decisions continuous, gradients flow through the entire rendering pipeline—enabling learning of geometry, materials, and lighting from images.
+
+The technique is compatible with existing rendering infrastructure: meshes, textures, shaders all remain usable. Only the rasterization stage is modified during training; inference uses standard hardware rasterization.
+
+Applications include:
+- Inverse rendering (reconstruct scenes from photos)
+- Neural relighting (learn to relight from examples)
+- Learned deformation (train mesh deformation from video)
+- Material transfer (learn materials from references)
+
+Differentiable rendering is becoming essential infrastructure for blending learning with graphics.
+
+References
+
+[1] Liu, S., et al. "Soft Rasterizer: A Differentiable Renderer for Image-based 3D Reasoning." ICCV 2019.
+[2] Laine, S., et al. "Modular Primitives for High-Performance Differentiable Rendering." TOG 2020.
+[3] Ravi, N., et al. "Accelerating 3D Deep Learning with PyTorch3D." SIGGRAPH Asia 2020.
+[4] Li, T., et al. "Differentiable Monte Carlo Ray Tracing through Edge Sampling." TOG 2018.
+[5] Kato, H., et al. "Neural 3D Mesh Renderer." CVPR 2018.

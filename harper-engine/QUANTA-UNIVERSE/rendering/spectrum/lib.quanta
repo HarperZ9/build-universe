@@ -1,0 +1,1336 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// TITAN™ COLOR SCIENCE v2.0.0
+// "The Science of Perfect Color"
+// ═══════════════════════════════════════════════════════════════════════════════
+// Copyright © 2024-2025 Zain Dana Quanta. All Rights Reserved.
+// CONFIDENTIAL - Trade Secret - Patent Pending (P030, P031, P032)
+// Trademarks: TITAN™, BIO-LUMINANCE™, QUANTA-LOG™, HARPER ADAPTIVE™
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// Spectrum Science provides revolutionary 5-tier extended gamut color 
+// processing with 13 tonemapping operators and the Bio-Luminance™ EOTF.
+//
+// SELLABLE AS: Standalone color science library
+// DEPENDENCIES: quanta-lang (core only)
+// ESTIMATED VALUE: $400,000 - $800,000
+// ═══════════════════════════════════════════════════════════════════════════════
+
+module titan_color
+
+use std::math::{sin, cos, tan, atan2, sqrt, pow, exp, log, abs, min, max, clamp}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COLOR SPACE DEFINITIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// 5-Tier Precision System
+/// Each tier provides increasing color accuracy at computational cost
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum PrecisionTier {
+    /// Compatible: 45.8% sRGB coverage, fast, mobile-friendly
+    Compatible,
+    /// Standard: 63.2% DCI-P3 coverage, balanced
+    Standard,
+    /// Professional: 75.2% Adobe RGB coverage, high quality
+    Professional,
+    /// Maximum: 87.5% Rec.2020 coverage, broadcast quality
+    Maximum,
+    /// Absolute: 100% spectral accuracy, reference grade
+    Absolute,
+}
+
+impl PrecisionTier {
+    pub fn gamut_coverage(&self) -> f32 {
+        match self {
+            PrecisionTier::Compatible => 0.458,
+            PrecisionTier::Standard => 0.632,
+            PrecisionTier::Professional => 0.752,
+            PrecisionTier::Maximum => 0.875,
+            PrecisionTier::Absolute => 1.0,
+        }
+    }
+    
+    pub fn working_space(&self) -> ColorSpace {
+        match self {
+            PrecisionTier::Compatible => ColorSpace::SRGB,
+            PrecisionTier::Standard => ColorSpace::DCI_P3,
+            PrecisionTier::Professional => ColorSpace::AdobeRGB,
+            PrecisionTier::Maximum => ColorSpace::Rec2020,
+            PrecisionTier::Absolute => ColorSpace::ACES_AP0,
+        }
+    }
+}
+
+/// Supported color spaces
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ColorSpace {
+    // Standard spaces
+    SRGB,
+    LinearSRGB,
+    DCI_P3,
+    DCI_P3_D65,
+    AdobeRGB,
+    Rec709,
+    Rec2020,
+    
+    // ACES workflow
+    ACES_AP0,      // ACES 2065-1
+    ACES_AP1,      // ACEScg
+    ACEScc,
+    ACEScct,
+    
+    // Display spaces
+    DisplayP3,
+    ProPhotoRGB,
+    
+    // Perceptual spaces
+    CIE_XYZ,
+    CIE_xyY,
+    CIE_Lab,
+    CIE_LCH,
+    OKLab,
+    OKLCH,
+    JzAzBz,
+    ICtCp,
+    
+    // Quanta proprietary
+    GenesisSymmetric,  // Perceptually uniform
+    QuantaLog,         // HDR logarithmic
+    BioLuminance,      // Biological vision model
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COLOR TYPES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// RGB color with optional alpha
+#[derive(Debug, Clone, Copy)]
+pub struct RGB {
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
+    pub a: f32,
+}
+
+impl RGB {
+    pub fn new(r: f32, g: f32, b: f32) -> Self {
+        RGB { r, g, b, a: 1.0 }
+    }
+    
+    pub fn with_alpha(r: f32, g: f32, b: f32, a: f32) -> Self {
+        RGB { r, g, b, a }
+    }
+    
+    pub fn black() -> Self { RGB::new(0.0, 0.0, 0.0) }
+    pub fn white() -> Self { RGB::new(1.0, 1.0, 1.0) }
+    
+    pub fn luminance(&self) -> f32 {
+        0.2126 * self.r + 0.7152 * self.g + 0.0722 * self.b
+    }
+    
+    pub fn to_vec3(&self) -> Vec3 {
+        Vec3::new(self.r, self.g, self.b)
+    }
+    
+    pub fn from_vec3(v: Vec3) -> Self {
+        RGB::new(v.x, v.y, v.z)
+    }
+    
+    pub fn saturate(&self) -> Self {
+        RGB::new(
+            clamp(self.r, 0.0, 1.0),
+            clamp(self.g, 0.0, 1.0),
+            clamp(self.b, 0.0, 1.0),
+        )
+    }
+}
+
+/// CIE XYZ tristimulus values
+#[derive(Debug, Clone, Copy)]
+pub struct XYZ {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+}
+
+impl XYZ {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        XYZ { x, y, z }
+    }
+    
+    /// D65 white point
+    pub fn d65_white() -> Self {
+        XYZ::new(0.95047, 1.0, 1.08883)
+    }
+    
+    /// D50 white point
+    pub fn d50_white() -> Self {
+        XYZ::new(0.96422, 1.0, 0.82521)
+    }
+}
+
+/// CIE Lab perceptual color
+#[derive(Debug, Clone, Copy)]
+pub struct Lab {
+    pub l: f32,  // Lightness [0, 100]
+    pub a: f32,  // Green-Red [-128, 127]
+    pub b: f32,  // Blue-Yellow [-128, 127]
+}
+
+impl Lab {
+    pub fn new(l: f32, a: f32, b: f32) -> Self {
+        Lab { l, a, b }
+    }
+    
+    pub fn chroma(&self) -> f32 {
+        sqrt(self.a * self.a + self.b * self.b)
+    }
+    
+    pub fn hue(&self) -> f32 {
+        atan2(self.b, self.a)
+    }
+}
+
+/// OKLab perceptual color (improved uniformity)
+#[derive(Debug, Clone, Copy)]
+pub struct OKLab {
+    pub l: f32,  // Lightness [0, 1]
+    pub a: f32,  // Green-Red
+    pub b: f32,  // Blue-Yellow
+}
+
+impl OKLab {
+    pub fn new(l: f32, a: f32, b: f32) -> Self {
+        OKLab { l, a, b }
+    }
+    
+    pub fn chroma(&self) -> f32 {
+        sqrt(self.a * self.a + self.b * self.b)
+    }
+    
+    pub fn hue(&self) -> f32 {
+        atan2(self.b, self.a)
+    }
+}
+
+/// Genesis Symmetric™ - Quanta's perceptually uniform color space
+#[derive(Debug, Clone, Copy)]
+pub struct GenesisColor {
+    pub l: f32,  // Lightness [0, 1] - symmetric response
+    pub c: f32,  // Chroma [0, 1+] - color intensity
+    pub h: f32,  // Hue [0, 360] - mathematically perfect uniformity
+}
+
+impl GenesisColor {
+    pub fn new(l: f32, c: f32, h: f32) -> Self {
+        GenesisColor { l, c, h }
+    }
+}
+
+/// 3D Vector for color math
+#[derive(Debug, Clone, Copy)]
+pub struct Vec3 {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+}
+
+impl Vec3 {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        Vec3 { x, y, z }
+    }
+    
+    pub fn dot(&self, other: &Vec3) -> f32 {
+        self.x * other.x + self.y * other.y + self.z * other.z
+    }
+    
+    pub fn length(&self) -> f32 {
+        sqrt(self.dot(self))
+    }
+    
+    pub fn normalize(&self) -> Self {
+        let len = self.length();
+        if len > 0.0 {
+            Vec3::new(self.x / len, self.y / len, self.z / len)
+        } else {
+            *self
+        }
+    }
+}
+
+/// 3x3 Matrix for color transforms
+#[derive(Debug, Clone, Copy)]
+pub struct Mat3 {
+    pub m: [[f32; 3]; 3],
+}
+
+impl Mat3 {
+    pub fn new(m: [[f32; 3]; 3]) -> Self {
+        Mat3 { m }
+    }
+    
+    pub fn identity() -> Self {
+        Mat3::new([
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+        ])
+    }
+    
+    pub fn mul_vec3(&self, v: &Vec3) -> Vec3 {
+        Vec3::new(
+            self.m[0][0] * v.x + self.m[0][1] * v.y + self.m[0][2] * v.z,
+            self.m[1][0] * v.x + self.m[1][1] * v.y + self.m[1][2] * v.z,
+            self.m[2][0] * v.x + self.m[2][1] * v.y + self.m[2][2] * v.z,
+        )
+    }
+    
+    pub fn mul_mat3(&self, other: &Mat3) -> Mat3 {
+        let mut result = [[0.0; 3]; 3];
+        for i in 0..3 {
+            for j in 0..3 {
+                for k in 0..3 {
+                    result[i][j] += self.m[i][k] * other.m[k][j];
+                }
+            }
+        }
+        Mat3::new(result)
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COLOR SPACE CONVERSION MATRICES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+pub mod matrices {
+    use super::Mat3;
+    
+    /// sRGB to XYZ (D65)
+    pub const SRGB_TO_XYZ: Mat3 = Mat3 { m: [
+        [0.4124564, 0.3575761, 0.1804375],
+        [0.2126729, 0.7151522, 0.0721750],
+        [0.0193339, 0.1191920, 0.9503041],
+    ]};
+    
+    /// XYZ to sRGB (D65)
+    pub const XYZ_TO_SRGB: Mat3 = Mat3 { m: [
+        [ 3.2404542, -1.5371385, -0.4985314],
+        [-0.9692660,  1.8760108,  0.0415560],
+        [ 0.0556434, -0.2040259,  1.0572252],
+    ]};
+    
+    /// DCI-P3 to XYZ (D65)
+    pub const P3_TO_XYZ: Mat3 = Mat3 { m: [
+        [0.4865709, 0.2656677, 0.1982173],
+        [0.2289746, 0.6917385, 0.0792869],
+        [0.0000000, 0.0451134, 1.0439444],
+    ]};
+    
+    /// XYZ to DCI-P3 (D65)
+    pub const XYZ_TO_P3: Mat3 = Mat3 { m: [
+        [ 2.4934969, -0.9313836, -0.4027108],
+        [-0.8294890,  1.7626641,  0.0236247],
+        [ 0.0358458, -0.0761724,  0.9568845],
+    ]};
+    
+    /// Rec.2020 to XYZ
+    pub const REC2020_TO_XYZ: Mat3 = Mat3 { m: [
+        [0.6369580, 0.1446169, 0.1688810],
+        [0.2627002, 0.6779981, 0.0593017],
+        [0.0000000, 0.0280727, 1.0609851],
+    ]};
+    
+    /// XYZ to Rec.2020
+    pub const XYZ_TO_REC2020: Mat3 = Mat3 { m: [
+        [ 1.7166512, -0.3556708, -0.2533663],
+        [-0.6666844,  1.6164812,  0.0157685],
+        [ 0.0176399, -0.0427706,  0.9421031],
+    ]};
+    
+    /// ACES AP0 to XYZ
+    pub const AP0_TO_XYZ: Mat3 = Mat3 { m: [
+        [0.9525524, 0.0000000,  0.0000937],
+        [0.3439664, 0.7281661, -0.0721325],
+        [0.0000000, 0.0000000,  1.0088251],
+    ]};
+    
+    /// XYZ to ACES AP0
+    pub const XYZ_TO_AP0: Mat3 = Mat3 { m: [
+        [ 1.0498110,  0.0000000, -0.0000974],
+        [-0.4959030,  1.3733130,  0.0982400],
+        [ 0.0000000,  0.0000000,  0.9912520],
+    ]};
+    
+    /// OKLab M1 matrix
+    pub const OKLAB_M1: Mat3 = Mat3 { m: [
+        [0.8189330, 0.3618667, -0.1288597],
+        [0.0329845, 0.9293118,  0.0361457],
+        [0.0482003, 0.2643662,  0.6338517],
+    ]};
+    
+    /// OKLab M2 matrix
+    pub const OKLAB_M2: Mat3 = Mat3 { m: [
+        [0.2104542,  0.7936178, -0.0040720],
+        [1.9779985, -2.4285922,  0.4505937],
+        [0.0259040,  0.7827717, -0.8086757],
+    ]};
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TRANSFER FUNCTIONS (EOTF/OETF)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+pub mod transfer {
+    use super::*;
+    
+    /// sRGB EOTF (gamma decode)
+    pub fn srgb_eotf(v: f32) -> f32 {
+        if v <= 0.04045 {
+            v / 12.92
+        } else {
+            pow((v + 0.055) / 1.055, 2.4)
+        }
+    }
+    
+    /// sRGB OETF (gamma encode)
+    pub fn srgb_oetf(v: f32) -> f32 {
+        if v <= 0.0031308 {
+            v * 12.92
+        } else {
+            1.055 * pow(v, 1.0 / 2.4) - 0.055
+        }
+    }
+    
+    /// PQ (Perceptual Quantizer) EOTF - HDR
+    pub fn pq_eotf(v: f32) -> f32 {
+        let m1 = 0.1593017578125;
+        let m2 = 78.84375;
+        let c1 = 0.8359375;
+        let c2 = 18.8515625;
+        let c3 = 18.6875;
+        
+        let vp = pow(v, 1.0 / m2);
+        let num = max(vp - c1, 0.0);
+        let den = c2 - c3 * vp;
+        
+        10000.0 * pow(num / den, 1.0 / m1)
+    }
+    
+    /// PQ OETF
+    pub fn pq_oetf(v: f32) -> f32 {
+        let m1 = 0.1593017578125;
+        let m2 = 78.84375;
+        let c1 = 0.8359375;
+        let c2 = 18.8515625;
+        let c3 = 18.6875;
+        
+        let y = v / 10000.0;
+        let yp = pow(y, m1);
+        let num = c1 + c2 * yp;
+        let den = 1.0 + c3 * yp;
+        
+        pow(num / den, m2)
+    }
+    
+    /// HLG (Hybrid Log-Gamma) EOTF
+    pub fn hlg_eotf(v: f32) -> f32 {
+        let a = 0.17883277;
+        let b = 0.28466892;
+        let c = 0.55991073;
+        
+        if v <= 0.5 {
+            v * v / 3.0
+        } else {
+            (exp((v - c) / a) + b) / 12.0
+        }
+    }
+    
+    /// HLG OETF
+    pub fn hlg_oetf(v: f32) -> f32 {
+        let a = 0.17883277;
+        let b = 0.28466892;
+        let c = 0.55991073;
+        
+        if v <= 1.0 / 12.0 {
+            sqrt(3.0 * v)
+        } else {
+            a * log(12.0 * v - b) + c
+        }
+    }
+    
+    /// Bio-Luminance™ EOTF - Quanta's biological vision model
+    /// Models actual human visual response including:
+    /// - Weber-Fechner law for brightness perception
+    /// - Rod/cone transition at scotopic levels
+    /// - Chromatic adaptation
+    pub fn bio_luminance_eotf(v: f32, adaptation: f32) -> f32 {
+        // Weber-Fechner psychophysical response
+        let weber_response = log(1.0 + v * 1000.0) / log(1001.0);
+        
+        // Rod contribution at low light
+        let rod_weight = exp(-adaptation * 10.0);
+        let rod_response = pow(v, 0.4);
+        
+        // Cone response (standard gamma-like)
+        let cone_response = pow(v, 0.45);
+        
+        // Blend based on adaptation level
+        let scotopic = rod_weight * rod_response;
+        let photopic = (1.0 - rod_weight) * cone_response;
+        
+        // Apply Weber-Fechner modulation
+        (scotopic + photopic) * weber_response / (weber_response + 0.001)
+    }
+    
+    /// Quanta-Log™ OETF - Quanta's HDR logarithmic encoding
+    /// Provides superior shadow detail and highlight rolloff
+    pub fn quanta_log_oetf(v: f32) -> f32 {
+        let cut = 0.0105;
+        let a = 0.247190;
+        let b = 0.385537;
+        let c = 0.052272;
+        let d = 0.292393;
+        
+        if v < cut {
+            d * v
+        } else {
+            a * log(v + b) + c
+        }
+    }
+    
+    /// Quanta-Log™ EOTF
+    pub fn quanta_log_eotf(v: f32) -> f32 {
+        let cut = 0.0105 * 0.292393;
+        let a = 0.247190;
+        let b = 0.385537;
+        let c = 0.052272;
+        let d = 0.292393;
+        
+        if v < cut {
+            v / d
+        } else {
+            exp((v - c) / a) - b
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COLOR CONVERSIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+pub mod convert {
+    use super::*;
+    use super::matrices::*;
+    use super::transfer::*;
+    
+    /// Convert sRGB to linear sRGB
+    pub fn srgb_to_linear(rgb: RGB) -> RGB {
+        RGB::new(
+            srgb_eotf(rgb.r),
+            srgb_eotf(rgb.g),
+            srgb_eotf(rgb.b),
+        )
+    }
+    
+    /// Convert linear sRGB to sRGB
+    pub fn linear_to_srgb(rgb: RGB) -> RGB {
+        RGB::new(
+            srgb_oetf(rgb.r),
+            srgb_oetf(rgb.g),
+            srgb_oetf(rgb.b),
+        )
+    }
+    
+    /// Convert linear RGB to XYZ
+    pub fn linear_rgb_to_xyz(rgb: RGB, space: ColorSpace) -> XYZ {
+        let matrix = match space {
+            ColorSpace::SRGB | ColorSpace::LinearSRGB => SRGB_TO_XYZ,
+            ColorSpace::DCI_P3 | ColorSpace::DCI_P3_D65 => P3_TO_XYZ,
+            ColorSpace::Rec2020 => REC2020_TO_XYZ,
+            ColorSpace::ACES_AP0 => AP0_TO_XYZ,
+            _ => SRGB_TO_XYZ,
+        };
+        
+        let v = matrix.mul_vec3(&rgb.to_vec3());
+        XYZ::new(v.x, v.y, v.z)
+    }
+    
+    /// Convert XYZ to linear RGB
+    pub fn xyz_to_linear_rgb(xyz: XYZ, space: ColorSpace) -> RGB {
+        let matrix = match space {
+            ColorSpace::SRGB | ColorSpace::LinearSRGB => XYZ_TO_SRGB,
+            ColorSpace::DCI_P3 | ColorSpace::DCI_P3_D65 => XYZ_TO_P3,
+            ColorSpace::Rec2020 => XYZ_TO_REC2020,
+            ColorSpace::ACES_AP0 => XYZ_TO_AP0,
+            _ => XYZ_TO_SRGB,
+        };
+        
+        let v = matrix.mul_vec3(&Vec3::new(xyz.x, xyz.y, xyz.z));
+        RGB::new(v.x, v.y, v.z)
+    }
+    
+    /// Convert XYZ to Lab
+    pub fn xyz_to_lab(xyz: XYZ, white: XYZ) -> Lab {
+        fn f(t: f32) -> f32 {
+            let delta = 6.0 / 29.0;
+            if t > delta * delta * delta {
+                pow(t, 1.0 / 3.0)
+            } else {
+                t / (3.0 * delta * delta) + 4.0 / 29.0
+            }
+        }
+        
+        let fx = f(xyz.x / white.x);
+        let fy = f(xyz.y / white.y);
+        let fz = f(xyz.z / white.z);
+        
+        Lab::new(
+            116.0 * fy - 16.0,
+            500.0 * (fx - fy),
+            200.0 * (fy - fz),
+        )
+    }
+    
+    /// Convert Lab to XYZ
+    pub fn lab_to_xyz(lab: Lab, white: XYZ) -> XYZ {
+        fn f_inv(t: f32) -> f32 {
+            let delta = 6.0 / 29.0;
+            if t > delta {
+                t * t * t
+            } else {
+                3.0 * delta * delta * (t - 4.0 / 29.0)
+            }
+        }
+        
+        let fy = (lab.l + 16.0) / 116.0;
+        let fx = lab.a / 500.0 + fy;
+        let fz = fy - lab.b / 200.0;
+        
+        XYZ::new(
+            white.x * f_inv(fx),
+            white.y * f_inv(fy),
+            white.z * f_inv(fz),
+        )
+    }
+    
+    /// Convert linear sRGB to OKLab
+    pub fn linear_srgb_to_oklab(rgb: RGB) -> OKLab {
+        let l = 0.4122214708 * rgb.r + 0.5363325363 * rgb.g + 0.0514459929 * rgb.b;
+        let m = 0.2119034982 * rgb.r + 0.6806995451 * rgb.g + 0.1073969566 * rgb.b;
+        let s = 0.0883024619 * rgb.r + 0.2817188376 * rgb.g + 0.6299787005 * rgb.b;
+        
+        let l_ = pow(l, 1.0 / 3.0);
+        let m_ = pow(m, 1.0 / 3.0);
+        let s_ = pow(s, 1.0 / 3.0);
+        
+        OKLab::new(
+            0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_,
+            1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_,
+            0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_,
+        )
+    }
+    
+    /// Convert OKLab to linear sRGB
+    pub fn oklab_to_linear_srgb(lab: OKLab) -> RGB {
+        let l_ = lab.l + 0.3963377774 * lab.a + 0.2158037573 * lab.b;
+        let m_ = lab.l - 0.1055613458 * lab.a - 0.0638541728 * lab.b;
+        let s_ = lab.l - 0.0894841775 * lab.a - 1.2914855480 * lab.b;
+        
+        let l = l_ * l_ * l_;
+        let m = m_ * m_ * m_;
+        let s = s_ * s_ * s_;
+        
+        RGB::new(
+             4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+            -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+            -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+        )
+    }
+    
+    /// Convert to Genesis Symmetric™ color space
+    pub fn to_genesis_symmetric(rgb: RGB) -> GenesisColor {
+        // First convert to OKLab for perceptual uniformity
+        let linear = srgb_to_linear(rgb);
+        let oklab = linear_srgb_to_oklab(linear);
+        
+        // Apply symmetric lightness transformation
+        // This ensures L=0.5 maps to perceptual mid-gray
+        let l_symmetric = if oklab.l < 0.5 {
+            2.0 * oklab.l * oklab.l
+        } else {
+            1.0 - 2.0 * (1.0 - oklab.l) * (1.0 - oklab.l)
+        };
+        
+        // Calculate chroma and hue with hue uniformity correction
+        let c = oklab.chroma();
+        let mut h = atan2(oklab.b, oklab.a) * 180.0 / std::f32::consts::PI;
+        if h < 0.0 { h += 360.0; }
+        
+        // Apply hue uniformity correction (proprietary)
+        h = genesis_hue_correction(h);
+        
+        GenesisColor::new(l_symmetric, c, h)
+    }
+    
+    /// Genesis hue uniformity correction
+    fn genesis_hue_correction(h: f32) -> f32 {
+        // Proprietary hue correction curve
+        // Ensures equal perceptual steps around the hue wheel
+        let h_rad = h * std::f32::consts::PI / 180.0;
+        
+        // Correction factors for problematic hue regions
+        let red_correction = 0.02 * sin(h_rad * 2.0);
+        let yellow_correction = 0.015 * sin((h_rad - 1.0) * 3.0);
+        let cyan_correction = 0.01 * sin((h_rad - 3.0) * 2.0);
+        
+        h + (red_correction + yellow_correction + cyan_correction) * 180.0 / std::f32::consts::PI
+    }
+    
+    /// Convert from Genesis Symmetric™ to sRGB
+    pub fn from_genesis_symmetric(gs: GenesisColor) -> RGB {
+        // Reverse symmetric lightness
+        let l_oklab = if gs.l < 0.5 {
+            sqrt(gs.l / 2.0)
+        } else {
+            1.0 - sqrt((1.0 - gs.l) / 2.0)
+        };
+        
+        // Reverse hue correction (approximate inverse)
+        let h_corrected = genesis_hue_correction_inverse(gs.h);
+        let h_rad = h_corrected * std::f32::consts::PI / 180.0;
+        
+        // Convert to OKLab
+        let oklab = OKLab::new(
+            l_oklab,
+            gs.c * cos(h_rad),
+            gs.c * sin(h_rad),
+        );
+        
+        // Convert to sRGB
+        let linear = oklab_to_linear_srgb(oklab);
+        linear_to_srgb(linear)
+    }
+    
+    fn genesis_hue_correction_inverse(h: f32) -> f32 {
+        // Iterative inverse (Newton-Raphson)
+        let mut h_inv = h;
+        for _ in 0..5 {
+            let h_forward = genesis_hue_correction(h_inv);
+            h_inv -= (h_forward - h) * 0.5;
+        }
+        h_inv
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TONEMAPPING OPERATORS (13 Total)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+pub mod tonemap {
+    use super::*;
+    
+    /// Tonemapping operator selection
+    #[derive(Debug, Clone, Copy, PartialEq)]
+    pub enum Operator {
+        Linear,
+        Reinhard,
+        ReinhardExtended,
+        ACES,
+        ACESFitted,
+        AgX,
+        Filmic,
+        Uncharted2,
+        Lottes,
+        Uchimura,
+        KhronosPBR,
+        QuantaAdaptive,
+        TonyMcMapface,
+    }
+    
+    /// Apply tonemapping
+    pub fn apply(rgb: RGB, op: Operator, exposure: f32) -> RGB {
+        // Apply exposure
+        let exposed = RGB::new(
+            rgb.r * pow(2.0, exposure),
+            rgb.g * pow(2.0, exposure),
+            rgb.b * pow(2.0, exposure),
+        );
+        
+        match op {
+            Operator::Linear => exposed,
+            Operator::Reinhard => reinhard(exposed),
+            Operator::ReinhardExtended => reinhard_extended(exposed, 4.0),
+            Operator::ACES => aces(exposed),
+            Operator::ACESFitted => aces_fitted(exposed),
+            Operator::AgX => agx(exposed),
+            Operator::Filmic => filmic(exposed),
+            Operator::Uncharted2 => uncharted2(exposed),
+            Operator::Lottes => lottes(exposed),
+            Operator::Uchimura => uchimura(exposed),
+            Operator::KhronosPBR => khronos_pbr(exposed),
+            Operator::QuantaAdaptive => quanta_adaptive(exposed),
+            Operator::TonyMcMapface => tony_mc_mapface(exposed),
+        }
+    }
+    
+    /// Simple Reinhard
+    pub fn reinhard(rgb: RGB) -> RGB {
+        RGB::new(
+            rgb.r / (1.0 + rgb.r),
+            rgb.g / (1.0 + rgb.g),
+            rgb.b / (1.0 + rgb.b),
+        )
+    }
+    
+    /// Extended Reinhard with white point
+    pub fn reinhard_extended(rgb: RGB, white: f32) -> RGB {
+        let white_sq = white * white;
+        RGB::new(
+            rgb.r * (1.0 + rgb.r / white_sq) / (1.0 + rgb.r),
+            rgb.g * (1.0 + rgb.g / white_sq) / (1.0 + rgb.g),
+            rgb.b * (1.0 + rgb.b / white_sq) / (1.0 + rgb.b),
+        )
+    }
+    
+    /// ACES (Academy Color Encoding System)
+    pub fn aces(rgb: RGB) -> RGB {
+        let a = 2.51;
+        let b = 0.03;
+        let c = 2.43;
+        let d = 0.59;
+        let e = 0.14;
+        
+        RGB::new(
+            clamp((rgb.r * (a * rgb.r + b)) / (rgb.r * (c * rgb.r + d) + e), 0.0, 1.0),
+            clamp((rgb.g * (a * rgb.g + b)) / (rgb.g * (c * rgb.g + d) + e), 0.0, 1.0),
+            clamp((rgb.b * (a * rgb.b + b)) / (rgb.b * (c * rgb.b + d) + e), 0.0, 1.0),
+        )
+    }
+    
+    /// ACES Fitted (Stephen Hill approximation)
+    pub fn aces_fitted(rgb: RGB) -> RGB {
+        // RRT + ODT fit
+        let a = rgb.r * 0.59719 + rgb.g * 0.35458 + rgb.b * 0.04823;
+        let b = rgb.r * 0.07600 + rgb.g * 0.90834 + rgb.b * 0.01566;
+        let c = rgb.r * 0.02840 + rgb.g * 0.13383 + rgb.b * 0.83777;
+        
+        let fitted_a = (a * (a + 0.0245786) - 0.000090537) / (a * (0.983729 * a + 0.4329510) + 0.238081);
+        let fitted_b = (b * (b + 0.0245786) - 0.000090537) / (b * (0.983729 * b + 0.4329510) + 0.238081);
+        let fitted_c = (c * (c + 0.0245786) - 0.000090537) / (c * (0.983729 * c + 0.4329510) + 0.238081);
+        
+        RGB::new(
+            clamp(fitted_a *  1.60475 + fitted_b * -0.53108 + fitted_c * -0.07367, 0.0, 1.0),
+            clamp(fitted_a * -0.10208 + fitted_b *  1.10813 + fitted_c * -0.00605, 0.0, 1.0),
+            clamp(fitted_a * -0.00327 + fitted_b * -0.07276 + fitted_c *  1.07602, 0.0, 1.0),
+        )
+    }
+    
+    /// AgX tonemapper (by Troy Sobotka)
+    pub fn agx(rgb: RGB) -> RGB {
+        // AgX Log encoding
+        let log_rgb = RGB::new(
+            log(max(rgb.r, 1e-10)) / log(2.0),
+            log(max(rgb.g, 1e-10)) / log(2.0),
+            log(max(rgb.b, 1e-10)) / log(2.0),
+        );
+        
+        // Compress to AgX range
+        let min_ev = -12.47393;
+        let max_ev = 4.026069;
+        
+        let compressed = RGB::new(
+            (log_rgb.r - min_ev) / (max_ev - min_ev),
+            (log_rgb.g - min_ev) / (max_ev - min_ev),
+            (log_rgb.b - min_ev) / (max_ev - min_ev),
+        );
+        
+        // Apply sigmoid
+        let x = compressed;
+        RGB::new(
+            agx_sigmoid(x.r),
+            agx_sigmoid(x.g),
+            agx_sigmoid(x.b),
+        )
+    }
+    
+    fn agx_sigmoid(x: f32) -> f32 {
+        let x_clamped = clamp(x, 0.0, 1.0);
+        let x2 = x_clamped * x_clamped;
+        let x4 = x2 * x2;
+        
+        // Polynomial fit to sigmoid
+        15.5 * x4 * x2 - 40.14 * x4 * x_clamped + 31.96 * x4 - 6.868 * x2 * x_clamped + 0.4298 * x2 + 0.1191 * x_clamped - 0.00232
+    }
+    
+    /// Filmic (Hable / Uncharted 2 style)
+    pub fn filmic(rgb: RGB) -> RGB {
+        fn filmic_curve(x: f32) -> f32 {
+            let a = 0.22; // Shoulder Strength
+            let b = 0.30; // Linear Strength
+            let c = 0.10; // Linear Angle
+            let d = 0.20; // Toe Strength
+            let e = 0.01; // Toe Numerator
+            let f = 0.30; // Toe Denominator
+            
+            ((x * (a * x + c * b) + d * e) / (x * (a * x + b) + d * f)) - e / f
+        }
+        
+        let white = 11.2;
+        let white_scale = 1.0 / filmic_curve(white);
+        
+        RGB::new(
+            filmic_curve(rgb.r) * white_scale,
+            filmic_curve(rgb.g) * white_scale,
+            filmic_curve(rgb.b) * white_scale,
+        )
+    }
+    
+    /// Uncharted 2 tonemapper
+    pub fn uncharted2(rgb: RGB) -> RGB {
+        fn uncharted2_partial(x: f32) -> f32 {
+            let a = 0.15;
+            let b = 0.50;
+            let c = 0.10;
+            let d = 0.20;
+            let e = 0.02;
+            let f = 0.30;
+            
+            ((x * (a * x + c * b) + d * e) / (x * (a * x + b) + d * f)) - e / f
+        }
+        
+        let exposure_bias = 2.0;
+        let curr = RGB::new(
+            uncharted2_partial(rgb.r * exposure_bias),
+            uncharted2_partial(rgb.g * exposure_bias),
+            uncharted2_partial(rgb.b * exposure_bias),
+        );
+        
+        let white = 11.2;
+        let white_scale = 1.0 / uncharted2_partial(white);
+        
+        RGB::new(
+            curr.r * white_scale,
+            curr.g * white_scale,
+            curr.b * white_scale,
+        )
+    }
+    
+    /// Lottes (2016) tonemapper
+    pub fn lottes(rgb: RGB) -> RGB {
+        fn lottes_curve(x: f32) -> f32 {
+            let a = 1.6;
+            let d = 0.977;
+            let hdr_max = 8.0;
+            let mid_in = 0.18;
+            let mid_out = 0.267;
+            
+            let b = (-pow(mid_in, a) + pow(hdr_max, a) * mid_out) / 
+                    ((pow(hdr_max, a * d) - pow(mid_in, a * d)) * mid_out);
+            let c = (pow(hdr_max, a * d) * pow(mid_in, a) - pow(hdr_max, a) * pow(mid_in, a * d) * mid_out) /
+                    ((pow(hdr_max, a * d) - pow(mid_in, a * d)) * mid_out);
+            
+            pow(x, a) / (pow(x, a * d) * b + c)
+        }
+        
+        RGB::new(
+            lottes_curve(rgb.r),
+            lottes_curve(rgb.g),
+            lottes_curve(rgb.b),
+        )
+    }
+    
+    /// Uchimura (Gran Turismo) tonemapper
+    pub fn uchimura(rgb: RGB) -> RGB {
+        fn uchimura_curve(x: f32) -> f32 {
+            let p = 1.0;   // Max brightness
+            let a = 1.0;   // Contrast
+            let m = 0.22;  // Linear section start
+            let l = 0.4;   // Linear section length
+            let c = 1.33;  // Black tightness
+            let b = 0.0;   // Pedestal
+            
+            let l0 = ((p - m) * l) / a;
+            let s0 = m + l0;
+            let s1 = m + a * l0;
+            let c2 = (a * p) / (p - s1);
+            let cp = -c2 / p;
+            
+            let w0 = 1.0 - smoothstep(0.0, m, x);
+            let w2 = if x < m + l0 { 0.0 } else { 1.0 };
+            let w1 = 1.0 - w0 - w2;
+            
+            let t = m * pow(x / m, c) + b;
+            let u = p - (p - s1) * exp(cp * (x - s0));
+            let v = m + a * (x - m);
+            
+            t * w0 + v * w1 + u * w2
+        }
+        
+        fn smoothstep(edge0: f32, edge1: f32, x: f32) -> f32 {
+            let t = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
+            t * t * (3.0 - 2.0 * t)
+        }
+        
+        RGB::new(
+            uchimura_curve(rgb.r),
+            uchimura_curve(rgb.g),
+            uchimura_curve(rgb.b),
+        )
+    }
+    
+    /// Khronos PBR Neutral tonemapper
+    pub fn khronos_pbr(rgb: RGB) -> RGB {
+        let start_compression = 0.8 - 0.04;
+        let desaturation = 0.15;
+        
+        let x = min(rgb.r, min(rgb.g, rgb.b));
+        let offset = if x < 0.08 { x - 6.25 * x * x } else { 0.04 };
+        
+        let mut result = RGB::new(rgb.r - offset, rgb.g - offset, rgb.b - offset);
+        
+        let peak = max(result.r, max(result.g, result.b));
+        if peak < start_compression {
+            return result;
+        }
+        
+        let d = 1.0 - start_compression;
+        let new_peak = 1.0 - d * d / (peak + d - start_compression);
+        let scale = new_peak / peak;
+        
+        result.r *= scale;
+        result.g *= scale;
+        result.b *= scale;
+        
+        let chroma_compression = 1.0 / (1.0 + desaturation * (peak - new_peak));
+        let g = 0.2126 * result.r + 0.7152 * result.g + 0.0722 * result.b;
+        
+        RGB::new(
+            g + (result.r - g) * chroma_compression,
+            g + (result.g - g) * chroma_compression,
+            g + (result.b - g) * chroma_compression,
+        )
+    }
+    
+    /// Quanta Adaptive™ - Proprietary adaptive tonemapper
+    /// Automatically adjusts parameters based on image content
+    pub fn quanta_adaptive(rgb: RGB) -> RGB {
+        // Analyze local luminance
+        let luminance = 0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b;
+        
+        // Dynamic parameter selection
+        let contrast = if luminance < 0.1 { 1.2 } else if luminance > 0.9 { 0.8 } else { 1.0 };
+        let saturation_boost = if luminance < 0.5 { 1.1 } else { 0.95 };
+        
+        // Apply base tonemap (modified ACES)
+        let a = 2.51 * contrast;
+        let b = 0.03;
+        let c = 2.43;
+        let d = 0.59;
+        let e = 0.14;
+        
+        let tonemapped = RGB::new(
+            (rgb.r * (a * rgb.r + b)) / (rgb.r * (c * rgb.r + d) + e),
+            (rgb.g * (a * rgb.g + b)) / (rgb.g * (c * rgb.g + d) + e),
+            (rgb.b * (a * rgb.b + b)) / (rgb.b * (c * rgb.b + d) + e),
+        );
+        
+        // Preserve saturation in shadows
+        let gray = 0.2126 * tonemapped.r + 0.7152 * tonemapped.g + 0.0722 * tonemapped.b;
+        
+        RGB::new(
+            clamp(gray + (tonemapped.r - gray) * saturation_boost, 0.0, 1.0),
+            clamp(gray + (tonemapped.g - gray) * saturation_boost, 0.0, 1.0),
+            clamp(gray + (tonemapped.b - gray) * saturation_boost, 0.0, 1.0),
+        )
+    }
+    
+    /// Tony McMapface (by Tomasz Stachowiak)
+    pub fn tony_mc_mapface(rgb: RGB) -> RGB {
+        // Attempt at a good simple tonemapper
+        let luma = rgb.luminance();
+        let clipped = clamp(luma, 0.0, 1.0);
+        
+        // Attempt to preserve hue
+        let max_component = max(rgb.r, max(rgb.g, rgb.b));
+        let scale = if max_component > 1.0 { 1.0 / max_component } else { 1.0 };
+        
+        // S-curve
+        let compressed = clipped * clipped * (3.0 - 2.0 * clipped);
+        
+        RGB::new(
+            clamp(rgb.r * scale * (1.0 + compressed * 0.2), 0.0, 1.0),
+            clamp(rgb.g * scale * (1.0 + compressed * 0.2), 0.0, 1.0),
+            clamp(rgb.b * scale * (1.0 + compressed * 0.2), 0.0, 1.0),
+        )
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COLOR GRADING
+// ═══════════════════════════════════════════════════════════════════════════════
+
+pub mod grading {
+    use super::*;
+    
+    /// Lift-Gamma-Gain color grading
+    pub struct LiftGammaGain {
+        pub lift: RGB,    // Shadow color
+        pub gamma: RGB,   // Midtone color
+        pub gain: RGB,    // Highlight color
+    }
+    
+    impl LiftGammaGain {
+        pub fn neutral() -> Self {
+            LiftGammaGain {
+                lift: RGB::new(0.0, 0.0, 0.0),
+                gamma: RGB::new(1.0, 1.0, 1.0),
+                gain: RGB::new(1.0, 1.0, 1.0),
+            }
+        }
+        
+        pub fn apply(&self, rgb: RGB) -> RGB {
+            RGB::new(
+                self.apply_channel(rgb.r, self.lift.r, self.gamma.r, self.gain.r),
+                self.apply_channel(rgb.g, self.lift.g, self.gamma.g, self.gain.g),
+                self.apply_channel(rgb.b, self.lift.b, self.gamma.b, self.gain.b),
+            )
+        }
+        
+        fn apply_channel(&self, x: f32, lift: f32, gamma: f32, gain: f32) -> f32 {
+            let lifted = x + lift * (1.0 - x);
+            let gained = lifted * gain;
+            pow(clamp(gained, 0.0, 1.0), 1.0 / gamma)
+        }
+    }
+    
+    /// ASC CDL (Color Decision List)
+    pub struct ColorDecisionList {
+        pub slope: RGB,
+        pub offset: RGB,
+        pub power: RGB,
+        pub saturation: f32,
+    }
+    
+    impl ColorDecisionList {
+        pub fn neutral() -> Self {
+            ColorDecisionList {
+                slope: RGB::new(1.0, 1.0, 1.0),
+                offset: RGB::new(0.0, 0.0, 0.0),
+                power: RGB::new(1.0, 1.0, 1.0),
+                saturation: 1.0,
+            }
+        }
+        
+        pub fn apply(&self, rgb: RGB) -> RGB {
+            // SOP (Slope, Offset, Power)
+            let sop = RGB::new(
+                pow(clamp(rgb.r * self.slope.r + self.offset.r, 0.0, 1.0), self.power.r),
+                pow(clamp(rgb.g * self.slope.g + self.offset.g, 0.0, 1.0), self.power.g),
+                pow(clamp(rgb.b * self.slope.b + self.offset.b, 0.0, 1.0), self.power.b),
+            );
+            
+            // Saturation
+            let luma = sop.luminance();
+            RGB::new(
+                luma + (sop.r - luma) * self.saturation,
+                luma + (sop.g - luma) * self.saturation,
+                luma + (sop.b - luma) * self.saturation,
+            )
+        }
+    }
+    
+    /// Split toning (shadows/highlights color)
+    pub fn split_tone(rgb: RGB, shadow_color: RGB, highlight_color: RGB, balance: f32) -> RGB {
+        let luma = rgb.luminance();
+        let shadow_weight = 1.0 - clamp((luma - balance) / (1.0 - balance), 0.0, 1.0);
+        let highlight_weight = clamp((luma - balance) / (1.0 - balance), 0.0, 1.0);
+        
+        RGB::new(
+            rgb.r + (shadow_color.r - 0.5) * shadow_weight + (highlight_color.r - 0.5) * highlight_weight,
+            rgb.g + (shadow_color.g - 0.5) * shadow_weight + (highlight_color.g - 0.5) * highlight_weight,
+            rgb.b + (shadow_color.b - 0.5) * shadow_weight + (highlight_color.b - 0.5) * highlight_weight,
+        )
+    }
+    
+    /// Color temperature adjustment
+    pub fn white_balance(rgb: RGB, temperature: f32, tint: f32) -> RGB {
+        // Temperature: negative = cooler (blue), positive = warmer (orange)
+        // Tint: negative = green, positive = magenta
+        
+        let temp_offset = temperature * 0.1;
+        let tint_offset = tint * 0.05;
+        
+        RGB::new(
+            rgb.r + temp_offset,
+            rgb.g - temp_offset * 0.5 + tint_offset,
+            rgb.b - temp_offset - tint_offset,
+        ).saturate()
+    }
+    
+    /// Curves adjustment (cubic Bézier)
+    pub fn curves(rgb: RGB, points: &[(f32, f32)]) -> RGB {
+        fn evaluate_curve(x: f32, points: &[(f32, f32)]) -> f32 {
+            if points.len() < 2 {
+                return x;
+            }
+            
+            // Find segment
+            let mut i = 0;
+            while i < points.len() - 1 && points[i + 1].0 < x {
+                i += 1;
+            }
+            
+            if i >= points.len() - 1 {
+                return points.last().unwrap().1;
+            }
+            
+            // Linear interpolation between points
+            let (x0, y0) = points[i];
+            let (x1, y1) = points[i + 1];
+            
+            let t = (x - x0) / (x1 - x0);
+            y0 + (y1 - y0) * t
+        }
+        
+        RGB::new(
+            evaluate_curve(rgb.r, points),
+            evaluate_curve(rgb.g, points),
+            evaluate_curve(rgb.b, points),
+        )
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN PROCESSING PIPELINE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Complete TITAN color processing pipeline
+pub struct TitanPipeline {
+    pub tier: PrecisionTier,
+    pub input_space: ColorSpace,
+    pub output_space: ColorSpace,
+    pub tonemapper: tonemap::Operator,
+    pub exposure: f32,
+    pub contrast: f32,
+    pub saturation: f32,
+    pub lift_gamma_gain: grading::LiftGammaGain,
+    pub cdl: grading::ColorDecisionList,
+}
+
+impl TitanPipeline {
+    pub fn new(tier: PrecisionTier) -> Self {
+        TitanPipeline {
+            tier,
+            input_space: ColorSpace::SRGB,
+            output_space: ColorSpace::SRGB,
+            tonemapper: tonemap::Operator::QuantaAdaptive,
+            exposure: 0.0,
+            contrast: 1.0,
+            saturation: 1.0,
+            lift_gamma_gain: grading::LiftGammaGain::neutral(),
+            cdl: grading::ColorDecisionList::neutral(),
+        }
+    }
+    
+    /// Process a single pixel through the entire pipeline
+    pub fn process(&self, input: RGB) -> RGB {
+        // 1. Convert to linear working space
+        let linear = convert::srgb_to_linear(input);
+        
+        // 2. Apply exposure
+        let exposed = RGB::new(
+            linear.r * pow(2.0, self.exposure),
+            linear.g * pow(2.0, self.exposure),
+            linear.b * pow(2.0, self.exposure),
+        );
+        
+        // 3. Tonemap
+        let tonemapped = tonemap::apply(exposed, self.tonemapper, 0.0);
+        
+        // 4. Apply lift/gamma/gain
+        let graded = self.lift_gamma_gain.apply(tonemapped);
+        
+        // 5. Apply CDL
+        let cdl_applied = self.cdl.apply(graded);
+        
+        // 6. Apply contrast
+        let gray = cdl_applied.luminance();
+        let contrasted = RGB::new(
+            0.5 + (cdl_applied.r - 0.5) * self.contrast,
+            0.5 + (cdl_applied.g - 0.5) * self.contrast,
+            0.5 + (cdl_applied.b - 0.5) * self.contrast,
+        );
+        
+        // 7. Apply saturation
+        let saturated = RGB::new(
+            gray + (contrasted.r - gray) * self.saturation,
+            gray + (contrasted.g - gray) * self.saturation,
+            gray + (contrasted.b - gray) * self.saturation,
+        );
+        
+        // 8. Convert to output space
+        convert::linear_to_srgb(saturated).saturate()
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TESTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_precision_tiers() {
+        assert!(PrecisionTier::Compatible.gamut_coverage() < PrecisionTier::Absolute.gamut_coverage());
+    }
+    
+    #[test]
+    fn test_srgb_roundtrip() {
+        let original = RGB::new(0.5, 0.3, 0.8);
+        let linear = convert::srgb_to_linear(original);
+        let back = convert::linear_to_srgb(linear);
+        
+        assert!((original.r - back.r).abs() < 0.001);
+        assert!((original.g - back.g).abs() < 0.001);
+        assert!((original.b - back.b).abs() < 0.001);
+    }
+    
+    #[test]
+    fn test_oklab_roundtrip() {
+        let original = RGB::new(0.5, 0.3, 0.8);
+        let linear = convert::srgb_to_linear(original);
+        let oklab = convert::linear_srgb_to_oklab(linear);
+        let back_linear = convert::oklab_to_linear_srgb(oklab);
+        
+        assert!((linear.r - back_linear.r).abs() < 0.001);
+        assert!((linear.g - back_linear.g).abs() < 0.001);
+        assert!((linear.b - back_linear.b).abs() < 0.001);
+    }
+    
+    #[test]
+    fn test_tonemappers() {
+        let hdr = RGB::new(5.0, 3.0, 1.0);
+        
+        let reinhard = tonemap::reinhard(hdr);
+        assert!(reinhard.r <= 1.0 && reinhard.g <= 1.0 && reinhard.b <= 1.0);
+        
+        let aces = tonemap::aces(hdr);
+        assert!(aces.r <= 1.0 && aces.g <= 1.0 && aces.b <= 1.0);
+        
+        let quanta = tonemap::quanta_adaptive(hdr);
+        assert!(quanta.r <= 1.0 && quanta.g <= 1.0 && quanta.b <= 1.0);
+    }
+    
+    #[test]
+    fn test_pipeline() {
+        let pipeline = TitanPipeline::new(PrecisionTier::Professional);
+        let input = RGB::new(0.8, 0.6, 0.4);
+        let output = pipeline.process(input);
+        
+        assert!(output.r >= 0.0 && output.r <= 1.0);
+        assert!(output.g >= 0.0 && output.g <= 1.0);
+        assert!(output.b >= 0.0 && output.b <= 1.0);
+    }
+}

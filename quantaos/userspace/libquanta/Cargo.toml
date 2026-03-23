@@ -1,0 +1,11 @@
+[package]
+name = "libquanta"
+version = "0.1.0"
+edition = "2021"
+authors = ["Zain Dana Harper"]
+description = "QuantaOS user-space standard library"
+
+[dependencies]
+
+[features]
+default = []
