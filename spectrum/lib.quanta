@@ -1,11 +1,8 @@
-// ═══════════════════════════════════════════════════════════════════════════════
 // TITAN™ COLOR SCIENCE v2.0.0
 // "The Science of Perfect Color"
-// ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Quanta. All Rights Reserved.
 // CONFIDENTIAL - Trade Secret - Patent Pending (P030, P031, P032)
 // Trademarks: TITAN™, BIO-LUMINANCE™, QUANTA-LOG™, HARPER ADAPTIVE™
-// ═══════════════════════════════════════════════════════════════════════════════
 //
 // Spectrum Science provides revolutionary 5-tier extended gamut color 
 // processing with 13 tonemapping operators and the Bio-Luminance™ EOTF.
@@ -13,15 +10,12 @@
 // SELLABLE AS: Standalone color science library
 // DEPENDENCIES: quanta-lang (core only)
 // ESTIMATED VALUE: $400,000 - $800,000
-// ═══════════════════════════════════════════════════════════════════════════════
 
 module titan_color
 
 use std::math::{sin, cos, tan, atan2, sqrt, pow, exp, log, abs, min, max, clamp}
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // COLOR SPACE DEFINITIONS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /// 5-Tier Precision System
 /// Each tier provides increasing color accuracy at computational cost
@@ -99,9 +93,7 @@ pub enum ColorSpace {
     BioLuminance,      // Biological vision model
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // COLOR TYPES
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /// RGB color with optional alpha
 #[derive(Debug, Clone, Copy)]
@@ -298,9 +290,7 @@ impl Mat3 {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // COLOR SPACE CONVERSION MATRICES
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod matrices {
     use super::Mat3;
@@ -376,9 +366,7 @@ pub mod matrices {
     ]};
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // TRANSFER FUNCTIONS (EOTF/OETF)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod transfer {
     use super::*;
@@ -514,9 +502,7 @@ pub mod transfer {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // COLOR CONVERSIONS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod convert {
     use super::*;
@@ -722,9 +708,7 @@ pub mod convert {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // TONEMAPPING OPERATORS (13 Total)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod tonemap {
     use super::*;
@@ -1065,9 +1049,7 @@ pub mod tonemap {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // COLOR GRADING
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod grading {
     use super::*;
@@ -1200,9 +1182,7 @@ pub mod grading {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // MAIN PROCESSING PIPELINE
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /// Complete TITAN color processing pipeline
 pub struct TitanPipeline {
@@ -1273,9 +1253,7 @@ impl TitanPipeline {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // COLOR DIFFERENCE FORMULAS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod color_difference {
     use super::*;
@@ -1487,9 +1465,7 @@ pub mod color_difference {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // CHROMATIC ADAPTATION TRANSFORMS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod chromatic_adaptation {
     use super::*;
@@ -1698,9 +1674,7 @@ pub mod chromatic_adaptation {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // SPECTRAL PROCESSING
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod spectral {
     use super::*;
@@ -1712,16 +1686,16 @@ pub mod spectral {
 
     /// Spectral power distribution
     #[derive(Debug, Clone)]
-    pub struct SPD {
+    pub struct SpectralDist {
         pub start_wavelength: f32,
         pub end_wavelength: f32,
         pub interval: f32,
         pub values: Vec<f32>,
     }
 
-    impl SPD {
+    impl SpectralDist {
         pub fn new(start: f32, end: f32, interval: f32, values: Vec<f32>) -> Self {
-            SPD {
+            SpectralDist {
                 start_wavelength: start,
                 end_wavelength: end,
                 interval,
@@ -1729,16 +1703,16 @@ pub mod spectral {
             }
         }
 
-        /// Create empty SPD
+        /// Create empty SpectralDist
         pub fn zeros(start: f32, end: f32, interval: f32) -> Self {
             let count = ((end - start) / interval).ceil() as usize + 1;
-            SPD::new(start, end, interval, vec![0.0; count])
+            SpectralDist::new(start, end, interval, vec![0.0; count])
         }
 
-        /// Create uniform SPD (equal energy)
+        /// Create uniform SpectralDist (equal energy)
         pub fn uniform(start: f32, end: f32, interval: f32, value: f32) -> Self {
             let count = ((end - start) / interval).ceil() as usize + 1;
-            SPD::new(start, end, interval, vec![value; count])
+            SpectralDist::new(start, end, interval, vec![value; count])
         }
 
         /// Get value at wavelength (linear interpolation)
@@ -1758,8 +1732,8 @@ pub mod spectral {
             self.values[i] * (1.0 - frac) + self.values[i + 1] * frac
         }
 
-        /// Multiply two SPDs
-        pub fn multiply(&self, other: &SPD) -> SPD {
+        /// Multiply two SpectralDists
+        pub fn multiply(&self, other: &SpectralDist) -> SpectralDist {
             let mut result = self.clone();
             for (i, v) in result.values.iter_mut().enumerate() {
                 let wavelength = self.start_wavelength + i as f32 * self.interval;
@@ -1768,14 +1742,14 @@ pub mod spectral {
             result
         }
 
-        /// Scale SPD
+        /// Scale FullSPD
         pub fn scale(&mut self, factor: f32) {
             for v in &mut self.values {
                 *v *= factor;
             }
         }
 
-        /// Integrate SPD over wavelength range
+        /// Integrate FullSPD over wavelength range
         pub fn integrate(&self) -> f32 {
             let mut sum = 0.0;
             for i in 0..self.values.len() - 1 {
@@ -1795,9 +1769,9 @@ pub mod spectral {
 
     /// CIE 1931 2° Standard Observer Color Matching Functions
     pub struct CMF {
-        pub x_bar: SPD,
-        pub y_bar: SPD,
-        pub z_bar: SPD,
+        pub x_bar: SpectralDist,
+        pub y_bar: SpectralDist,
+        pub z_bar: SpectralDist,
     }
 
     impl CMF {
@@ -1823,14 +1797,14 @@ pub mod spectral {
             }).collect();
 
             CMF {
-                x_bar: SPD::new(380.0, 780.0, 5.0, x_bar_values),
-                y_bar: SPD::new(380.0, 780.0, 5.0, y_bar_values),
-                z_bar: SPD::new(380.0, 780.0, 5.0, z_bar_values),
+                x_bar: SpectralDist::new(380.0, 780.0, 5.0, x_bar_values),
+                y_bar: SpectralDist::new(380.0, 780.0, 5.0, y_bar_values),
+                z_bar: SpectralDist::new(380.0, 780.0, 5.0, z_bar_values),
             }
         }
 
-        /// Convert SPD to XYZ using color matching
-        pub fn spd_to_xyz(&self, spd: &SPD) -> XYZ {
+        /// Convert SpectralDist to XYZ using color matching
+        pub fn spd_to_xyz(&self, spd: &SpectralDist) -> XYZ {
             let mut x = 0.0;
             let mut y = 0.0;
             let mut z = 0.0;
@@ -1860,8 +1834,8 @@ pub mod spectral {
         exp(-0.5 * pow((x - mean) / std, 2.0))
     }
 
-    /// Create blackbody SPD for given temperature
-    pub fn blackbody_spd(temperature: f32) -> SPD {
+    /// Create blackbody spectral distribution for given temperature
+    pub fn blackbody_spd(temperature: f32) -> SpectralDist {
         let count = ((LAMBDA_MAX - LAMBDA_MIN) / LAMBDA_STEP) as usize + 1;
         let mut values = Vec::with_capacity(count);
 
@@ -1878,13 +1852,13 @@ pub mod spectral {
             values.push(spectral_radiance);
         }
 
-        let mut spd = SPD::new(LAMBDA_MIN, LAMBDA_MAX, LAMBDA_STEP, values);
+        let mut spd = SpectralDist::new(LAMBDA_MIN, LAMBDA_MAX, LAMBDA_STEP, values);
         spd.normalize();
         spd
     }
 
-    /// Create D-illuminant SPD
-    pub fn d_illuminant_spd(cct: f32) -> SPD {
+    /// Create D-illuminant spectral distribution
+    pub fn d_illuminant_spd(cct: f32) -> SpectralDist {
         let s0: Vec<f32> = vec![
             63.4, 64.6, 65.8, 80.3, 94.8, 99.8, 104.8, 105.3, 105.9, 101.4,
             96.8, 105.4, 113.9, 119.8, 125.6, 125.5, 125.5, 123.4, 121.3, 121.3,
@@ -1904,7 +1878,7 @@ pub mod spectral {
             values.push(s0[i] * (cct / 6500.0));
         }
 
-        SPD::new(300.0, 830.0, 5.0, values)
+        SpectralDist::new(300.0, 830.0, 5.0, values)
     }
 
     /// Wavelength to approximate sRGB color (for visualization)
@@ -1931,9 +1905,7 @@ pub mod spectral {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // GAMUT MAPPING
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod gamut_mapping {
     use super::*;
@@ -2116,9 +2088,7 @@ pub mod gamut_mapping {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // LOOK-UP TABLES (LUTs)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod lut {
     use super::*;
@@ -2360,9 +2330,7 @@ pub mod lut {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // FILM EMULATION
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod film {
     use super::*;
@@ -2606,9 +2574,7 @@ pub mod film {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // COLOR BLINDNESS SIMULATION
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod color_blindness {
     use super::*;
@@ -2728,9 +2694,7 @@ pub mod color_blindness {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // HDR PROCESSING
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod hdr {
     use super::*;
@@ -2890,9 +2854,7 @@ pub mod hdr {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // COLOR HARMONY
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod harmony {
     use super::*;
@@ -3090,7 +3052,7 @@ pub mod harmony {
                 // Harmonious angles: 0, 30, 60, 90, 120, 150, 180
                 let harmony_angles = [0.0, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0];
                 let min_dist = harmony_angles.iter()
-                    .map(|&a| (angle - a).abs())
+                    .map(|a| (angle - *a).abs())
                     .fold(f32::MAX, f32::min);
 
                 total_score += 1.0 - (min_dist / 30.0).min(1.0);
@@ -3133,9 +3095,7 @@ pub mod harmony {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // ICC PROFILE SUPPORT
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod icc {
     use super::*;
@@ -3343,9 +3303,9 @@ pub mod icc {
             ]);
 
             // 3x3 matrix inverse
-            let det = m.data[0][0] * (m.data[1][1] * m.data[2][2] - m.data[1][2] * m.data[2][1])
-                    - m.data[0][1] * (m.data[1][0] * m.data[2][2] - m.data[1][2] * m.data[2][0])
-                    + m.data[0][2] * (m.data[1][0] * m.data[2][1] - m.data[1][1] * m.data[2][0]);
+            let det = m.m[0][0] * (m.m[1][1] * m.m[2][2] - m.m[1][2] * m.m[2][1])
+                    - m.m[0][1] * (m.m[1][0] * m.m[2][2] - m.m[1][2] * m.m[2][0])
+                    + m.m[0][2] * (m.m[1][0] * m.m[2][1] - m.m[1][1] * m.m[2][0]);
 
             if det.abs() < 1e-10 {
                 return RGB::black();
@@ -3353,19 +3313,19 @@ pub mod icc {
 
             let inv_det = 1.0 / det;
             let r_lin = inv_det * (
-                (m.data[1][1] * m.data[2][2] - m.data[1][2] * m.data[2][1]) * xyz.x +
-                (m.data[0][2] * m.data[2][1] - m.data[0][1] * m.data[2][2]) * xyz.y +
-                (m.data[0][1] * m.data[1][2] - m.data[0][2] * m.data[1][1]) * xyz.z
+                (m.m[1][1] * m.m[2][2] - m.m[1][2] * m.m[2][1]) * xyz.x +
+                (m.m[0][2] * m.m[2][1] - m.m[0][1] * m.m[2][2]) * xyz.y +
+                (m.m[0][1] * m.m[1][2] - m.m[0][2] * m.m[1][1]) * xyz.z
             );
             let g_lin = inv_det * (
-                (m.data[1][2] * m.data[2][0] - m.data[1][0] * m.data[2][2]) * xyz.x +
-                (m.data[0][0] * m.data[2][2] - m.data[0][2] * m.data[2][0]) * xyz.y +
-                (m.data[0][2] * m.data[1][0] - m.data[0][0] * m.data[1][2]) * xyz.z
+                (m.m[1][2] * m.m[2][0] - m.m[1][0] * m.m[2][2]) * xyz.x +
+                (m.m[0][0] * m.m[2][2] - m.m[0][2] * m.m[2][0]) * xyz.y +
+                (m.m[0][2] * m.m[1][0] - m.m[0][0] * m.m[1][2]) * xyz.z
             );
             let b_lin = inv_det * (
-                (m.data[1][0] * m.data[2][1] - m.data[1][1] * m.data[2][0]) * xyz.x +
-                (m.data[0][1] * m.data[2][0] - m.data[0][0] * m.data[2][1]) * xyz.y +
-                (m.data[0][0] * m.data[1][1] - m.data[0][1] * m.data[1][0]) * xyz.z
+                (m.m[1][0] * m.m[2][1] - m.m[1][1] * m.m[2][0]) * xyz.x +
+                (m.m[0][1] * m.m[2][0] - m.m[0][0] * m.m[2][1]) * xyz.y +
+                (m.m[0][0] * m.m[1][1] - m.m[0][1] * m.m[1][0]) * xyz.z
             );
 
             RGB::new(
@@ -3413,9 +3373,7 @@ pub mod icc {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // ACES COLOR PIPELINE
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod aces {
     use super::*;
@@ -3708,9 +3666,7 @@ pub mod aces {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // COLOR QUANTIZATION
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod quantization {
     use super::*;
@@ -4046,9 +4002,7 @@ pub mod quantization {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // DITHERING ALGORITHMS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod dithering {
     use super::*;
@@ -4246,9 +4200,7 @@ pub mod dithering {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // IMAGE QUALITY METRICS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod metrics {
     use super::*;
@@ -4294,8 +4246,8 @@ pub mod metrics {
         let mu_y: f32 = lum_proc.iter().sum::<f32>() / n;
 
         // Variances and covariance
-        let var_x: f32 = lum_orig.iter().map(|&x| (x - mu_x).powi(2)).sum::<f32>() / n;
-        let var_y: f32 = lum_proc.iter().map(|&y| (y - mu_y).powi(2)).sum::<f32>() / n;
+        let var_x: f32 = lum_orig.iter().map(|x| (*x - mu_x).powi(2)).sum::<f32>() / n;
+        let var_y: f32 = lum_proc.iter().map(|y| (*y - mu_y).powi(2)).sum::<f32>() / n;
         let cov_xy: f32 = lum_orig.iter().zip(lum_proc.iter())
             .map(|(&x, &y)| (x - mu_x) * (y - mu_y))
             .sum::<f32>() / n;
@@ -4425,9 +4377,7 @@ pub mod metrics {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // COLOR MIXING (PHYSICAL & DIGITAL)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod mixing {
     use super::*;
@@ -4744,9 +4694,7 @@ pub mod mixing {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // ADVANCED TONEMAPPING OPERATORS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod tonemapping {
     use super::RGB;
@@ -4777,7 +4725,7 @@ pub mod tonemapping {
         }
     }
 
-    pub fn tonemap(color: RGB<f64>, op: TonemapOperator, params: &TonemapParams) -> RGB<f64> {
+    pub fn tonemap(color: RGB, op: TonemapOperator, params: &TonemapParams) -> RGB {
         let exposed = RGB::new(color.r * params.exposure, color.g * params.exposure, color.b * params.exposure);
         let mapped = match op {
             TonemapOperator::Linear => exposed,
@@ -4797,18 +4745,18 @@ pub mod tonemapping {
         gamma_correct(mapped, params.gamma)
     }
 
-    fn reinhard(c: RGB<f64>) -> RGB<f64> {
+    fn reinhard(c: RGB) -> RGB {
         RGB::new(c.r / (1.0 + c.r), c.g / (1.0 + c.g), c.b / (1.0 + c.b))
     }
 
-    fn reinhard_extended(c: RGB<f64>, white: f64) -> RGB<f64> {
+    fn reinhard_extended(c: RGB, white: f64) -> RGB {
         let w2 = white * white;
         RGB::new(c.r * (1.0 + c.r / w2) / (1.0 + c.r),
                  c.g * (1.0 + c.g / w2) / (1.0 + c.g),
                  c.b * (1.0 + c.b / w2) / (1.0 + c.b))
     }
 
-    fn reinhard_jodie(c: RGB<f64>) -> RGB<f64> {
+    fn reinhard_jodie(c: RGB) -> RGB {
         let luma = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
         let tv = RGB::new(c.r / (1.0 + c.r), c.g / (1.0 + c.g), c.b / (1.0 + c.b));
         let tl = luma / (1.0 + luma);
@@ -4817,13 +4765,13 @@ pub mod tonemapping {
                  lerp(tv.b, c.b * tl / luma.max(1e-6), tv.b))
     }
 
-    fn aces_fitted(c: RGB<f64>) -> RGB<f64> {
+    fn aces_fitted(c: RGB) -> RGB {
         let a = 2.51; let b = 0.03; let cc = 2.43; let d = 0.59; let e = 0.14;
         let apply = |x: f64| ((x * (a * x + b)) / (x * (cc * x + d) + e)).clamp(0.0, 1.0);
         RGB::new(apply(c.r), apply(c.g), apply(c.b))
     }
 
-    fn uncharted2(c: RGB<f64>, p: &TonemapParams) -> RGB<f64> {
+    fn uncharted2(c: RGB, p: &TonemapParams) -> RGB {
         let a = p.shoulder_strength; let b = p.linear_strength; let cc = p.linear_angle;
         let d = p.toe_strength; let e = 0.02; let f = 0.30;
         let curve = |x: f64| ((x * (a * x + cc * b) + d * e) / (x * (a * x + b) + d * f)) - e / f;
@@ -4834,7 +4782,7 @@ pub mod tonemapping {
                  (curve(c.b) * white_scale).clamp(0.0, 1.0))
     }
 
-    fn lottes(c: RGB<f64>) -> RGB<f64> {
+    fn lottes(c: RGB) -> RGB {
         let a = 1.6; let d = 0.977; let hdr_max = 8.0; let mid_in = 0.18; let mid_out = 0.267;
         let b = (-d.powf(a) + mid_out.powf(a) * hdr_max.powf(a) * d.powf(a)) /
                 ((mid_out.powf(a) - d.powf(a)) * hdr_max.powf(a));
@@ -4843,7 +4791,7 @@ pub mod tonemapping {
         RGB::new(apply(c.r).clamp(0.0, 1.0), apply(c.g).clamp(0.0, 1.0), apply(c.b).clamp(0.0, 1.0))
     }
 
-    fn uchimura(c: RGB<f64>) -> RGB<f64> {
+    fn uchimura(c: RGB) -> RGB {
         let p = 1.0; let a = 1.0; let m = 0.22; let l = 0.4; let cc = 1.33; let b = 0.0;
         let apply = |x: f64| {
             let l0 = ((p - m) * l) / a;
@@ -4858,7 +4806,7 @@ pub mod tonemapping {
         RGB::new(apply(c.r).clamp(0.0, 1.0), apply(c.g).clamp(0.0, 1.0), apply(c.b).clamp(0.0, 1.0))
     }
 
-    fn agx(c: RGB<f64>) -> RGB<f64> {
+    fn agx(c: RGB) -> RGB {
         let agx_mat = [[0.842, 0.0423, 0.0424], [0.0784, 0.878, 0.0784], [0.0792, 0.0792, 0.879]];
         let r = agx_mat[0][0] * c.r + agx_mat[0][1] * c.g + agx_mat[0][2] * c.b;
         let g = agx_mat[1][0] * c.r + agx_mat[1][1] * c.g + agx_mat[1][2] * c.b;
@@ -4873,13 +4821,13 @@ pub mod tonemapping {
         RGB::new(apply(r), apply(g), apply(b))
     }
 
-    fn tony_mc_mapface(c: RGB<f64>) -> RGB<f64> {
+    fn tony_mc_mapface(c: RGB) -> RGB {
         let luma = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
         let s = 1.0 / (1.0 + luma);
         RGB::new((c.r * s).clamp(0.0, 1.0), (c.g * s).clamp(0.0, 1.0), (c.b * s).clamp(0.0, 1.0))
     }
 
-    fn neutral(c: RGB<f64>) -> RGB<f64> {
+    fn neutral(c: RGB) -> RGB {
         let start = 0.18; let length = 0.5; let contrast = 1.0;
         let apply = |x: f64| {
             if x <= start { x } else { start + length * (1.0 - (-contrast * (x - start) / length).exp()) }
@@ -4887,7 +4835,7 @@ pub mod tonemapping {
         RGB::new(apply(c.r).clamp(0.0, 1.0), apply(c.g).clamp(0.0, 1.0), apply(c.b).clamp(0.0, 1.0))
     }
 
-    fn bioluminance(c: RGB<f64>, p: &TonemapParams) -> RGB<f64> {
+    fn bioluminance(c: RGB, p: &TonemapParams) -> RGB {
         let luma = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
         let compressed = luma / (1.0 + luma * p.toe_strength);
         let scale = if luma > 1e-6 { compressed / luma } else { 1.0 };
@@ -4900,7 +4848,7 @@ pub mod tonemapping {
         RGB::new(saturated.r.clamp(0.0, 1.0), saturated.g.clamp(0.0, 1.0), saturated.b.clamp(0.0, 1.0))
     }
 
-    fn gamma_correct(c: RGB<f64>, gamma: f64) -> RGB<f64> {
+    fn gamma_correct(c: RGB, gamma: f64) -> RGB {
         let inv = 1.0 / gamma;
         RGB::new(c.r.powf(inv), c.g.powf(inv), c.b.powf(inv))
     }
@@ -4908,9 +4856,7 @@ pub mod tonemapping {
     fn lerp(a: f64, b: f64, t: f64) -> f64 { a + t * (b - a) }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // HDR COLOR PIPELINE
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod hdr_pipeline {
     use super::RGB;
@@ -4974,7 +4920,7 @@ pub mod hdr_pipeline {
         if l <= 0.0031308 { 12.92 * l } else { 1.055 * l.powf(1.0 / 2.4) - 0.055 }
     }
 
-    pub fn apply_eotf(color: RGB<f64>, tf: TransferFunction) -> RGB<f64> {
+    pub fn apply_eotf(color: RGB, tf: TransferFunction) -> RGB {
         match tf {
             TransferFunction::Linear => color,
             TransferFunction::sRGB => RGB::new(srgb_eotf(color.r), srgb_eotf(color.g), srgb_eotf(color.b)),
@@ -4985,7 +4931,7 @@ pub mod hdr_pipeline {
         }
     }
 
-    pub fn apply_oetf(color: RGB<f64>, tf: TransferFunction) -> RGB<f64> {
+    pub fn apply_oetf(color: RGB, tf: TransferFunction) -> RGB {
         match tf {
             TransferFunction::Linear => color,
             TransferFunction::sRGB => RGB::new(srgb_oetf(color.r), srgb_oetf(color.g), srgb_oetf(color.b)),
@@ -5020,7 +4966,7 @@ pub mod hdr_pipeline {
         [0.4866, 0.2657, 0.1982], [0.2290, 0.6917, 0.0793], [0.0000, 0.0451, 1.0439],
     ];
 
-    pub fn matrix_transform(color: RGB<f64>, mat: [[f64; 3]; 3]) -> RGB<f64> {
+    pub fn matrix_transform(color: RGB, mat: [[f64; 3]; 3]) -> RGB {
         RGB::new(
             mat[0][0] * color.r + mat[0][1] * color.g + mat[0][2] * color.b,
             mat[1][0] * color.r + mat[1][1] * color.g + mat[1][2] * color.b,
@@ -5028,7 +4974,7 @@ pub mod hdr_pipeline {
         )
     }
 
-    pub fn convert_colorspace(color: RGB<f64>, from: ColorSpace, to: ColorSpace) -> RGB<f64> {
+    pub fn convert_colorspace(color: RGB, from: ColorSpace, to: ColorSpace) -> RGB {
         if from == to { return color; }
         let xyz = match from {
             ColorSpace::LinearSRGB | ColorSpace::sRGB => matrix_transform(color, SRGB_TO_XYZ),
@@ -5066,35 +5012,33 @@ pub mod hdr_pipeline {
         }
     }
 
-    pub fn compute_max_cll(pixels: &[RGB<f64>]) -> f64 {
+    pub fn compute_max_cll(pixels: &[RGB]) -> f64 {
         pixels.iter().map(|p| {
             let luma = 0.2627 * p.r + 0.6780 * p.g + 0.0593 * p.b;
             luma
         }).fold(0.0_f64, f64::max)
     }
 
-    pub fn compute_max_fall(pixels: &[RGB<f64>]) -> f64 {
+    pub fn compute_max_fall(pixels: &[RGB]) -> f64 {
         if pixels.is_empty() { return 0.0; }
         let sum: f64 = pixels.iter().map(|p| 0.2627 * p.r + 0.6780 * p.g + 0.0593 * p.b).sum();
         sum / pixels.len() as f64
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // COLOR SPACE UTILITIES
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod color_spaces {
     use super::RGB;
 
-    pub fn rgb_to_ycbcr(c: RGB<f64>) -> (f64, f64, f64) {
+    pub fn rgb_to_ycbcr(c: RGB) -> (f64, f64, f64) {
         let y = 0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
         let cb = -0.168736 * c.r - 0.331264 * c.g + 0.5 * c.b + 0.5;
         let cr = 0.5 * c.r - 0.418688 * c.g - 0.081312 * c.b + 0.5;
         (y, cb, cr)
     }
 
-    pub fn ycbcr_to_rgb(y: f64, cb: f64, cr: f64) -> RGB<f64> {
+    pub fn ycbcr_to_rgb(y: f64, cb: f64, cr: f64) -> RGB {
         let cb = cb - 0.5; let cr = cr - 0.5;
         RGB::new(
             (y + 1.402 * cr).clamp(0.0, 1.0),
@@ -5103,14 +5047,14 @@ pub mod color_spaces {
         )
     }
 
-    pub fn rgb_to_ycocg(c: RGB<f64>) -> (f64, f64, f64) {
+    pub fn rgb_to_ycocg(c: RGB) -> (f64, f64, f64) {
         let y = 0.25 * c.r + 0.5 * c.g + 0.25 * c.b;
         let co = 0.5 * c.r - 0.5 * c.b;
         let cg = -0.25 * c.r + 0.5 * c.g - 0.25 * c.b;
         (y, co, cg)
     }
 
-    pub fn ycocg_to_rgb(y: f64, co: f64, cg: f64) -> RGB<f64> {
+    pub fn ycocg_to_rgb(y: f64, co: f64, cg: f64) -> RGB {
         RGB::new(
             (y + co - cg).clamp(0.0, 1.0),
             (y + cg).clamp(0.0, 1.0),
@@ -5118,7 +5062,7 @@ pub mod color_spaces {
         )
     }
 
-    pub fn rgb_to_ictcp(c: RGB<f64>) -> (f64, f64, f64) {
+    pub fn rgb_to_ictcp(c: RGB) -> (f64, f64, f64) {
         let l = 0.4122 * c.r + 0.5236 * c.g + 0.0641 * c.b;
         let m = 0.1668 * c.r + 0.7203 * c.g + 0.1129 * c.b;
         let s = 0.0241 * c.r + 0.0754 * c.g + 0.9005 * c.b;
@@ -5136,14 +5080,14 @@ pub mod color_spaces {
         ((c1 + c2 * y) / (1.0 + c3 * y)).powf(m2)
     }
 
-    pub fn rgb_to_xyz(c: RGB<f64>) -> (f64, f64, f64) {
+    pub fn rgb_to_xyz(c: RGB) -> (f64, f64, f64) {
         let x = 0.4124564 * c.r + 0.3575761 * c.g + 0.1804375 * c.b;
         let y = 0.2126729 * c.r + 0.7151522 * c.g + 0.0721750 * c.b;
         let z = 0.0193339 * c.r + 0.1191920 * c.g + 0.9503041 * c.b;
         (x, y, z)
     }
 
-    pub fn xyz_to_rgb(x: f64, y: f64, z: f64) -> RGB<f64> {
+    pub fn xyz_to_rgb(x: f64, y: f64, z: f64) -> RGB {
         RGB::new(
             (3.2404542 * x - 1.5371385 * y - 0.4985314 * z).clamp(0.0, 1.0),
             (-0.9692660 * x + 1.8760108 * y + 0.0415560 * z).clamp(0.0, 1.0),
@@ -5170,12 +5114,12 @@ pub mod color_spaces {
         (xn * f_inv(fx), yn * f_inv(fy), zn * f_inv(fz))
     }
 
-    pub fn rgb_to_lab(c: RGB<f64>) -> (f64, f64, f64) {
+    pub fn rgb_to_lab(c: RGB) -> (f64, f64, f64) {
         let (x, y, z) = rgb_to_xyz(c);
         xyz_to_lab(x, y, z)
     }
 
-    pub fn lab_to_rgb(l: f64, a: f64, b: f64) -> RGB<f64> {
+    pub fn lab_to_rgb(l: f64, a: f64, b: f64) -> RGB {
         let (x, y, z) = lab_to_xyz(l, a, b);
         xyz_to_rgb(x, y, z)
     }
@@ -5220,9 +5164,7 @@ pub mod color_spaces {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // REGION: Color Management System
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod cms {
     use super::*;
@@ -5323,9 +5265,7 @@ pub mod cms {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // REGION: Color Quantization & Dithering
-// ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod quantization {
     use super::*;
@@ -5449,12 +5389,10 @@ pub mod quantization {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // SPECTRAL COLOR SCIENCE
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /// Full spectral power distribution
-pub mod spectral {
+pub mod spectral_pd {
     use super::*;
 
     /// Wavelength range for visible light (nm)
@@ -5464,7 +5402,7 @@ pub mod spectral {
 
     /// Spectral Power Distribution
     #[derive(Clone, Debug)]
-    pub struct SPD {
+    pub struct SpectralPD {
         /// Starting wavelength (nm)
         pub start: f64,
         /// Wavelength step size (nm)
@@ -5473,21 +5411,9 @@ pub mod spectral {
         pub values: Vec<f64>,
     }
 
-    impl SPD {
+    impl SpectralPD {
         pub fn new(start: f64, step: f64, values: Vec<f64>) -> Self {
-            SPD { start, step, values }
-        }
-
-        /// Create SPD from function over wavelength range
-        pub fn from_fn<F>(start: f64, end: f64, step: f64, f: F) -> Self
-        where
-            F: Fn(f64) -> f64,
-        {
-            let count = ((end - start) / step).ceil() as usize + 1;
-            let values: Vec<f64> = (0..count)
-                .map(|i| f(start + i as f64 * step))
-                .collect();
-            SPD { start, step, values }
+            SpectralPD { start, step, values }
         }
 
         /// Sample value at specific wavelength (linear interpolation)
@@ -5507,7 +5433,19 @@ pub mod spectral {
             self.values[i] * (1.0 - t) + self.values[i + 1] * t
         }
 
-        /// Integrate SPD over wavelength range
+        /// Create SpectralPD from values computed over wavelength range
+        pub fn from_range(start: f64, end: f64, step: f64) -> Self {
+            let count = ((end - start) / step).ceil() as i64 + 1;
+            let mut values: Vec<f64> = vec![];
+            let mut i = 0;
+            while i < count {
+                vec_push(values, 0.0);
+                i = i + 1;
+            }
+            SpectralPD { start, step, values }
+        }
+
+        /// Integrate SpectralPD over wavelength range
         pub fn integrate(&self, start: f64, end: f64) -> f64 {
             let mut sum = 0.0;
             let mut wl = start;
@@ -5519,13 +5457,13 @@ pub mod spectral {
         }
 
         /// Multiply two SPDs (e.g., illuminant × reflectance)
-        pub fn multiply(&self, other: &SPD) -> SPD {
+        pub fn multiply(&self, other: &SpectralPD) -> SpectralPD {
             let start = self.start.max(other.start);
             let end = (self.start + self.values.len() as f64 * self.step)
                 .min(other.start + other.values.len() as f64 * other.step);
             let step = self.step.min(other.step);
 
-            SPD::from_fn(start, end, step, |wl| {
+            SpectralPD::from_fn(start, end, step, |wl| {
                 self.sample(wl) * other.sample(wl)
             })
         }
@@ -5543,9 +5481,9 @@ pub mod spectral {
 
     /// CIE 1931 Standard Observer (2°)
     pub struct CIE1931Observer {
-        pub x_bar: SPD,
-        pub y_bar: SPD,
-        pub z_bar: SPD,
+        pub x_bar: SpectralPD,
+        pub y_bar: SpectralPD,
+        pub z_bar: SpectralPD,
     }
 
     impl CIE1931Observer {
@@ -5554,20 +5492,20 @@ pub mod spectral {
             let wavelengths: Vec<f64> = (0..81).map(|i| 380.0 + i as f64 * 5.0).collect();
 
             // X-bar approximation using Gaussian mixture
-            let x_bar = SPD::from_fn(380.0, 780.0, 5.0, |wl| {
+            let x_bar = SpectralPD::from_fn(380.0, 780.0, 5.0, |wl| {
                 1.056 * gaussian(wl, 599.8, 37.9) +
                 0.362 * gaussian(wl, 442.0, 16.0) -
                 0.065 * gaussian(wl, 501.1, 20.4)
             });
 
             // Y-bar approximation
-            let y_bar = SPD::from_fn(380.0, 780.0, 5.0, |wl| {
+            let y_bar = SpectralPD::from_fn(380.0, 780.0, 5.0, |wl| {
                 0.821 * gaussian(wl, 568.8, 46.9) +
                 0.286 * gaussian(wl, 530.9, 16.3)
             });
 
             // Z-bar approximation
-            let z_bar = SPD::from_fn(380.0, 780.0, 5.0, |wl| {
+            let z_bar = SpectralPD::from_fn(380.0, 780.0, 5.0, |wl| {
                 1.217 * gaussian(wl, 437.0, 11.8) +
                 0.681 * gaussian(wl, 459.0, 26.0)
             });
@@ -5575,8 +5513,8 @@ pub mod spectral {
             CIE1931Observer { x_bar, y_bar, z_bar }
         }
 
-        /// Convert SPD to XYZ tristimulus values
-        pub fn spd_to_xyz(&self, spd: &SPD, illuminant: &SPD) -> XYZ {
+        /// Convert SpectralPD to XYZ tristimulus values
+        pub fn spd_to_xyz(&self, spd: &SpectralPD, illuminant: &SpectralPD) -> XYZ {
             let mut x = 0.0;
             let mut y = 0.0;
             let mut z = 0.0;
@@ -5605,24 +5543,24 @@ pub mod spectral {
 
     /// CIE 1964 Supplementary Standard Observer (10°)
     pub struct CIE1964Observer {
-        pub x_bar_10: SPD,
-        pub y_bar_10: SPD,
-        pub z_bar_10: SPD,
+        pub x_bar_10: SpectralPD,
+        pub y_bar_10: SpectralPD,
+        pub z_bar_10: SpectralPD,
     }
 
     impl CIE1964Observer {
         pub fn new() -> Self {
-            let x_bar_10 = SPD::from_fn(380.0, 780.0, 5.0, |wl| {
+            let x_bar_10 = SpectralPD::from_fn(380.0, 780.0, 5.0, |wl| {
                 0.398 * gaussian(wl, 449.3, 19.4) +
                 1.132 * gaussian(wl, 598.4, 38.9) -
                 0.053 * gaussian(wl, 501.2, 21.4)
             });
 
-            let y_bar_10 = SPD::from_fn(380.0, 780.0, 5.0, |wl| {
+            let y_bar_10 = SpectralPD::from_fn(380.0, 780.0, 5.0, |wl| {
                 1.011 * gaussian(wl, 556.8, 42.3)
             });
 
-            let z_bar_10 = SPD::from_fn(380.0, 780.0, 5.0, |wl| {
+            let z_bar_10 = SpectralPD::from_fn(380.0, 780.0, 5.0, |wl| {
                 2.060 * gaussian(wl, 449.5, 22.2)
             });
 
@@ -5640,8 +5578,8 @@ pub mod spectral {
         use super::*;
 
         /// CIE Standard Illuminant A (incandescent, ~2856K)
-        pub fn illuminant_a() -> SPD {
-            SPD::from_fn(380.0, 780.0, 5.0, |wl| {
+        pub fn illuminant_a() -> SpectralPD {
+            SpectralPD::from_fn(380.0, 780.0, 5.0, |wl| {
                 let c1 = 3.74183e-16;
                 let c2 = 1.4388e-2;
                 let t = 2856.0;
@@ -5654,29 +5592,29 @@ pub mod spectral {
         }
 
         /// CIE Standard Illuminant D50 (daylight, ~5003K)
-        pub fn illuminant_d50() -> SPD {
+        pub fn illuminant_d50() -> SpectralPD {
             daylight_spd(5003.0)
         }
 
         /// CIE Standard Illuminant D65 (daylight, ~6504K)
-        pub fn illuminant_d65() -> SPD {
+        pub fn illuminant_d65() -> SpectralPD {
             daylight_spd(6504.0)
         }
 
         /// CIE Standard Illuminant D75 (daylight, ~7504K)
-        pub fn illuminant_d75() -> SPD {
+        pub fn illuminant_d75() -> SpectralPD {
             daylight_spd(7504.0)
         }
 
         /// CIE Standard Illuminant E (equal energy)
-        pub fn illuminant_e() -> SPD {
-            SPD::from_fn(380.0, 780.0, 5.0, |_| 100.0)
+        pub fn illuminant_e() -> SpectralPD {
+            SpectralPD::from_fn(380.0, 780.0, 5.0, |_| 100.0)
         }
 
         /// Fluorescent illuminant F2 (cool white)
-        pub fn illuminant_f2() -> SPD {
+        pub fn illuminant_f2() -> SpectralPD {
             // Simplified approximation
-            SPD::from_fn(380.0, 780.0, 5.0, |wl| {
+            SpectralPD::from_fn(380.0, 780.0, 5.0, |wl| {
                 let base = 10.0 + 40.0 * gaussian(wl, 545.0, 30.0);
                 let spike1 = 80.0 * gaussian(wl, 436.0, 5.0);
                 let spike2 = 100.0 * gaussian(wl, 545.0, 8.0);
@@ -5686,8 +5624,8 @@ pub mod spectral {
         }
 
         /// LED illuminant (approximate)
-        pub fn illuminant_led(cct: f64) -> SPD {
-            SPD::from_fn(380.0, 780.0, 5.0, |wl| {
+        pub fn illuminant_led(cct: f64) -> SpectralPD {
+            SpectralPD::from_fn(380.0, 780.0, 5.0, |wl| {
                 // Blue pump + phosphor emission
                 let blue = 100.0 * gaussian(wl, 450.0, 15.0);
                 let phosphor_yellow = 80.0 * gaussian(wl, 560.0, 60.0);
@@ -5699,8 +5637,8 @@ pub mod spectral {
             })
         }
 
-        /// Calculate daylight SPD from correlated color temperature
-        fn daylight_spd(cct: f64) -> SPD {
+        /// Calculate daylight SpectralPD from correlated color temperature
+        fn daylight_spd(cct: f64) -> SpectralPD {
             // CIE daylight calculation
             let xd = if cct <= 7000.0 {
                 0.244063 + 0.09911e3 / cct + 2.9678e6 / cct.powi(2) - 4.6070e9 / cct.powi(3)
@@ -5714,7 +5652,7 @@ pub mod spectral {
             let m1 = (-1.3515 - 1.7703 * xd + 5.9114 * yd) / m;
             let m2 = (0.0300 - 31.4424 * xd + 30.0717 * yd) / m;
 
-            SPD::from_fn(380.0, 780.0, 5.0, |wl| {
+            SpectralPD::from_fn(380.0, 780.0, 5.0, |wl| {
                 let s0 = daylight_s0(wl);
                 let s1 = daylight_s1(wl);
                 let s2 = daylight_s2(wl);
@@ -5738,9 +5676,9 @@ pub mod spectral {
         }
     }
 
-    /// Planckian (blackbody) radiator SPD
-    pub fn planckian_spd(temperature: f64) -> SPD {
-        SPD::from_fn(380.0, 780.0, 5.0, |wl| {
+    /// Planckian (blackbody) radiator SpectralPD
+    pub fn planckian_spd(temperature: f64) -> SpectralPD {
+        SpectralPD::from_fn(380.0, 780.0, 5.0, |wl| {
             let c1 = 3.74183e-16;
             let c2 = 1.4388e-2;
             let wl_m = wl * 1e-9;
@@ -5750,9 +5688,7 @@ pub mod spectral {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // METAMERISM
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /// Metamerism analysis and detection
 pub mod metamerism {
@@ -5771,7 +5707,7 @@ pub mod metamerism {
     }
 
     /// Analyze metamerism between two SPDs
-    pub fn analyze_metamerism(spd1: &SPD, spd2: &SPD) -> MetamerismIndex {
+    pub fn analyze_metamerism(spd1: &FullSPD, spd2: &FullSPD) -> MetamerismIndex {
         let observer = CIE1931Observer::new();
 
         // Reference illuminant
@@ -5851,15 +5787,13 @@ pub mod metamerism {
     }
 
     /// Check if two colors are metameric (match under one illuminant but not others)
-    pub fn are_metameric(spd1: &SPD, spd2: &SPD, threshold: f64) -> bool {
+    pub fn are_metameric(spd1: &FullSPD, spd2: &FullSPD, threshold: f64) -> bool {
         let index = analyze_metamerism(spd1, spd2);
         index.general.abs() > threshold
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // COLOR VISION DEFICIENCY SIMULATION
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /// Color blindness simulation
 pub mod cvd {
@@ -6027,9 +5961,7 @@ pub mod cvd {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // COLOR APPEARANCE MODELS (CIECAM02/16)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /// CIECAM02/16 Color Appearance Model
 pub mod cam {
@@ -6308,383 +6240,11 @@ pub mod cam {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // ICC PROFILE HANDLING
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /// ICC Color Profile support
-pub mod icc {
-    use super::*;
 
-    /// ICC Profile class
-    #[derive(Clone, Copy, Debug, PartialEq)]
-    pub enum ProfileClass {
-        Input,
-        Display,
-        Output,
-        DeviceLink,
-        ColorSpace,
-        Abstract,
-        NamedColor,
-    }
-
-    /// ICC Profile header
-    #[derive(Clone, Debug)]
-    pub struct ProfileHeader {
-        pub size: u32,
-        pub preferred_cmm: [u8; 4],
-        pub version: ProfileVersion,
-        pub class: ProfileClass,
-        pub color_space: ColorSpaceSignature,
-        pub pcs: ColorSpaceSignature,
-        pub creation_date: DateTime,
-        pub primary_platform: [u8; 4],
-        pub flags: u32,
-        pub device_manufacturer: [u8; 4],
-        pub device_model: [u8; 4],
-        pub rendering_intent: RenderingIntent,
-        pub illuminant: XYZ,
-        pub creator: [u8; 4],
-        pub profile_id: [u8; 16],
-    }
-
-    #[derive(Clone, Copy, Debug)]
-    pub struct ProfileVersion {
-        pub major: u8,
-        pub minor: u8,
-        pub bugfix: u8,
-    }
-
-    #[derive(Clone, Copy, Debug)]
-    pub struct DateTime {
-        pub year: u16,
-        pub month: u16,
-        pub day: u16,
-        pub hour: u16,
-        pub minute: u16,
-        pub second: u16,
-    }
-
-    #[derive(Clone, Copy, Debug, PartialEq)]
-    pub enum ColorSpaceSignature {
-        XYZ,
-        Lab,
-        Luv,
-        YCbCr,
-        Yxy,
-        RGB,
-        Gray,
-        HSV,
-        HLS,
-        CMYK,
-        CMY,
-    }
-
-    #[derive(Clone, Copy, Debug, PartialEq)]
-    pub enum RenderingIntent {
-        Perceptual,
-        RelativeColorimetric,
-        Saturation,
-        AbsoluteColorimetric,
-    }
-
-    /// ICC Profile tag
-    #[derive(Clone, Debug)]
-    pub struct ProfileTag {
-        pub signature: [u8; 4],
-        pub offset: u32,
-        pub size: u32,
-        pub data: TagData,
-    }
-
-    /// Tag data types
-    #[derive(Clone, Debug)]
-    pub enum TagData {
-        XYZ(XYZ),
-        Curve(ToneCurve),
-        Text(String),
-        Desc(String),
-        MLUT(MultiLUT),
-        CLUT(ColorLUT),
-        Para(ParametricCurve),
-        Vcgt(VideoCardGammaTable),
-        Unknown(Vec<u8>),
-    }
-
-    /// Tone reproduction curve
-    #[derive(Clone, Debug)]
-    pub struct ToneCurve {
-        pub gamma: Option<f64>,
-        pub table: Option<Vec<u16>>,
-    }
-
-    impl ToneCurve {
-        pub fn gamma(g: f64) -> Self {
-            ToneCurve { gamma: Some(g), table: None }
-        }
-
-        pub fn table(t: Vec<u16>) -> Self {
-            ToneCurve { gamma: None, table: Some(t) }
-        }
-
-        pub fn apply(&self, x: f64) -> f64 {
-            if let Some(g) = self.gamma {
-                x.powf(g)
-            } else if let Some(ref t) = self.table {
-                let idx = (x * (t.len() - 1) as f64).clamp(0.0, (t.len() - 1) as f64);
-                let i = idx.floor() as usize;
-                let f = idx.fract();
-
-                if i >= t.len() - 1 {
-                    t[t.len() - 1] as f64 / 65535.0
-                } else {
-                    let v1 = t[i] as f64 / 65535.0;
-                    let v2 = t[i + 1] as f64 / 65535.0;
-                    v1 * (1.0 - f) + v2 * f
-                }
-            } else {
-                x
-            }
-        }
-
-        pub fn apply_inverse(&self, y: f64) -> f64 {
-            if let Some(g) = self.gamma {
-                y.powf(1.0 / g)
-            } else if let Some(ref t) = self.table {
-                // Binary search for inverse
-                let target = (y * 65535.0) as u16;
-                let mut lo = 0;
-                let mut hi = t.len() - 1;
-
-                while lo < hi {
-                    let mid = (lo + hi) / 2;
-                    if t[mid] < target {
-                        lo = mid + 1;
-                    } else {
-                        hi = mid;
-                    }
-                }
-
-                lo as f64 / (t.len() - 1) as f64
-            } else {
-                y
-            }
-        }
-    }
-
-    /// Parametric curve types (ICC v4)
-    #[derive(Clone, Debug)]
-    pub enum ParametricCurve {
-        /// Y = X^gamma
-        Type0 { gamma: f64 },
-        /// Y = (aX+b)^gamma if X >= -b/a, else 0
-        Type1 { gamma: f64, a: f64, b: f64 },
-        /// Y = (aX+b)^gamma + c if X >= -b/a, else c
-        Type2 { gamma: f64, a: f64, b: f64, c: f64 },
-        /// Y = (aX+b)^gamma if X >= d, else cX
-        Type3 { gamma: f64, a: f64, b: f64, c: f64, d: f64 },
-        /// Y = (aX+b)^gamma + e if X >= d, else cX+f
-        Type4 { gamma: f64, a: f64, b: f64, c: f64, d: f64, e: f64, f: f64 },
-    }
-
-    impl ParametricCurve {
-        /// sRGB transfer function
-        pub fn srgb() -> Self {
-            ParametricCurve::Type3 {
-                gamma: 2.4,
-                a: 1.0 / 1.055,
-                b: 0.055 / 1.055,
-                c: 1.0 / 12.92,
-                d: 0.04045,
-            }
-        }
-
-        /// Rec. 709 transfer function
-        pub fn rec709() -> Self {
-            ParametricCurve::Type3 {
-                gamma: 1.0 / 0.45,
-                a: 1.0 / 1.099,
-                b: 0.099 / 1.099,
-                c: 1.0 / 4.5,
-                d: 0.081,
-            }
-        }
-
-        pub fn apply(&self, x: f64) -> f64 {
-            match self {
-                ParametricCurve::Type0 { gamma } => x.powf(*gamma),
-                ParametricCurve::Type1 { gamma, a, b } => {
-                    if x >= -b / a { (a * x + b).powf(*gamma) } else { 0.0 }
-                }
-                ParametricCurve::Type2 { gamma, a, b, c } => {
-                    if x >= -b / a { (a * x + b).powf(*gamma) + c } else { *c }
-                }
-                ParametricCurve::Type3 { gamma, a, b, c, d } => {
-                    if x >= *d { (a * x + b).powf(*gamma) } else { c * x }
-                }
-                ParametricCurve::Type4 { gamma, a, b, c, d, e, f } => {
-                    if x >= *d { (a * x + b).powf(*gamma) + e } else { c * x + f }
-                }
-            }
-        }
-    }
-
-    /// Color Lookup Table
-    #[derive(Clone, Debug)]
-    pub struct ColorLUT {
-        pub grid_points: [u8; 16],
-        pub input_channels: u8,
-        pub output_channels: u8,
-        pub data: Vec<f32>,
-    }
-
-    impl ColorLUT {
-        pub fn lookup(&self, input: &[f32]) -> Vec<f32> {
-            // Trilinear interpolation for 3D LUT
-            if input.len() != self.input_channels as usize {
-                return vec![0.0; self.output_channels as usize];
-            }
-
-            let n = self.grid_points[0] as usize;
-            let mut result = vec![0.0; self.output_channels as usize];
-
-            // Simplified 3D interpolation
-            let x = (input[0] * (n - 1) as f32).clamp(0.0, (n - 1) as f32);
-            let y = (input[1] * (n - 1) as f32).clamp(0.0, (n - 1) as f32);
-            let z = (input[2] * (n - 1) as f32).clamp(0.0, (n - 1) as f32);
-
-            let xi = x.floor() as usize;
-            let yi = y.floor() as usize;
-            let zi = z.floor() as usize;
-
-            let xf = x.fract();
-            let yf = y.fract();
-            let zf = z.fract();
-
-            // Trilinear interpolation
-            for c in 0..self.output_channels as usize {
-                let c000 = self.get(xi, yi, zi, c);
-                let c100 = self.get(xi + 1, yi, zi, c);
-                let c010 = self.get(xi, yi + 1, zi, c);
-                let c110 = self.get(xi + 1, yi + 1, zi, c);
-                let c001 = self.get(xi, yi, zi + 1, c);
-                let c101 = self.get(xi + 1, yi, zi + 1, c);
-                let c011 = self.get(xi, yi + 1, zi + 1, c);
-                let c111 = self.get(xi + 1, yi + 1, zi + 1, c);
-
-                let c00 = c000 * (1.0 - xf) + c100 * xf;
-                let c01 = c001 * (1.0 - xf) + c101 * xf;
-                let c10 = c010 * (1.0 - xf) + c110 * xf;
-                let c11 = c011 * (1.0 - xf) + c111 * xf;
-
-                let c0 = c00 * (1.0 - yf) + c10 * yf;
-                let c1 = c01 * (1.0 - yf) + c11 * yf;
-
-                result[c] = c0 * (1.0 - zf) + c1 * zf;
-            }
-
-            result
-        }
-
-        fn get(&self, x: usize, y: usize, z: usize, c: usize) -> f32 {
-            let n = self.grid_points[0] as usize;
-            let x = x.min(n - 1);
-            let y = y.min(n - 1);
-            let z = z.min(n - 1);
-
-            let idx = ((z * n + y) * n + x) * self.output_channels as usize + c;
-            self.data.get(idx).copied().unwrap_or(0.0)
-        }
-    }
-
-    /// Multi-processing element LUT
-    #[derive(Clone, Debug)]
-    pub struct MultiLUT {
-        pub input_curves: Vec<ToneCurve>,
-        pub clut: Option<ColorLUT>,
-        pub output_curves: Vec<ToneCurve>,
-        pub matrix: Option<[[f64; 3]; 3]>,
-    }
-
-    /// Video card gamma table
-    #[derive(Clone, Debug)]
-    pub struct VideoCardGammaTable {
-        pub red: Vec<u16>,
-        pub green: Vec<u16>,
-        pub blue: Vec<u16>,
-    }
-
-    /// ICC Profile
-    #[derive(Clone, Debug)]
-    pub struct Profile {
-        pub header: ProfileHeader,
-        pub tags: Vec<ProfileTag>,
-    }
-
-    impl Profile {
-        /// Create sRGB profile
-        pub fn srgb() -> Self {
-            let header = ProfileHeader {
-                size: 0,
-                preferred_cmm: *b"none",
-                version: ProfileVersion { major: 4, minor: 4, bugfix: 0 },
-                class: ProfileClass::Display,
-                color_space: ColorSpaceSignature::RGB,
-                pcs: ColorSpaceSignature::XYZ,
-                creation_date: DateTime {
-                    year: 2024, month: 1, day: 1,
-                    hour: 0, minute: 0, second: 0,
-                },
-                primary_platform: *b"none",
-                flags: 0,
-                device_manufacturer: *b"none",
-                device_model: *b"none",
-                rendering_intent: RenderingIntent::Perceptual,
-                illuminant: XYZ::new(0.9642, 1.0, 0.8249),
-                creator: *b"QNTA",
-                profile_id: [0; 16],
-            };
-
-            let tags = vec![
-                ProfileTag {
-                    signature: *b"rXYZ",
-                    offset: 0,
-                    size: 0,
-                    data: TagData::XYZ(XYZ::new(0.4124, 0.2126, 0.0193)),
-                },
-                ProfileTag {
-                    signature: *b"gXYZ",
-                    offset: 0,
-                    size: 0,
-                    data: TagData::XYZ(XYZ::new(0.3576, 0.7152, 0.1192)),
-                },
-                ProfileTag {
-                    signature: *b"bXYZ",
-                    offset: 0,
-                    size: 0,
-                    data: TagData::XYZ(XYZ::new(0.1805, 0.0722, 0.9505)),
-                },
-            ];
-
-            Profile { header, tags }
-        }
-
-        /// Get tag by signature
-        pub fn get_tag(&self, sig: &[u8; 4]) -> Option<&ProfileTag> {
-            self.tags.iter().find(|t| &t.signature == sig)
-        }
-
-        /// Transform color through profile
-        pub fn transform(&self, input: &[f32]) -> Vec<f32> {
-            // Simplified profile transform
-            vec![input[0], input[1], input[2]]
-        }
-    }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
 // HDR METADATA
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /// HDR metadata formats
 pub mod hdr_metadata {
@@ -6911,9 +6471,7 @@ pub mod hdr_metadata {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // COLOR HARMONY
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /// Color harmony algorithms
 pub mod harmony {
@@ -6973,7 +6531,7 @@ pub mod harmony {
             return 1.0;
         }
 
-        let hsls: Vec<(f32, f32, f32)> = colors.iter().map(|&c| rgb_to_hsl(c)).collect();
+        let hsls: Vec<(f32, f32, f32)> = colors.iter().map(|c| rgb_to_hsl(*c)).collect();
 
         // Check for known harmonious relationships
         let mut score = 0.0;
@@ -7156,9 +6714,7 @@ pub mod harmony {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // GAMUT BOUNDARY DESCRIPTOR
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /// Gamut boundary description and analysis
 pub mod gamut {
@@ -7331,9 +6887,7 @@ pub mod gamut {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // COLOR DIFFERENCE FORMULAS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /// Advanced color difference metrics
 pub mod delta_e {
@@ -7514,9 +7068,7 @@ pub mod delta_e {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 #[cfg(test)]
 mod tests {
