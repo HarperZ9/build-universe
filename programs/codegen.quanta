@@ -1,0 +1,1513 @@
+// =============================================================================
+// qcodegen - QuantaLang-to-C Code Generator written in QuantaLang
+// =============================================================================
+// Sixth self-hosting tool. The FINAL piece of the self-hosting compiler chain:
+//   tokenize -> parse -> check -> codegen
+//
+// Reads a .quanta source file, tokenizes it, and emits equivalent C code
+// that compiles with gcc/MSVC.
+//
+// Scope (handles a subset of QuantaLang):
+//   - Functions (fn name(params) -> ret { ... })
+//   - Let bindings (let x = 5; let mut y = 0;)
+//   - Arithmetic, comparisons, logical operators
+//   - If/else, while, return
+//   - Function calls
+//   - println!("{}", x) -> printf("%lld\n", x)
+//   - String literals, booleans, integers, floats
+//
+// Type mapping:
+//   i64 -> int64_t    i32 -> int32_t    f64 -> double    f32 -> float
+//   bool -> int       String/&str -> const char*
+//
+// Usage:
+//   qcodegen file.quanta              print C code to stdout
+//   qcodegen file.quanta -o out.c     write to file
+//   qcodegen --help                   usage
+// =============================================================================
+
+// ---------------------------------------------------------------------------
+// Token type constants (must match tok.quanta / parse.quanta / check.quanta)
+// ---------------------------------------------------------------------------
+fn TK_KEYWORD() -> i32 { 1 }
+fn TK_IDENT() -> i32 { 2 }
+fn TK_INT_LIT() -> i32 { 3 }
+fn TK_FLOAT_LIT() -> i32 { 4 }
+fn TK_STR_LIT() -> i32 { 5 }
+fn TK_CHAR_LIT() -> i32 { 6 }
+fn TK_PLUS() -> i32 { 10 }
+fn TK_MINUS() -> i32 { 11 }
+fn TK_STAR() -> i32 { 12 }
+fn TK_SLASH() -> i32 { 13 }
+fn TK_PERCENT() -> i32 { 14 }
+fn TK_ASSIGN() -> i32 { 15 }
+fn TK_EQ() -> i32 { 16 }
+fn TK_NEQ() -> i32 { 17 }
+fn TK_LT() -> i32 { 18 }
+fn TK_GT() -> i32 { 19 }
+fn TK_LE() -> i32 { 20 }
+fn TK_GE() -> i32 { 21 }
+fn TK_AND() -> i32 { 22 }
+fn TK_OR() -> i32 { 23 }
+fn TK_NOT() -> i32 { 24 }
+fn TK_BIT_AND() -> i32 { 25 }
+fn TK_BIT_OR() -> i32 { 26 }
+fn TK_BIT_XOR() -> i32 { 27 }
+fn TK_SHL() -> i32 { 28 }
+fn TK_SHR() -> i32 { 29 }
+fn TK_PLUS_EQ() -> i32 { 30 }
+fn TK_MINUS_EQ() -> i32 { 31 }
+fn TK_STAR_EQ() -> i32 { 32 }
+fn TK_SLASH_EQ() -> i32 { 33 }
+fn TK_ARROW() -> i32 { 34 }
+fn TK_FAT_ARROW() -> i32 { 35 }
+fn TK_COLONCOLON() -> i32 { 36 }
+fn TK_LPAREN() -> i32 { 40 }
+fn TK_RPAREN() -> i32 { 41 }
+fn TK_LBRACE() -> i32 { 42 }
+fn TK_RBRACE() -> i32 { 43 }
+fn TK_LBRACK() -> i32 { 44 }
+fn TK_RBRACK() -> i32 { 45 }
+fn TK_COMMA() -> i32 { 46 }
+fn TK_SEMI() -> i32 { 47 }
+fn TK_COLON() -> i32 { 48 }
+fn TK_DOT() -> i32 { 49 }
+
+// ---------------------------------------------------------------------------
+// Character helpers (same as tok.quanta / parse.quanta / check.quanta)
+// ---------------------------------------------------------------------------
+fn is_alpha(c: String) -> bool {
+    if c == "_" { return true; }
+    let low = c.to_lowercase();
+    if low == "a" { return true; } if low == "b" { return true; }
+    if low == "c" { return true; } if low == "d" { return true; }
+    if low == "e" { return true; } if low == "f" { return true; }
+    if low == "g" { return true; } if low == "h" { return true; }
+    if low == "i" { return true; } if low == "j" { return true; }
+    if low == "k" { return true; } if low == "l" { return true; }
+    if low == "m" { return true; } if low == "n" { return true; }
+    if low == "o" { return true; } if low == "p" { return true; }
+    if low == "q" { return true; } if low == "r" { return true; }
+    if low == "s" { return true; } if low == "t" { return true; }
+    if low == "u" { return true; } if low == "v" { return true; }
+    if low == "w" { return true; } if low == "x" { return true; }
+    if low == "y" { return true; } if low == "z" { return true; }
+    false
+}
+
+fn is_digit(c: String) -> bool {
+    c == "0" || c == "1" || c == "2" || c == "3" || c == "4" ||
+    c == "5" || c == "6" || c == "7" || c == "8" || c == "9"
+}
+
+fn is_hex_digit(c: String) -> bool {
+    if is_digit(c) { return true; }
+    let low = c.to_lowercase();
+    low == "a" || low == "b" || low == "c" || low == "d" ||
+    low == "e" || low == "f"
+}
+
+fn is_bin_digit(c: String) -> bool { c == "0" || c == "1" }
+
+fn is_oct_digit(c: String) -> bool {
+    c == "0" || c == "1" || c == "2" || c == "3" ||
+    c == "4" || c == "5" || c == "6" || c == "7"
+}
+
+fn is_alnum(c: String) -> bool { is_alpha(c) || is_digit(c) }
+
+fn is_whitespace(c: String) -> bool {
+    c == " " || c == "\t" || c == "\r" || c == "\n"
+}
+
+// ---------------------------------------------------------------------------
+// Tokenizer (embedded from tok.quanta)
+// ---------------------------------------------------------------------------
+struct Tok {
+    input: String,
+    ilen: i32,
+    pos: i32,
+    line: i32,
+    col: i32,
+    pool: String,
+    t_types: Vec<i32>,
+    t_starts: Vec<i32>,
+    t_lens: Vec<i32>,
+    t_lines: Vec<i32>,
+    t_cols: Vec<i32>,
+    count: i32,
+}
+
+fn tok_new(input: String) -> Tok {
+    let ilen = input.len();
+    Tok {
+        input: input, ilen: ilen,
+        pos: 0, line: 1, col: 1,
+        pool: "",
+        t_types: vec![], t_starts: vec![], t_lens: vec![],
+        t_lines: vec![], t_cols: vec![],
+        count: 0,
+    }
+}
+
+fn pool_add(t: &mut Tok, text: String) -> i32 {
+    let st = t.pool.len();
+    t.pool = t.pool + text;
+    st
+}
+
+fn pool_get(t: &Tok, start: i32, length: i32) -> String {
+    if length == 0 { return ""; }
+    t.pool.substring(start, length)
+}
+
+fn tok_emit(t: &mut Tok, ttype: i32, text: String, tline: i32, tcol: i32) {
+    let st = pool_add(t, text);
+    let tlen = text.len();
+    vec_push(t.t_types, ttype);
+    vec_push(t.t_starts, st);
+    vec_push(t.t_lens, tlen);
+    vec_push(t.t_lines, tline);
+    vec_push(t.t_cols, tcol);
+    t.count = t.count + 1;
+}
+
+fn peek_tok(t: &Tok) -> String {
+    if t.pos >= t.ilen { return ""; }
+    t.input.char_at(t.pos)
+}
+
+fn peek_at(t: &Tok, offset: i32) -> String {
+    let p = t.pos + offset;
+    if p >= t.ilen { return ""; }
+    t.input.char_at(p)
+}
+
+fn advance_tok(t: &mut Tok) -> String {
+    if t.pos >= t.ilen { return ""; }
+    let c = t.input.char_at(t.pos);
+    t.pos = t.pos + 1;
+    if c == "\n" { t.line = t.line + 1; t.col = 1; }
+    else { t.col = t.col + 1; }
+    c
+}
+
+fn is_keyword(s: String) -> bool {
+    if s == "fn" { return true; } if s == "let" { return true; }
+    if s == "mut" { return true; } if s == "if" { return true; }
+    if s == "else" { return true; } if s == "while" { return true; }
+    if s == "for" { return true; } if s == "in" { return true; }
+    if s == "return" { return true; } if s == "struct" { return true; }
+    if s == "enum" { return true; } if s == "impl" { return true; }
+    if s == "pub" { return true; } if s == "mod" { return true; }
+    if s == "use" { return true; } if s == "match" { return true; }
+    if s == "trait" { return true; } if s == "const" { return true; }
+    if s == "true" { return true; } if s == "false" { return true; }
+    if s == "self" { return true; } if s == "Self" { return true; }
+    if s == "super" { return true; } if s == "where" { return true; }
+    if s == "as" { return true; } if s == "break" { return true; }
+    if s == "continue" { return true; } if s == "loop" { return true; }
+    if s == "type" { return true; }
+    false
+}
+
+fn skip_whitespace(t: &mut Tok) {
+    let mut go = true;
+    while go {
+        if t.pos >= t.ilen { go = false; }
+        else {
+            let c = peek_tok(t);
+            if is_whitespace(c) { advance_tok(t); }
+            else { go = false; }
+        }
+    }
+}
+
+fn skip_line_comment(t: &mut Tok) {
+    advance_tok(t); advance_tok(t);
+    let mut go = true;
+    while go {
+        if t.pos >= t.ilen { go = false; }
+        else {
+            let c = peek_tok(t);
+            if c == "\n" { advance_tok(t); go = false; }
+            else { advance_tok(t); }
+        }
+    }
+}
+
+fn skip_block_comment(t: &mut Tok) {
+    advance_tok(t); advance_tok(t);
+    let mut depth: i32 = 1;
+    let mut go = true;
+    while go {
+        if t.pos >= t.ilen { go = false; }
+        else {
+            let c = peek_tok(t);
+            let c2 = peek_at(t, 1);
+            if c == "/" && c2 == "*" {
+                advance_tok(t); advance_tok(t); depth = depth + 1;
+            } else if c == "*" && c2 == "/" {
+                advance_tok(t); advance_tok(t); depth = depth - 1;
+                if depth == 0 { go = false; }
+            } else { advance_tok(t); }
+        }
+    }
+}
+
+fn read_string(t: &mut Tok) {
+    let tline = t.line; let tcol = t.col;
+    let mut text = "\"";
+    advance_tok(t);
+    let mut go = true;
+    while go {
+        if t.pos >= t.ilen { go = false; }
+        else {
+            let c = peek_tok(t);
+            if c == "\\" {
+                text = text + advance_tok(t);
+                if t.pos < t.ilen { text = text + advance_tok(t); }
+            } else if c == "\"" { text = text + advance_tok(t); go = false; }
+            else { text = text + advance_tok(t); }
+        }
+    }
+    tok_emit(t, TK_STR_LIT(), text, tline, tcol);
+}
+
+fn read_char_lit(t: &mut Tok) {
+    let tline = t.line; let tcol = t.col;
+    let mut text = "'";
+    advance_tok(t);
+    let mut go = true;
+    while go {
+        if t.pos >= t.ilen { go = false; }
+        else {
+            let c = peek_tok(t);
+            if c == "\\" {
+                text = text + advance_tok(t);
+                if t.pos < t.ilen { text = text + advance_tok(t); }
+            } else if c == "'" { text = text + advance_tok(t); go = false; }
+            else { text = text + advance_tok(t); }
+        }
+    }
+    tok_emit(t, TK_CHAR_LIT(), text, tline, tcol);
+}
+
+fn read_number(t: &mut Tok) {
+    let tline = t.line; let tcol = t.col;
+    let mut text = "";
+    let c0 = peek_tok(t);
+    if c0 == "0" {
+        let c1 = peek_at(t, 1);
+        if c1 == "x" || c1 == "X" {
+            text = text + advance_tok(t); text = text + advance_tok(t);
+            let mut go = true;
+            while go {
+                if t.pos >= t.ilen { go = false; }
+                else { let c = peek_tok(t); if is_hex_digit(c) || c == "_" { text = text + advance_tok(t); } else { go = false; } }
+            }
+            tok_emit(t, TK_INT_LIT(), text, tline, tcol); return;
+        }
+        if c1 == "b" || c1 == "B" {
+            text = text + advance_tok(t); text = text + advance_tok(t);
+            let mut go = true;
+            while go {
+                if t.pos >= t.ilen { go = false; }
+                else { let c = peek_tok(t); if is_bin_digit(c) || c == "_" { text = text + advance_tok(t); } else { go = false; } }
+            }
+            tok_emit(t, TK_INT_LIT(), text, tline, tcol); return;
+        }
+        if c1 == "o" || c1 == "O" {
+            text = text + advance_tok(t); text = text + advance_tok(t);
+            let mut go = true;
+            while go {
+                if t.pos >= t.ilen { go = false; }
+                else { let c = peek_tok(t); if is_oct_digit(c) || c == "_" { text = text + advance_tok(t); } else { go = false; } }
+            }
+            tok_emit(t, TK_INT_LIT(), text, tline, tcol); return;
+        }
+    }
+    let mut go = true;
+    while go {
+        if t.pos >= t.ilen { go = false; }
+        else { let c = peek_tok(t); if is_digit(c) || c == "_" { text = text + advance_tok(t); } else { go = false; } }
+    }
+    let mut is_float = false;
+    if t.pos < t.ilen {
+        let dot = peek_tok(t);
+        if dot == "." {
+            let after = peek_at(t, 1);
+            if is_digit(after) {
+                is_float = true;
+                text = text + advance_tok(t);
+                let mut go2 = true;
+                while go2 {
+                    if t.pos >= t.ilen { go2 = false; }
+                    else { let c = peek_tok(t); if is_digit(c) || c == "_" { text = text + advance_tok(t); } else { go2 = false; } }
+                }
+            }
+        }
+    }
+    if t.pos < t.ilen {
+        let ec = peek_tok(t);
+        if ec == "e" || ec == "E" {
+            is_float = true;
+            text = text + advance_tok(t);
+            if t.pos < t.ilen {
+                let sign = peek_tok(t);
+                if sign == "+" || sign == "-" { text = text + advance_tok(t); }
+            }
+            let mut go3 = true;
+            while go3 {
+                if t.pos >= t.ilen { go3 = false; }
+                else { let c = peek_tok(t); if is_digit(c) { text = text + advance_tok(t); } else { go3 = false; } }
+            }
+        }
+    }
+    if is_float { tok_emit(t, TK_FLOAT_LIT(), text, tline, tcol); }
+    else { tok_emit(t, TK_INT_LIT(), text, tline, tcol); }
+}
+
+fn read_ident_or_keyword(t: &mut Tok) {
+    let tline = t.line; let tcol = t.col;
+    let mut text = "";
+    let mut go = true;
+    while go {
+        if t.pos >= t.ilen { go = false; }
+        else { let c = peek_tok(t); if is_alnum(c) { text = text + advance_tok(t); } else { go = false; } }
+    }
+    if is_keyword(text) { tok_emit(t, TK_KEYWORD(), text, tline, tcol); }
+    else { tok_emit(t, TK_IDENT(), text, tline, tcol); }
+}
+
+fn read_operator(t: &mut Tok) {
+    let tline = t.line; let tcol = t.col;
+    let c = peek_tok(t); let c2 = peek_at(t, 1); let c3 = peek_at(t, 2);
+    if c == "." && c2 == "." && c3 == "=" { advance_tok(t); advance_tok(t); advance_tok(t); tok_emit(t, 38, "..=", tline, tcol); return; }
+    if c == "<" && c2 == "<" { advance_tok(t); advance_tok(t); tok_emit(t, TK_SHL(), "<<", tline, tcol); return; }
+    if c == ">" && c2 == ">" { advance_tok(t); advance_tok(t); tok_emit(t, TK_SHR(), ">>", tline, tcol); return; }
+    if c == "=" && c2 == "=" { advance_tok(t); advance_tok(t); tok_emit(t, TK_EQ(), "==", tline, tcol); return; }
+    if c == "!" && c2 == "=" { advance_tok(t); advance_tok(t); tok_emit(t, TK_NEQ(), "!=", tline, tcol); return; }
+    if c == "<" && c2 == "=" { advance_tok(t); advance_tok(t); tok_emit(t, TK_LE(), "<=", tline, tcol); return; }
+    if c == ">" && c2 == "=" { advance_tok(t); advance_tok(t); tok_emit(t, TK_GE(), ">=", tline, tcol); return; }
+    if c == "&" && c2 == "&" { advance_tok(t); advance_tok(t); tok_emit(t, TK_AND(), "&&", tline, tcol); return; }
+    if c == "|" && c2 == "|" { advance_tok(t); advance_tok(t); tok_emit(t, TK_OR(), "||", tline, tcol); return; }
+    if c == "+" && c2 == "=" { advance_tok(t); advance_tok(t); tok_emit(t, TK_PLUS_EQ(), "+=", tline, tcol); return; }
+    if c == "-" && c2 == "=" { advance_tok(t); advance_tok(t); tok_emit(t, TK_MINUS_EQ(), "-=", tline, tcol); return; }
+    if c == "*" && c2 == "=" { advance_tok(t); advance_tok(t); tok_emit(t, TK_STAR_EQ(), "*=", tline, tcol); return; }
+    if c == "/" && c2 == "=" { advance_tok(t); advance_tok(t); tok_emit(t, TK_SLASH_EQ(), "/=", tline, tcol); return; }
+    if c == "-" && c2 == ">" { advance_tok(t); advance_tok(t); tok_emit(t, TK_ARROW(), "->", tline, tcol); return; }
+    if c == "=" && c2 == ">" { advance_tok(t); advance_tok(t); tok_emit(t, TK_FAT_ARROW(), "=>", tline, tcol); return; }
+    if c == ":" && c2 == ":" { advance_tok(t); advance_tok(t); tok_emit(t, TK_COLONCOLON(), "::", tline, tcol); return; }
+    if c == "." && c2 == "." { advance_tok(t); advance_tok(t); tok_emit(t, 37, "..", tline, tcol); return; }
+    advance_tok(t);
+    if c == "+" { tok_emit(t, TK_PLUS(), "+", tline, tcol); return; }
+    if c == "-" { tok_emit(t, TK_MINUS(), "-", tline, tcol); return; }
+    if c == "*" { tok_emit(t, TK_STAR(), "*", tline, tcol); return; }
+    if c == "/" { tok_emit(t, TK_SLASH(), "/", tline, tcol); return; }
+    if c == "%" { tok_emit(t, TK_PERCENT(), "%", tline, tcol); return; }
+    if c == "=" { tok_emit(t, TK_ASSIGN(), "=", tline, tcol); return; }
+    if c == "<" { tok_emit(t, TK_LT(), "<", tline, tcol); return; }
+    if c == ">" { tok_emit(t, TK_GT(), ">", tline, tcol); return; }
+    if c == "!" { tok_emit(t, TK_NOT(), "!", tline, tcol); return; }
+    if c == "&" { tok_emit(t, TK_BIT_AND(), "&", tline, tcol); return; }
+    if c == "|" { tok_emit(t, TK_BIT_OR(), "|", tline, tcol); return; }
+    if c == "^" { tok_emit(t, TK_BIT_XOR(), "^", tline, tcol); return; }
+    if c == "(" { tok_emit(t, TK_LPAREN(), "(", tline, tcol); return; }
+    if c == ")" { tok_emit(t, TK_RPAREN(), ")", tline, tcol); return; }
+    if c == "{" { tok_emit(t, TK_LBRACE(), "{", tline, tcol); return; }
+    if c == "}" { tok_emit(t, TK_RBRACE(), "}", tline, tcol); return; }
+    if c == "[" { tok_emit(t, TK_LBRACK(), "[", tline, tcol); return; }
+    if c == "]" { tok_emit(t, TK_RBRACK(), "]", tline, tcol); return; }
+    if c == "," { tok_emit(t, TK_COMMA(), ",", tline, tcol); return; }
+    if c == ";" { tok_emit(t, TK_SEMI(), ";", tline, tcol); return; }
+    if c == ":" { tok_emit(t, TK_COLON(), ":", tline, tcol); return; }
+    if c == "." { tok_emit(t, TK_DOT(), ".", tline, tcol); return; }
+    if c == "@" { tok_emit(t, 50, "@", tline, tcol); return; }
+    if c == "#" { tok_emit(t, 51, "#", tline, tcol); return; }
+    if c == "?" { tok_emit(t, 52, "?", tline, tcol); return; }
+}
+
+fn tokenize(t: &mut Tok) {
+    let mut go = true;
+    while go {
+        if t.pos >= t.ilen { go = false; }
+        else {
+            skip_whitespace(t);
+            if t.pos >= t.ilen { go = false; }
+            else {
+                let c = peek_tok(t);
+                let c2 = peek_at(t, 1);
+                if c == "/" && c2 == "/" { skip_line_comment(t); }
+                else if c == "/" && c2 == "*" { skip_block_comment(t); }
+                else if c == "\"" { read_string(t); }
+                else if c == "'" { read_char_lit(t); }
+                else if is_digit(c) { read_number(t); }
+                else if is_alpha(c) { read_ident_or_keyword(t); }
+                else { read_operator(t); }
+            }
+        }
+    }
+}
+
+// ===========================================================================
+// CODE GENERATOR
+// ===========================================================================
+// Syntax-directed translation: parse and emit C code in one pass.
+// We do a two-pass approach:
+//   Pass 1: Scan for all fn signatures to emit forward declarations.
+//   Pass 2: Full codegen.
+// ===========================================================================
+
+struct CG {
+    pool: String,
+    tk: Vec<i32>,
+    ts: Vec<i32>,
+    tl: Vec<i32>,
+    count: i32,
+    pos: i32,
+    // Output buffer
+    out: String,
+    // Forward declarations buffer
+    fwd: String,
+    // Indentation level
+    indent: i32,
+}
+
+fn cg_new(t: &Tok) -> CG {
+    CG {
+        pool: t.pool,
+        tk: t.t_types, ts: t.t_starts, tl: t.t_lens,
+        count: t.count,
+        pos: 0,
+        out: "",
+        fwd: "",
+        indent: 0,
+    }
+}
+
+// --- Token access helpers ---
+fn pk(cg: &CG) -> i32 {
+    if cg.pos >= cg.count { return 0; }
+    vec_get(cg.tk, cg.pos)
+}
+
+fn pk_at(cg: &CG, off: i32) -> i32 {
+    let i = cg.pos + off;
+    if i >= cg.count { return 0; }
+    vec_get(cg.tk, i)
+}
+
+fn ptxt(cg: &CG) -> String {
+    if cg.pos >= cg.count { return ""; }
+    let s = vec_get(cg.ts, cg.pos);
+    let l = vec_get(cg.tl, cg.pos);
+    if l == 0 { return ""; }
+    cg.pool.substring(s, l)
+}
+
+fn ptxt_at(cg: &CG, off: i32) -> String {
+    let i = cg.pos + off;
+    if i >= cg.count { return ""; }
+    let s = vec_get(cg.ts, i);
+    let l = vec_get(cg.tl, i);
+    if l == 0 { return ""; }
+    cg.pool.substring(s, l)
+}
+
+fn adv(cg: &mut CG) {
+    if cg.pos < cg.count { cg.pos = cg.pos + 1; }
+}
+
+fn at_end(cg: &CG) -> bool { cg.pos >= cg.count }
+
+fn expect_kind(cg: &mut CG, kind: i32) -> bool {
+    if pk(cg) == kind { adv(cg); return true; }
+    false
+}
+
+fn expect_text(cg: &mut CG, text: String) -> bool {
+    if ptxt(cg) == text { adv(cg); return true; }
+    false
+}
+
+// --- Output helpers ---
+fn make_indent(n: i32) -> String {
+    let mut out = "";
+    let mut i: i32 = 0;
+    while i < n {
+        out = out + "    ";
+        i = i + 1;
+    }
+    out
+}
+
+fn emit(cg: &mut CG, text: String) {
+    cg.out = cg.out + text;
+}
+
+fn emit_indent(cg: &mut CG) {
+    let pad = make_indent(cg.indent);
+    cg.out = cg.out + pad;
+}
+
+fn emit_line(cg: &mut CG, text: String) {
+    let pad = make_indent(cg.indent);
+    cg.out = cg.out + pad + text + "\n";
+}
+
+fn emit_fwd(cg: &mut CG, text: String) {
+    cg.fwd = cg.fwd + text + "\n";
+}
+
+// --- Skip helpers ---
+fn skip_balanced_braces(cg: &mut CG) {
+    if pk(cg) != TK_LBRACE() { return; }
+    adv(cg);
+    let mut depth: i32 = 1;
+    let mut go = true;
+    while go {
+        if at_end(cg) { go = false; }
+        else if pk(cg) == TK_LBRACE() { depth = depth + 1; adv(cg); }
+        else if pk(cg) == TK_RBRACE() {
+            depth = depth - 1; adv(cg);
+            if depth == 0 { go = false; }
+        }
+        else { adv(cg); }
+    }
+}
+
+fn skip_to_semi(cg: &mut CG) {
+    let mut go = true;
+    while go {
+        if at_end(cg) { go = false; }
+        else if pk(cg) == TK_SEMI() { adv(cg); go = false; }
+        else { adv(cg); }
+    }
+}
+
+// ===========================================================================
+// Type mapping: QuantaLang types -> C types
+// ===========================================================================
+fn map_type(ty: String) -> String {
+    if ty == "i64" { return "int64_t"; }
+    if ty == "i32" { return "int32_t"; }
+    if ty == "i16" { return "int16_t"; }
+    if ty == "i8" { return "int8_t"; }
+    if ty == "u64" { return "uint64_t"; }
+    if ty == "u32" { return "uint32_t"; }
+    if ty == "u16" { return "uint16_t"; }
+    if ty == "u8" { return "uint8_t"; }
+    if ty == "f64" { return "double"; }
+    if ty == "f32" { return "float"; }
+    if ty == "bool" { return "int"; }
+    if ty == "String" { return "const char*"; }
+    if ty == "&str" { return "const char*"; }
+    if ty == "()" { return "void"; }
+    // Default: pass through
+    ty
+}
+
+// Parse a type annotation from the token stream and return the C type string
+fn parse_type(cg: &mut CG) -> String {
+    // Handle & and &mut references -> pass as pointer in C
+    if pk(cg) == TK_BIT_AND() {
+        adv(cg);
+        if ptxt(cg) == "mut" { adv(cg); }
+        let inner = parse_type(cg);
+        return inner;
+    }
+    // Handle main type name
+    let mut name = "";
+    if pk(cg) == TK_IDENT() || pk(cg) == TK_KEYWORD() {
+        name = ptxt(cg);
+        adv(cg);
+    }
+    // Handle :: paths (e.g., std::io::Result)
+    let mut go = true;
+    while go {
+        if pk(cg) == TK_COLONCOLON() {
+            name = name + "::";
+            adv(cg);
+            if pk(cg) == TK_IDENT() || pk(cg) == TK_KEYWORD() {
+                name = name + ptxt(cg);
+                adv(cg);
+            }
+        } else { go = false; }
+    }
+    // Handle <T> generics - skip
+    if pk(cg) == TK_LT() {
+        adv(cg);
+        let mut depth: i32 = 1;
+        let mut go2 = true;
+        while go2 {
+            if at_end(cg) { go2 = false; }
+            else if pk(cg) == TK_LT() { depth = depth + 1; adv(cg); }
+            else if pk(cg) == TK_GT() {
+                depth = depth - 1; adv(cg);
+                if depth == 0 { go2 = false; }
+            }
+            else { adv(cg); }
+        }
+    }
+    map_type(name)
+}
+
+// ===========================================================================
+// PASS 1: Collect forward declarations
+// ===========================================================================
+// Scan top-level fn signatures and emit C forward declarations.
+fn pass1_scan(cg: &mut CG) {
+    let saved_pos = cg.pos;
+    cg.pos = 0;
+
+    let mut go = true;
+    while go {
+        if at_end(cg) { go = false; }
+        else {
+            let k = pk(cg);
+            let txt = ptxt(cg);
+            // Skip 'pub' keyword
+            if k == TK_KEYWORD() && txt == "pub" { adv(cg); }
+            let k2 = pk(cg);
+            let txt2 = ptxt(cg);
+            if k2 == TK_KEYWORD() && txt2 == "fn" {
+                adv(cg); // skip "fn"
+                let name = ptxt(cg);
+                adv(cg); // skip name
+                // Parse params for the forward declaration
+                expect_kind(cg, TK_LPAREN());
+                let mut params_c = "";
+                let mut first = true;
+                let mut pgo = true;
+                while pgo {
+                    if at_end(cg) || pk(cg) == TK_RPAREN() { pgo = false; }
+                    else {
+                        if !first { params_c = params_c + ", "; }
+                        first = false;
+                        // Skip mut keyword if present
+                        if ptxt(cg) == "mut" { adv(cg); }
+                        // param name
+                        let pname = ptxt(cg);
+                        adv(cg);
+                        // : type
+                        expect_kind(cg, TK_COLON());
+                        let pty = parse_type(cg);
+                        params_c = params_c + pty + " " + pname;
+                        if pk(cg) == TK_COMMA() { adv(cg); }
+                        else { pgo = false; }
+                    }
+                }
+                expect_kind(cg, TK_RPAREN());
+                // Return type
+                let mut ret_c = "void";
+                if pk(cg) == TK_ARROW() {
+                    adv(cg);
+                    ret_c = parse_type(cg);
+                }
+                // Emit forward declaration (skip main)
+                if name == "main" {
+                    // no forward decl for main
+                } else {
+                    emit_fwd(cg, ret_c + " " + name + "(" + params_c + ");");
+                }
+                // Skip the body
+                if pk(cg) == TK_LBRACE() { skip_balanced_braces(cg); }
+            } else {
+                // Skip non-fn items
+                if pk(cg) == TK_LBRACE() { skip_balanced_braces(cg); }
+                else if pk(cg) == TK_SEMI() { adv(cg); }
+                else { adv(cg); }
+            }
+        }
+    }
+
+    // Restore position
+    cg.pos = saved_pos;
+}
+
+// ===========================================================================
+// PASS 2: Expression codegen
+// ===========================================================================
+// All parse_*_expr functions return a C expression string.
+
+fn parse_expr(cg: &mut CG) -> String {
+    let left = parse_or_expr(cg);
+    left
+}
+
+fn parse_or_expr(cg: &mut CG) -> String {
+    let mut result = parse_and_expr(cg);
+    let mut go = true;
+    while go {
+        if pk(cg) == TK_OR() {
+            adv(cg);
+            let right = parse_and_expr(cg);
+            result = result + " || " + right;
+        } else { go = false; }
+    }
+    result
+}
+
+fn parse_and_expr(cg: &mut CG) -> String {
+    let mut result = parse_cmp_expr(cg);
+    let mut go = true;
+    while go {
+        if pk(cg) == TK_AND() {
+            adv(cg);
+            let right = parse_cmp_expr(cg);
+            result = result + " && " + right;
+        } else { go = false; }
+    }
+    result
+}
+
+fn parse_cmp_expr(cg: &mut CG) -> String {
+    let mut result = parse_add_expr(cg);
+    let k = pk(cg);
+    if k == TK_EQ() { adv(cg); let r = parse_add_expr(cg); result = result + " == " + r; }
+    else if k == TK_NEQ() { adv(cg); let r = parse_add_expr(cg); result = result + " != " + r; }
+    else if k == TK_LT() { adv(cg); let r = parse_add_expr(cg); result = result + " < " + r; }
+    else if k == TK_GT() { adv(cg); let r = parse_add_expr(cg); result = result + " > " + r; }
+    else if k == TK_LE() { adv(cg); let r = parse_add_expr(cg); result = result + " <= " + r; }
+    else if k == TK_GE() { adv(cg); let r = parse_add_expr(cg); result = result + " >= " + r; }
+    result
+}
+
+fn parse_add_expr(cg: &mut CG) -> String {
+    let mut result = parse_mul_expr(cg);
+    let mut go = true;
+    while go {
+        let k = pk(cg);
+        if k == TK_PLUS() { adv(cg); let r = parse_mul_expr(cg); result = result + " + " + r; }
+        else if k == TK_MINUS() { adv(cg); let r = parse_mul_expr(cg); result = result + " - " + r; }
+        else { go = false; }
+    }
+    result
+}
+
+fn parse_mul_expr(cg: &mut CG) -> String {
+    let mut result = parse_unary_expr(cg);
+    let mut go = true;
+    while go {
+        let k = pk(cg);
+        if k == TK_STAR() { adv(cg); let r = parse_unary_expr(cg); result = result + " * " + r; }
+        else if k == TK_SLASH() { adv(cg); let r = parse_unary_expr(cg); result = result + " / " + r; }
+        else if k == TK_PERCENT() { adv(cg); let r = parse_unary_expr(cg); result = result + " % " + r; }
+        else { go = false; }
+    }
+    result
+}
+
+fn parse_unary_expr(cg: &mut CG) -> String {
+    if pk(cg) == TK_MINUS() { adv(cg); let v = parse_unary_expr(cg); return "-" + v; }
+    if pk(cg) == TK_NOT() { adv(cg); let v = parse_unary_expr(cg); return "!" + v; }
+    // Skip & and &mut (references don't exist in our C output for simple values)
+    if pk(cg) == TK_BIT_AND() {
+        adv(cg);
+        if ptxt(cg) == "mut" { adv(cg); }
+        let v = parse_unary_expr(cg);
+        return v;
+    }
+    parse_postfix_expr(cg)
+}
+
+fn parse_postfix_expr(cg: &mut CG) -> String {
+    let mut result = parse_primary_expr(cg);
+    let mut go = true;
+    while go {
+        if pk(cg) == TK_DOT() {
+            adv(cg);
+            if pk(cg) == TK_IDENT() || pk(cg) == TK_KEYWORD() {
+                let field = ptxt(cg);
+                adv(cg);
+                if pk(cg) == TK_LPAREN() {
+                    // Method call: obj.method(args) -> method(obj, args) or special
+                    adv(cg);
+                    let args = parse_call_args(cg);
+                    expect_kind(cg, TK_RPAREN());
+                    // For now, translate as method_call style
+                    result = result + "." + field + "(" + args + ")";
+                } else {
+                    result = result + "." + field;
+                }
+            } else { go = false; }
+        } else if pk(cg) == TK_LPAREN() {
+            // Function call: f(args)
+            adv(cg);
+            let args = parse_call_args(cg);
+            expect_kind(cg, TK_RPAREN());
+            result = result + "(" + args + ")";
+        } else if pk(cg) == TK_LBRACK() {
+            // Index: a[i]
+            adv(cg);
+            let idx = parse_expr(cg);
+            expect_kind(cg, TK_RBRACK());
+            result = result + "[" + idx + "]";
+        } else if pk(cg) == TK_NOT() {
+            // Macro call: ident!(args) - we handle println! specially
+            // but the name is already parsed; this handles the ! after ident
+            adv(cg); // skip !
+            if pk(cg) == TK_LPAREN() {
+                adv(cg);
+                let args = parse_call_args(cg);
+                expect_kind(cg, TK_RPAREN());
+                // result already has the macro name
+                result = result + "!(" + args + ")";
+            } else if pk(cg) == TK_LBRACK() {
+                adv(cg);
+                let args = parse_call_args(cg);
+                expect_kind(cg, TK_RBRACK());
+                result = result + "![" + args + "]";
+            }
+        } else { go = false; }
+    }
+    result
+}
+
+fn parse_call_args(cg: &mut CG) -> String {
+    let mut result = "";
+    let mut first = true;
+    let mut go = true;
+    while go {
+        if at_end(cg) || pk(cg) == TK_RPAREN() || pk(cg) == TK_RBRACK() { go = false; }
+        else {
+            if !first { result = result + ", "; }
+            first = false;
+            let arg = parse_expr(cg);
+            result = result + arg;
+            if pk(cg) == TK_COMMA() { adv(cg); }
+            else { go = false; }
+        }
+    }
+    result
+}
+
+fn parse_primary_expr(cg: &mut CG) -> String {
+    let k = pk(cg);
+    // Parenthesized expression
+    if k == TK_LPAREN() {
+        adv(cg);
+        let inner = parse_expr(cg);
+        expect_kind(cg, TK_RPAREN());
+        return "(" + inner + ")";
+    }
+    // Integer literal
+    if k == TK_INT_LIT() {
+        let v = ptxt(cg); adv(cg); return v;
+    }
+    // Float literal
+    if k == TK_FLOAT_LIT() {
+        let v = ptxt(cg); adv(cg); return v;
+    }
+    // String literal - pass through
+    if k == TK_STR_LIT() {
+        let v = ptxt(cg); adv(cg); return v;
+    }
+    // Char literal
+    if k == TK_CHAR_LIT() {
+        let v = ptxt(cg); adv(cg); return v;
+    }
+    // Keywords: true, false, if-expr
+    if k == TK_KEYWORD() {
+        let txt = ptxt(cg);
+        if txt == "true" { adv(cg); return "1"; }
+        if txt == "false" { adv(cg); return "0"; }
+    }
+    // Identifier
+    if k == TK_IDENT() || k == TK_KEYWORD() {
+        let name = ptxt(cg);
+        adv(cg);
+        // Handle :: paths
+        let mut path = name;
+        let mut pgo = true;
+        while pgo {
+            if pk(cg) == TK_COLONCOLON() {
+                adv(cg);
+                if pk(cg) == TK_IDENT() || pk(cg) == TK_KEYWORD() {
+                    path = path + "_" + ptxt(cg);
+                    adv(cg);
+                }
+            } else { pgo = false; }
+        }
+        return path;
+    }
+    // Fallback
+    if !at_end(cg) {
+        let v = ptxt(cg); adv(cg); return v;
+    }
+    ""
+}
+
+// ===========================================================================
+// PASS 2: Statement codegen
+// ===========================================================================
+
+// Build a printf/fprintf C format string from a QuantaLang format string token.
+// The token text includes the quotes: "format {}" -> we strip quotes, replace {} with %lld.
+fn build_c_format(fmt_tok: String, newline: bool) -> String {
+    // Strip surrounding quotes: "..." -> ...
+    let flen = fmt_tok.len();
+    let mut inner = fmt_tok;
+    if flen >= 2 {
+        if fmt_tok.starts_with("\"") {
+            inner = fmt_tok.substring(1, flen - 2);
+        }
+    }
+    // Replace {} with %lld
+    let ilen = inner.len();
+    let mut result = "";
+    let mut i: i32 = 0;
+    while i < ilen {
+        let ch = inner.char_at(i);
+        if ch == "{" && i + 1 < ilen {
+            let next = inner.char_at(i + 1);
+            if next == "}" {
+                result = result + "%lld";
+                i = i + 2;
+            } else {
+                result = result + ch;
+                i = i + 1;
+            }
+        } else {
+            result = result + ch;
+            i = i + 1;
+        }
+    }
+    if newline { result = result + "\\n"; }
+    result
+}
+
+// Codegen a println!/print!/eprintln! macro call directly from the token stream.
+// Caller has already consumed the macro name token. We expect: ! ( args ) ;
+fn codegen_macro_print(cg: &mut CG, macro_name: String) {
+    // Consume ! (
+    expect_kind(cg, TK_NOT());
+    expect_kind(cg, TK_LPAREN());
+
+    let is_println = macro_name == "println";
+    let is_eprintln = macro_name == "eprintln";
+    // is_print = !is_println && !is_eprintln
+
+    // Check for no-arg println!()
+    if pk(cg) == TK_RPAREN() {
+        adv(cg); // skip )
+        if pk(cg) == TK_SEMI() { adv(cg); }
+        if is_eprintln {
+            emit_line(cg, "fprintf(stderr, \"\\n\");");
+        } else if is_println {
+            emit_line(cg, "printf(\"\\n\");");
+        } else {
+            emit_line(cg, "printf(\"\");");
+        }
+        return;
+    }
+
+    // First arg should be a format string literal
+    let mut c_fmt = "";
+    if pk(cg) == TK_STR_LIT() {
+        let fmt_tok = ptxt(cg);
+        adv(cg);
+        c_fmt = build_c_format(fmt_tok, is_println);
+    } else {
+        // Not a string literal — just emit the arg as-is with a format
+        let arg = parse_expr(cg);
+        if pk(cg) == TK_RPAREN() { adv(cg); }
+        if pk(cg) == TK_SEMI() { adv(cg); }
+        if is_println {
+            emit_line(cg, "printf(\"%lld\\n\", " + arg + ");");
+        } else if is_eprintln {
+            emit_line(cg, "fprintf(stderr, \"%lld\\n\", " + arg + ");");
+        } else {
+            emit_line(cg, "printf(\"%lld\", " + arg + ");");
+        }
+        return;
+    }
+
+    // Collect remaining args (comma-separated expressions)
+    let mut args_str = "";
+    let mut has_args = false;
+    if pk(cg) == TK_COMMA() {
+        adv(cg); // skip comma after format string
+        let mut first = true;
+        let mut ago = true;
+        while ago {
+            if at_end(cg) || pk(cg) == TK_RPAREN() { ago = false; }
+            else {
+                if !first { args_str = args_str + ", "; }
+                first = false;
+                has_args = true;
+                let arg = parse_expr(cg);
+                args_str = args_str + arg;
+                if pk(cg) == TK_COMMA() { adv(cg); }
+                else { ago = false; }
+            }
+        }
+    }
+
+    expect_kind(cg, TK_RPAREN());
+    if pk(cg) == TK_SEMI() { adv(cg); }
+
+    // Build the printf/fprintf call
+    let mut call = "";
+    if is_eprintln {
+        call = "fprintf(stderr, \"" + c_fmt + "\"";
+    } else {
+        call = "printf(\"" + c_fmt + "\"";
+    }
+    if has_args {
+        call = call + ", " + args_str;
+    }
+    call = call + ");";
+    emit_line(cg, call);
+}
+
+// Parse a statement and emit C code
+fn codegen_stmt(cg: &mut CG) {
+    let k = pk(cg);
+    let txt = ptxt(cg);
+
+    // --- println! / eprintln! / print! macro calls ---
+    if k == TK_IDENT() && (txt == "println" || txt == "eprintln" || txt == "print") {
+        // Check if next token is !
+        if pk_at(cg, 1) == TK_NOT() {
+            let macro_name = txt;
+            adv(cg); // consume the macro name
+            codegen_macro_print(cg, macro_name);
+            return;
+        }
+    }
+
+    // --- let binding ---
+    if k == TK_KEYWORD() && txt == "let" {
+        adv(cg); // skip "let"
+        let mut is_mut = false;
+        if ptxt(cg) == "mut" { is_mut = true; adv(cg); }
+        let var_name = ptxt(cg);
+        adv(cg); // skip name
+
+        // Optional type annotation: : Type
+        let mut explicit_type = "";
+        if pk(cg) == TK_COLON() {
+            adv(cg);
+            explicit_type = parse_type(cg);
+        }
+
+        // = initializer
+        let mut init_val = "";
+        if pk(cg) == TK_ASSIGN() {
+            adv(cg);
+            init_val = parse_expr(cg);
+        }
+        if pk(cg) == TK_SEMI() { adv(cg); }
+
+        // Determine C type
+        let mut c_type = "";
+        if explicit_type != "" {
+            c_type = explicit_type;
+        } else {
+            // Infer type from the initializer
+            c_type = infer_type(init_val);
+        }
+
+        if init_val != "" {
+            emit_line(cg, c_type + " " + var_name + " = " + init_val + ";");
+        } else {
+            emit_line(cg, c_type + " " + var_name + ";");
+        }
+        return;
+    }
+
+    // --- if / else ---
+    if k == TK_KEYWORD() && txt == "if" {
+        adv(cg); // skip "if"
+        let cond = parse_expr(cg);
+        emit_line(cg, "if (" + cond + ") {");
+        cg.indent = cg.indent + 1;
+        codegen_block(cg);
+        cg.indent = cg.indent - 1;
+        // Handle else / else if chain
+        let mut ego = true;
+        while ego {
+            if ptxt(cg) == "else" {
+                adv(cg);
+                if ptxt(cg) == "if" {
+                    adv(cg);
+                    let cond2 = parse_expr(cg);
+                    emit_line(cg, "} else if (" + cond2 + ") {");
+                    cg.indent = cg.indent + 1;
+                    codegen_block(cg);
+                    cg.indent = cg.indent - 1;
+                } else {
+                    emit_line(cg, "} else {");
+                    cg.indent = cg.indent + 1;
+                    codegen_block(cg);
+                    cg.indent = cg.indent - 1;
+                    ego = false;
+                }
+            } else { ego = false; }
+        }
+        emit_line(cg, "}");
+        return;
+    }
+
+    // --- while ---
+    if k == TK_KEYWORD() && txt == "while" {
+        adv(cg);
+        let cond = parse_expr(cg);
+        emit_line(cg, "while (" + cond + ") {");
+        cg.indent = cg.indent + 1;
+        codegen_block(cg);
+        cg.indent = cg.indent - 1;
+        emit_line(cg, "}");
+        return;
+    }
+
+    // --- loop -> while(1) ---
+    if k == TK_KEYWORD() && txt == "loop" {
+        adv(cg);
+        emit_line(cg, "while (1) {");
+        cg.indent = cg.indent + 1;
+        codegen_block(cg);
+        cg.indent = cg.indent - 1;
+        emit_line(cg, "}");
+        return;
+    }
+
+    // --- return ---
+    if k == TK_KEYWORD() && txt == "return" {
+        adv(cg);
+        if pk(cg) == TK_SEMI() {
+            adv(cg);
+            emit_line(cg, "return;");
+        } else {
+            let val = parse_expr(cg);
+            if pk(cg) == TK_SEMI() { adv(cg); }
+            emit_line(cg, "return " + val + ";");
+        }
+        return;
+    }
+
+    // --- break / continue ---
+    if k == TK_KEYWORD() && (txt == "break" || txt == "continue") {
+        adv(cg);
+        if pk(cg) == TK_SEMI() { adv(cg); }
+        emit_line(cg, txt + ";");
+        return;
+    }
+
+    // --- Expression statement ---
+    let expr = parse_expr(cg);
+
+    // Check for assignment: expr = rhs
+    let ak = pk(cg);
+    if ak == TK_ASSIGN() {
+        adv(cg);
+        let rhs = parse_expr(cg);
+        if pk(cg) == TK_SEMI() { adv(cg); }
+        emit_line(cg, expr + " = " + rhs + ";");
+        return;
+    }
+    // Compound assignment: += -= *= /=
+    if ak == TK_PLUS_EQ() {
+        adv(cg); let rhs = parse_expr(cg);
+        if pk(cg) == TK_SEMI() { adv(cg); }
+        emit_line(cg, expr + " += " + rhs + ";");
+        return;
+    }
+    if ak == TK_MINUS_EQ() {
+        adv(cg); let rhs = parse_expr(cg);
+        if pk(cg) == TK_SEMI() { adv(cg); }
+        emit_line(cg, expr + " -= " + rhs + ";");
+        return;
+    }
+    if ak == TK_STAR_EQ() {
+        adv(cg); let rhs = parse_expr(cg);
+        if pk(cg) == TK_SEMI() { adv(cg); }
+        emit_line(cg, expr + " *= " + rhs + ";");
+        return;
+    }
+    if ak == TK_SLASH_EQ() {
+        adv(cg); let rhs = parse_expr(cg);
+        if pk(cg) == TK_SEMI() { adv(cg); }
+        emit_line(cg, expr + " /= " + rhs + ";");
+        return;
+    }
+
+    if pk(cg) == TK_SEMI() { adv(cg); }
+
+    // Regular expression statement
+    if expr != "" {
+        emit_line(cg, expr + ";");
+    }
+}
+
+// Infer C type from an initializer expression (simple heuristic)
+// Uses only .starts_with() which works on both String and &str
+fn infer_type(init: String) -> String {
+    if init == "" { return "int64_t"; }
+    // String literal
+    if init.starts_with("\"") { return "const char*"; }
+    // Char literal
+    if init.starts_with("'") { return "char"; }
+    // Boolean
+    if init == "1" || init == "0" { return "int64_t"; }
+    // Float literal (contains .) — check with contains-style
+    if init.contains(".") { return "double"; }
+    // Default: i64 for numeric
+    "int64_t"
+}
+
+// Parse a brace-delimited block { stmt; stmt; ... }
+fn codegen_block(cg: &mut CG) {
+    if !expect_kind(cg, TK_LBRACE()) { return; }
+    let mut go = true;
+    while go {
+        if at_end(cg) || pk(cg) == TK_RBRACE() { go = false; }
+        else { codegen_stmt(cg); }
+    }
+    expect_kind(cg, TK_RBRACE());
+}
+
+// ===========================================================================
+// PASS 2: Top-level item codegen
+// ===========================================================================
+
+fn codegen_function(cg: &mut CG) {
+    // "fn" already consumed. Parse name, params, return type, body.
+    let name = ptxt(cg);
+    adv(cg); // skip name
+
+    // Parse params
+    expect_kind(cg, TK_LPAREN());
+    let mut params_c = "";
+    let mut first = true;
+    let mut pgo = true;
+    while pgo {
+        if at_end(cg) || pk(cg) == TK_RPAREN() { pgo = false; }
+        else {
+            if !first { params_c = params_c + ", "; }
+            first = false;
+            // Skip mut
+            if ptxt(cg) == "mut" { adv(cg); }
+            let pname = ptxt(cg);
+            adv(cg);
+            expect_kind(cg, TK_COLON());
+            let pty = parse_type(cg);
+            params_c = params_c + pty + " " + pname;
+            if pk(cg) == TK_COMMA() { adv(cg); }
+            else { pgo = false; }
+        }
+    }
+    expect_kind(cg, TK_RPAREN());
+
+    // Return type
+    let mut ret_c = "void";
+    if pk(cg) == TK_ARROW() {
+        adv(cg);
+        ret_c = parse_type(cg);
+    }
+
+    // Emit function header
+    if name == "main" {
+        emit(cg, "int main(int argc, char** argv) {\n");
+    } else {
+        emit(cg, ret_c + " " + name + "(" + params_c + ") {\n");
+    }
+
+    // Body
+    cg.indent = cg.indent + 1;
+    codegen_block(cg);
+    // For main, add return 0 if not explicitly present
+    if name == "main" {
+        emit_line(cg, "return 0;");
+    }
+    cg.indent = cg.indent - 1;
+    emit(cg, "}\n\n");
+}
+
+fn codegen_item(cg: &mut CG) {
+    let k = pk(cg);
+    let txt = ptxt(cg);
+
+    // Skip pub
+    if k == TK_KEYWORD() && txt == "pub" { adv(cg); }
+
+    let k2 = pk(cg);
+    let txt2 = ptxt(cg);
+
+    // fn
+    if k2 == TK_KEYWORD() && txt2 == "fn" {
+        adv(cg); // consume "fn"
+        codegen_function(cg);
+        return;
+    }
+
+    // struct, enum, impl, trait, mod, use, const, type -> skip
+    if k2 == TK_KEYWORD() && (txt2 == "struct" || txt2 == "enum" || txt2 == "impl" ||
+       txt2 == "trait" || txt2 == "mod" || txt2 == "type") {
+        adv(cg);
+        // Skip name
+        if pk(cg) == TK_IDENT() || pk(cg) == TK_KEYWORD() { adv(cg); }
+        // Skip body or semicolon
+        if pk(cg) == TK_LBRACE() { skip_balanced_braces(cg); }
+        else if pk(cg) == TK_SEMI() { adv(cg); }
+        return;
+    }
+    if k2 == TK_KEYWORD() && txt2 == "use" {
+        adv(cg);
+        skip_to_semi(cg);
+        return;
+    }
+    if k2 == TK_KEYWORD() && txt2 == "const" {
+        adv(cg);
+        skip_to_semi(cg);
+        return;
+    }
+
+    // Attribute: #[...]
+    if k2 == 51 {
+        adv(cg);
+        if pk(cg) == TK_LBRACK() {
+            adv(cg);
+            let mut go = true;
+            while go {
+                if at_end(cg) || pk(cg) == TK_RBRACK() { go = false; }
+                else { adv(cg); }
+            }
+            expect_kind(cg, TK_RBRACK());
+        }
+        return;
+    }
+
+    // Unknown: skip
+    if !at_end(cg) { adv(cg); }
+}
+
+fn codegen_module(cg: &mut CG) {
+    let mut go = true;
+    while go {
+        if at_end(cg) { go = false; }
+        else { codegen_item(cg); }
+    }
+}
+
+// ===========================================================================
+// MAIN DRIVER
+// ===========================================================================
+fn generate(cg: &mut CG) -> String {
+    // Pass 1: collect forward declarations
+    pass1_scan(cg);
+
+    // Build the output
+    let mut header = "";
+    header = header + "/* Generated by qcodegen - QuantaLang to C compiler */\n";
+    header = header + "#include <stdio.h>\n";
+    header = header + "#include <stdint.h>\n";
+    header = header + "#include <stdlib.h>\n";
+    header = header + "#include <string.h>\n";
+    header = header + "\n";
+
+    // Forward declarations
+    if cg.fwd != "" {
+        header = header + "/* Forward declarations */\n";
+        header = header + cg.fwd;
+        header = header + "\n";
+    }
+
+    // Pass 2: generate function bodies
+    cg.pos = 0;
+    codegen_module(cg);
+
+    header + cg.out
+}
+
+// ===========================================================================
+// HELP
+// ===========================================================================
+fn print_help() {
+    println!("qcodegen - QuantaLang to C code generator (self-hosting tool #6)");
+    println!("");
+    println!("Usage:");
+    println!("  qcodegen FILE              generate C code, print to stdout");
+    println!("  qcodegen FILE -o OUT.c     generate C code, write to file");
+    println!("  qcodegen --help            display this help and exit");
+    println!("");
+    println!("Translates a subset of QuantaLang to C:");
+    println!("  fn, let, if/else, while, return, arithmetic,");
+    println!("  function calls, println!/eprintln!/print! macros.");
+    println!("");
+    println!("Type mapping:");
+    println!("  i64 -> int64_t   i32 -> int32_t   f64 -> double");
+    println!("  f32 -> float     bool -> int       String -> const char*");
+}
+
+// ===========================================================================
+// MAIN
+// ===========================================================================
+fn main() {
+    let nargs = args_count();
+
+    let mut filename = "";
+    let mut has_file = false;
+    let mut out_file = "";
+    let mut has_out = false;
+
+    let mut i: i32 = 1;
+    while i < nargs {
+        let arg = args_get(i);
+        if arg == "--help" || arg == "-h" {
+            print_help();
+            process_exit(0);
+        } else if arg == "-o" {
+            // Next arg is output file
+            if i + 1 < nargs {
+                i = i + 1;
+                out_file = args_get(i);
+                has_out = true;
+            } else {
+                println!("qcodegen: -o requires an argument");
+                process_exit(2);
+            }
+        } else if arg.starts_with("-") {
+            println!("qcodegen: unknown option '{}'", arg);
+            process_exit(2);
+        } else {
+            filename = arg;
+            has_file = true;
+        }
+        i = i + 1;
+    }
+
+    if !has_file {
+        print_help();
+        process_exit(0);
+    }
+
+    // Read input
+    let exists = file_exists(filename);
+    if !exists {
+        println!("qcodegen: {}: No such file or directory", filename);
+        process_exit(2);
+    }
+    let input = read_file(filename);
+    if input.len() == 0 {
+        process_exit(0);
+    }
+
+    // Tokenize
+    let mut t = tok_new(input);
+    tokenize(&mut t);
+
+    // Generate C code
+    let mut cg = cg_new(&t);
+    let c_code = generate(&mut cg);
+
+    // Output
+    if has_out {
+        write_file(out_file, c_code);
+        println!("qcodegen: wrote {}", out_file);
+    } else {
+        print!("{}", c_code);
+    }
+}

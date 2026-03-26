@@ -1,0 +1,189 @@
+// =============================================================================
+// qtac — Print lines in reverse order (GNU tac clone) in QuantaLang
+// =============================================================================
+// Usage:
+//   qtac file.txt              print lines of file in reverse order
+//   cat file.txt | qtac        reverse lines from stdin
+//   qtac --help                usage
+//
+// Reads all lines into a vec, prints from last to first.
+// =============================================================================
+
+fn print_help() {
+    println!("qtac -- concatenate and print files in reverse");
+    println!("");
+    println!("Usage:");
+    println!("  qtac [OPTION]... [FILE]...");
+    println!("");
+    println!("Options:");
+    println!("  --help   display this help and exit");
+    println!("");
+    println!("Write each FILE to standard output, last line first.");
+    println!("With no FILE, read standard input.");
+}
+
+// Parse content into lines, storing in a string pool.
+struct Tac {
+    sp_buf: String,
+    sp_n: i64,
+    sp_starts: Vec<i64>,
+    sp_lens: Vec<i64>,
+}
+
+fn tac_new() -> Tac {
+    Tac {
+        sp_buf: "",
+        sp_n: 0,
+        sp_starts: vec![],
+        sp_lens: vec![],
+    }
+}
+
+fn tac_add_line(t: &mut Tac, text: String) {
+    let st = t.sp_buf.len();
+    t.sp_buf = t.sp_buf + text;
+    let en = t.sp_buf.len();
+    vec_push(t.sp_starts, st);
+    vec_push(t.sp_lens, en - st);
+    t.sp_n = t.sp_n + 1;
+}
+
+fn tac_get_line(t: &Tac, idx: i64) -> String {
+    let st = vec_get(t.sp_starts, idx);
+    let ln = vec_get(t.sp_lens, idx);
+    if ln == 0 {
+        return "";
+    }
+    t.sp_buf.substring(st, ln)
+}
+
+fn parse_lines(t: &mut Tac, content: String) {
+    let clen = content.len();
+    let mut pos: i64 = 0;
+    let mut line_start: i64 = 0;
+    let mut go = true;
+
+    while go {
+        if pos >= clen {
+            // Last line (no trailing newline)
+            let ln = pos - line_start;
+            if ln > 0 {
+                let text = content.substring(line_start, ln);
+                // Strip trailing \r
+                let tlen = text.len();
+                let clean = if tlen > 0 {
+                    let last = text.char_at(tlen - 1);
+                    if last == "\r" {
+                        if tlen == 1 { "" } else { text.substring(0, tlen - 1) }
+                    } else {
+                        text
+                    }
+                } else {
+                    text
+                };
+                tac_add_line(t, clean);
+            }
+            go = false;
+        } else {
+            let c = content.char_at(pos);
+            if c == "\n" {
+                let mut ln = pos - line_start;
+                // Strip trailing \r
+                if ln > 0 {
+                    let last_pos = line_start + ln - 1;
+                    let lc = content.char_at(last_pos);
+                    if lc == "\r" { ln = ln - 1; }
+                }
+                let text = if ln > 0 {
+                    content.substring(line_start, ln)
+                } else {
+                    ""
+                };
+                tac_add_line(t, text);
+                line_start = pos + 1;
+                pos = pos + 1;
+            } else {
+                pos = pos + 1;
+            }
+        }
+    }
+}
+
+// Print lines in reverse order.
+fn print_reversed(t: &Tac) {
+    let n = t.sp_n;
+    if n == 0 { return; }
+    let mut i = n - 1;
+    let mut go = true;
+    while go {
+        let line = tac_get_line(t, i);
+        println!("{}", line);
+        if i == 0 {
+            go = false;
+        } else {
+            i = i - 1;
+        }
+    }
+}
+
+// Process one input source (file contents or stdin).
+fn process_input(content: String) {
+    if content.len() == 0 {
+        return;
+    }
+    let mut t = tac_new();
+    parse_lines(&mut t, content);
+    print_reversed(&t);
+}
+
+fn main() {
+    let nargs = args_count();
+
+    // Parse args: collect filenames
+    let mut file_count: i64 = 0;
+
+    let mut i: i64 = 1;
+    while i < nargs {
+        let arg = args_get(i);
+        if arg == "--help" || arg == "-h" {
+            print_help();
+            process_exit(0);
+        } else if arg.starts_with("-") {
+            // Unknown flag — skip
+            i = i + 1;
+        } else {
+            file_count = file_count + 1;
+            i = i + 1;
+        }
+        i = i + 1;
+    }
+
+    if file_count == 0 {
+        // Read from stdin
+        let piped = stdin_is_pipe();
+        if !piped {
+            print_help();
+            process_exit(0);
+        }
+        let content = read_all();
+        process_input(content);
+    } else {
+        // Process each file argument
+        let mut j: i64 = 1;
+        while j < nargs {
+            let arg = args_get(j);
+            if arg.starts_with("-") {
+                j = j + 1;
+            } else {
+                let exists = file_exists(arg);
+                if !exists {
+                    println!("qtac: {}: No such file or directory", arg);
+                    process_exit(2);
+                }
+                let content = read_file(arg);
+                process_input(content);
+                j = j + 1;
+            }
+        }
+    }
+}
