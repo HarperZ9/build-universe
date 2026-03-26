@@ -1,0 +1,975 @@
+// =============================================================================
+// qtok - QuantaLang Tokenizer written in QuantaLang
+// =============================================================================
+// Third self-hosting tool. A lexer that reads .quanta source and outputs a
+// token stream. This is the first compiler component written in QuantaLang.
+//
+// Usage:
+//   qtok file.quanta              tokenize, print token stream
+//   qtok --json file.quanta       output as JSON array
+//   qtok --count file.quanta      just count tokens by type
+//   cat code.quanta | qtok        from stdin
+//   qtok --help                   usage
+//
+// Token types: KEYWORD, IDENT, INT_LIT, FLOAT_LIT, STR_LIT, CHAR_LIT,
+//              PLUS, MINUS, STAR, SLASH, PERCENT, ASSIGN, EQ, NEQ, LT, GT,
+//              LE, GE, AND, OR, NOT, BIT_AND, BIT_OR, BIT_XOR, SHL, SHR,
+//              PLUS_EQ, MINUS_EQ, STAR_EQ, SLASH_EQ, ARROW, FAT_ARROW,
+//              COLONCOLON, DOTDOT, DOTDOTEQ,
+//              LPAREN, RPAREN, LBRACE, RBRACE, LBRACK, RBRACK,
+//              COMMA, SEMI, COLON, DOT, AT, HASH, QUESTION
+// =============================================================================
+
+// --- Token type constants ---
+// Using i32 enum-style constants.
+fn TK_KEYWORD() -> i32 { 1 }
+fn TK_IDENT() -> i32 { 2 }
+fn TK_INT_LIT() -> i32 { 3 }
+fn TK_FLOAT_LIT() -> i32 { 4 }
+fn TK_STR_LIT() -> i32 { 5 }
+fn TK_CHAR_LIT() -> i32 { 6 }
+fn TK_PLUS() -> i32 { 10 }
+fn TK_MINUS() -> i32 { 11 }
+fn TK_STAR() -> i32 { 12 }
+fn TK_SLASH() -> i32 { 13 }
+fn TK_PERCENT() -> i32 { 14 }
+fn TK_ASSIGN() -> i32 { 15 }
+fn TK_EQ() -> i32 { 16 }
+fn TK_NEQ() -> i32 { 17 }
+fn TK_LT() -> i32 { 18 }
+fn TK_GT() -> i32 { 19 }
+fn TK_LE() -> i32 { 20 }
+fn TK_GE() -> i32 { 21 }
+fn TK_AND() -> i32 { 22 }
+fn TK_OR() -> i32 { 23 }
+fn TK_NOT() -> i32 { 24 }
+fn TK_BIT_AND() -> i32 { 25 }
+fn TK_BIT_OR() -> i32 { 26 }
+fn TK_BIT_XOR() -> i32 { 27 }
+fn TK_SHL() -> i32 { 28 }
+fn TK_SHR() -> i32 { 29 }
+fn TK_PLUS_EQ() -> i32 { 30 }
+fn TK_MINUS_EQ() -> i32 { 31 }
+fn TK_STAR_EQ() -> i32 { 32 }
+fn TK_SLASH_EQ() -> i32 { 33 }
+fn TK_ARROW() -> i32 { 34 }
+fn TK_FAT_ARROW() -> i32 { 35 }
+fn TK_COLONCOLON() -> i32 { 36 }
+fn TK_DOTDOT() -> i32 { 37 }
+fn TK_DOTDOTEQ() -> i32 { 38 }
+fn TK_LPAREN() -> i32 { 40 }
+fn TK_RPAREN() -> i32 { 41 }
+fn TK_LBRACE() -> i32 { 42 }
+fn TK_RBRACE() -> i32 { 43 }
+fn TK_LBRACK() -> i32 { 44 }
+fn TK_RBRACK() -> i32 { 45 }
+fn TK_COMMA() -> i32 { 46 }
+fn TK_SEMI() -> i32 { 47 }
+fn TK_COLON() -> i32 { 48 }
+fn TK_DOT() -> i32 { 49 }
+fn TK_AT() -> i32 { 50 }
+fn TK_HASH() -> i32 { 51 }
+fn TK_QUESTION() -> i32 { 52 }
+
+// --- Tokenizer state ---
+struct Tok {
+    input: String,
+    ilen: i32,
+    pos: i32,
+    line: i32,
+    col: i32,
+    // Token output: string pool + parallel vecs
+    pool: String,
+    t_types: Vec<i32>,
+    t_starts: Vec<i32>,
+    t_lens: Vec<i32>,
+    t_lines: Vec<i32>,
+    t_cols: Vec<i32>,
+    count: i32,
+}
+
+fn tok_new(input: String) -> Tok {
+    let ilen = input.len();
+    Tok {
+        input: input, ilen: ilen,
+        pos: 0, line: 1, col: 1,
+        pool: "",
+        t_types: vec![], t_starts: vec![], t_lens: vec![],
+        t_lines: vec![], t_cols: vec![],
+        count: 0,
+    }
+}
+
+// --- Pool helpers ---
+fn pool_add(t: &mut Tok, text: String) -> i32 {
+    let st = t.pool.len();
+    t.pool = t.pool + text;
+    st
+}
+
+fn pool_get(t: &Tok, start: i32, length: i32) -> String {
+    if length == 0 { return ""; }
+    t.pool.substring(start, length)
+}
+
+// --- Emit a token ---
+fn emit(t: &mut Tok, ttype: i32, text: String, tline: i32, tcol: i32) {
+    let st = pool_add(t, text);
+    let tlen = text.len();
+    vec_push(t.t_types, ttype);
+    vec_push(t.t_starts, st);
+    vec_push(t.t_lens, tlen);
+    vec_push(t.t_lines, tline);
+    vec_push(t.t_cols, tcol);
+    t.count = t.count + 1;
+}
+
+// --- Character helpers ---
+fn is_alpha(c: String) -> bool {
+    if c == "_" { return true; }
+    let low = c.to_lowercase();
+    if low == "a" { return true; }
+    if low == "b" { return true; }
+    if low == "c" { return true; }
+    if low == "d" { return true; }
+    if low == "e" { return true; }
+    if low == "f" { return true; }
+    if low == "g" { return true; }
+    if low == "h" { return true; }
+    if low == "i" { return true; }
+    if low == "j" { return true; }
+    if low == "k" { return true; }
+    if low == "l" { return true; }
+    if low == "m" { return true; }
+    if low == "n" { return true; }
+    if low == "o" { return true; }
+    if low == "p" { return true; }
+    if low == "q" { return true; }
+    if low == "r" { return true; }
+    if low == "s" { return true; }
+    if low == "t" { return true; }
+    if low == "u" { return true; }
+    if low == "v" { return true; }
+    if low == "w" { return true; }
+    if low == "x" { return true; }
+    if low == "y" { return true; }
+    if low == "z" { return true; }
+    false
+}
+
+fn is_digit(c: String) -> bool {
+    c == "0" || c == "1" || c == "2" || c == "3" || c == "4" ||
+    c == "5" || c == "6" || c == "7" || c == "8" || c == "9"
+}
+
+fn is_hex_digit(c: String) -> bool {
+    if is_digit(c) { return true; }
+    let low = c.to_lowercase();
+    low == "a" || low == "b" || low == "c" || low == "d" ||
+    low == "e" || low == "f"
+}
+
+fn is_bin_digit(c: String) -> bool {
+    c == "0" || c == "1"
+}
+
+fn is_oct_digit(c: String) -> bool {
+    c == "0" || c == "1" || c == "2" || c == "3" ||
+    c == "4" || c == "5" || c == "6" || c == "7"
+}
+
+fn is_alnum(c: String) -> bool {
+    is_alpha(c) || is_digit(c)
+}
+
+fn is_whitespace(c: String) -> bool {
+    c == " " || c == "\t" || c == "\r" || c == "\n"
+}
+
+// --- Peek / advance ---
+fn peek(t: &Tok) -> String {
+    if t.pos >= t.ilen { return ""; }
+    t.input.char_at(t.pos)
+}
+
+fn peek_at(t: &Tok, offset: i32) -> String {
+    let p = t.pos + offset;
+    if p >= t.ilen { return ""; }
+    t.input.char_at(p)
+}
+
+fn advance(t: &mut Tok) -> String {
+    if t.pos >= t.ilen { return ""; }
+    let c = t.input.char_at(t.pos);
+    t.pos = t.pos + 1;
+    if c == "\n" {
+        t.line = t.line + 1;
+        t.col = 1;
+    } else {
+        t.col = t.col + 1;
+    }
+    c
+}
+
+// --- Keyword check ---
+fn is_keyword(s: String) -> bool {
+    if s == "fn" { return true; }
+    if s == "let" { return true; }
+    if s == "mut" { return true; }
+    if s == "if" { return true; }
+    if s == "else" { return true; }
+    if s == "while" { return true; }
+    if s == "for" { return true; }
+    if s == "in" { return true; }
+    if s == "return" { return true; }
+    if s == "struct" { return true; }
+    if s == "enum" { return true; }
+    if s == "impl" { return true; }
+    if s == "pub" { return true; }
+    if s == "mod" { return true; }
+    if s == "use" { return true; }
+    if s == "match" { return true; }
+    if s == "trait" { return true; }
+    if s == "const" { return true; }
+    if s == "true" { return true; }
+    if s == "false" { return true; }
+    if s == "self" { return true; }
+    if s == "Self" { return true; }
+    if s == "super" { return true; }
+    if s == "where" { return true; }
+    if s == "as" { return true; }
+    if s == "break" { return true; }
+    if s == "continue" { return true; }
+    if s == "loop" { return true; }
+    if s == "type" { return true; }
+    false
+}
+
+// --- Skip whitespace (track line/col) ---
+fn skip_whitespace(t: &mut Tok) {
+    let mut go = true;
+    while go {
+        if t.pos >= t.ilen {
+            go = false;
+        } else {
+            let c = peek(t);
+            if is_whitespace(c) {
+                advance(t);
+            } else {
+                go = false;
+            }
+        }
+    }
+}
+
+// --- Skip line comment: // ... \n ---
+fn skip_line_comment(t: &mut Tok) {
+    // Skip the two slashes
+    advance(t);
+    advance(t);
+    let mut go = true;
+    while go {
+        if t.pos >= t.ilen {
+            go = false;
+        } else {
+            let c = peek(t);
+            if c == "\n" {
+                advance(t);
+                go = false;
+            } else {
+                advance(t);
+            }
+        }
+    }
+}
+
+// --- Skip block comment: /* ... */ ---
+fn skip_block_comment(t: &mut Tok) {
+    // Skip /*
+    advance(t);
+    advance(t);
+    let mut depth: i32 = 1;
+    let mut go = true;
+    while go {
+        if t.pos >= t.ilen {
+            go = false;
+        } else {
+            let c = peek(t);
+            let c2 = peek_at(t, 1);
+            if c == "/" && c2 == "*" {
+                advance(t);
+                advance(t);
+                depth = depth + 1;
+            } else if c == "*" && c2 == "/" {
+                advance(t);
+                advance(t);
+                depth = depth - 1;
+                if depth == 0 {
+                    go = false;
+                }
+            } else {
+                advance(t);
+            }
+        }
+    }
+}
+
+// --- Read string literal: "..." with escapes ---
+fn read_string(t: &mut Tok) {
+    let tline = t.line;
+    let tcol = t.col;
+    let mut text = "\"";
+    advance(t);  // skip opening "
+    let mut go = true;
+    while go {
+        if t.pos >= t.ilen {
+            go = false;
+        } else {
+            let c = peek(t);
+            if c == "\\" {
+                // Escape sequence
+                text = text + advance(t);
+                if t.pos < t.ilen {
+                    text = text + advance(t);
+                }
+            } else if c == "\"" {
+                text = text + advance(t);
+                go = false;
+            } else {
+                text = text + advance(t);
+            }
+        }
+    }
+    emit(t, TK_STR_LIT(), text, tline, tcol);
+}
+
+// --- Read char literal: '.' ---
+fn read_char(t: &mut Tok) {
+    let tline = t.line;
+    let tcol = t.col;
+    let mut text = "'";
+    advance(t);  // skip opening '
+    let mut go = true;
+    while go {
+        if t.pos >= t.ilen {
+            go = false;
+        } else {
+            let c = peek(t);
+            if c == "\\" {
+                text = text + advance(t);
+                if t.pos < t.ilen {
+                    text = text + advance(t);
+                }
+            } else if c == "'" {
+                text = text + advance(t);
+                go = false;
+            } else {
+                text = text + advance(t);
+            }
+        }
+    }
+    emit(t, TK_CHAR_LIT(), text, tline, tcol);
+}
+
+// --- Read number: int or float, with 0x/0b/0o prefix ---
+fn read_number(t: &mut Tok) {
+    let tline = t.line;
+    let tcol = t.col;
+    let mut text = "";
+    let c0 = peek(t);
+
+    // Check for 0x, 0b, 0o prefixes
+    if c0 == "0" {
+        let c1 = peek_at(t, 1);
+        if c1 == "x" || c1 == "X" {
+            text = text + advance(t);  // 0
+            text = text + advance(t);  // x
+            let mut go = true;
+            while go {
+                if t.pos >= t.ilen { go = false; }
+                else {
+                    let c = peek(t);
+                    if is_hex_digit(c) || c == "_" {
+                        text = text + advance(t);
+                    } else {
+                        go = false;
+                    }
+                }
+            }
+            emit(t, TK_INT_LIT(), text, tline, tcol);
+            return;
+        }
+        if c1 == "b" || c1 == "B" {
+            text = text + advance(t);
+            text = text + advance(t);
+            let mut go = true;
+            while go {
+                if t.pos >= t.ilen { go = false; }
+                else {
+                    let c = peek(t);
+                    if is_bin_digit(c) || c == "_" {
+                        text = text + advance(t);
+                    } else {
+                        go = false;
+                    }
+                }
+            }
+            emit(t, TK_INT_LIT(), text, tline, tcol);
+            return;
+        }
+        if c1 == "o" || c1 == "O" {
+            text = text + advance(t);
+            text = text + advance(t);
+            let mut go = true;
+            while go {
+                if t.pos >= t.ilen { go = false; }
+                else {
+                    let c = peek(t);
+                    if is_oct_digit(c) || c == "_" {
+                        text = text + advance(t);
+                    } else {
+                        go = false;
+                    }
+                }
+            }
+            emit(t, TK_INT_LIT(), text, tline, tcol);
+            return;
+        }
+    }
+
+    // Regular decimal number
+    let mut go = true;
+    while go {
+        if t.pos >= t.ilen { go = false; }
+        else {
+            let c = peek(t);
+            if is_digit(c) || c == "_" {
+                text = text + advance(t);
+            } else {
+                go = false;
+            }
+        }
+    }
+
+    // Check for float: decimal point followed by digit
+    let mut is_float = false;
+    if t.pos < t.ilen {
+        let dot = peek(t);
+        if dot == "." {
+            let after = peek_at(t, 1);
+            if is_digit(after) {
+                is_float = true;
+                text = text + advance(t);  // .
+                let mut go2 = true;
+                while go2 {
+                    if t.pos >= t.ilen { go2 = false; }
+                    else {
+                        let c = peek(t);
+                        if is_digit(c) || c == "_" {
+                            text = text + advance(t);
+                        } else {
+                            go2 = false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Check for exponent: e/E
+    if t.pos < t.ilen {
+        let ec = peek(t);
+        if ec == "e" || ec == "E" {
+            is_float = true;
+            text = text + advance(t);
+            if t.pos < t.ilen {
+                let sign = peek(t);
+                if sign == "+" || sign == "-" {
+                    text = text + advance(t);
+                }
+            }
+            let mut go3 = true;
+            while go3 {
+                if t.pos >= t.ilen { go3 = false; }
+                else {
+                    let c = peek(t);
+                    if is_digit(c) {
+                        text = text + advance(t);
+                    } else {
+                        go3 = false;
+                    }
+                }
+            }
+        }
+    }
+
+    if is_float {
+        emit(t, TK_FLOAT_LIT(), text, tline, tcol);
+    } else {
+        emit(t, TK_INT_LIT(), text, tline, tcol);
+    }
+}
+
+// --- Read identifier or keyword ---
+fn read_ident_or_keyword(t: &mut Tok) {
+    let tline = t.line;
+    let tcol = t.col;
+    let mut text = "";
+    let mut go = true;
+    while go {
+        if t.pos >= t.ilen { go = false; }
+        else {
+            let c = peek(t);
+            if is_alnum(c) {
+                text = text + advance(t);
+            } else {
+                go = false;
+            }
+        }
+    }
+
+    if is_keyword(text) {
+        emit(t, TK_KEYWORD(), text, tline, tcol);
+    } else {
+        emit(t, TK_IDENT(), text, tline, tcol);
+    }
+}
+
+// --- Read operator or punctuation ---
+fn read_operator(t: &mut Tok) {
+    let tline = t.line;
+    let tcol = t.col;
+    let c = peek(t);
+    let c2 = peek_at(t, 1);
+    let c3 = peek_at(t, 2);
+
+    // Three-character operators
+    if c == "." && c2 == "." && c3 == "=" {
+        advance(t); advance(t); advance(t);
+        emit(t, TK_DOTDOTEQ(), "..=", tline, tcol);
+        return;
+    }
+    if c == "<" && c2 == "<" {
+        advance(t); advance(t);
+        emit(t, TK_SHL(), "<<", tline, tcol);
+        return;
+    }
+    if c == ">" && c2 == ">" {
+        advance(t); advance(t);
+        emit(t, TK_SHR(), ">>", tline, tcol);
+        return;
+    }
+
+    // Two-character operators
+    if c == "=" && c2 == "=" {
+        advance(t); advance(t);
+        emit(t, TK_EQ(), "==", tline, tcol);
+        return;
+    }
+    if c == "!" && c2 == "=" {
+        advance(t); advance(t);
+        emit(t, TK_NEQ(), "!=", tline, tcol);
+        return;
+    }
+    if c == "<" && c2 == "=" {
+        advance(t); advance(t);
+        emit(t, TK_LE(), "<=", tline, tcol);
+        return;
+    }
+    if c == ">" && c2 == "=" {
+        advance(t); advance(t);
+        emit(t, TK_GE(), ">=", tline, tcol);
+        return;
+    }
+    if c == "&" && c2 == "&" {
+        advance(t); advance(t);
+        emit(t, TK_AND(), "&&", tline, tcol);
+        return;
+    }
+    if c == "|" && c2 == "|" {
+        advance(t); advance(t);
+        emit(t, TK_OR(), "||", tline, tcol);
+        return;
+    }
+    if c == "+" && c2 == "=" {
+        advance(t); advance(t);
+        emit(t, TK_PLUS_EQ(), "+=", tline, tcol);
+        return;
+    }
+    if c == "-" && c2 == "=" {
+        advance(t); advance(t);
+        emit(t, TK_MINUS_EQ(), "-=", tline, tcol);
+        return;
+    }
+    if c == "*" && c2 == "=" {
+        advance(t); advance(t);
+        emit(t, TK_STAR_EQ(), "*=", tline, tcol);
+        return;
+    }
+    if c == "/" && c2 == "=" {
+        advance(t); advance(t);
+        emit(t, TK_SLASH_EQ(), "/=", tline, tcol);
+        return;
+    }
+    if c == "-" && c2 == ">" {
+        advance(t); advance(t);
+        emit(t, TK_ARROW(), "->", tline, tcol);
+        return;
+    }
+    if c == "=" && c2 == ">" {
+        advance(t); advance(t);
+        emit(t, TK_FAT_ARROW(), "=>", tline, tcol);
+        return;
+    }
+    if c == ":" && c2 == ":" {
+        advance(t); advance(t);
+        emit(t, TK_COLONCOLON(), "::", tline, tcol);
+        return;
+    }
+    if c == "." && c2 == "." {
+        advance(t); advance(t);
+        emit(t, TK_DOTDOT(), "..", tline, tcol);
+        return;
+    }
+
+    // Single-character operators and punctuation
+    advance(t);
+    if c == "+" { emit(t, TK_PLUS(), "+", tline, tcol); return; }
+    if c == "-" { emit(t, TK_MINUS(), "-", tline, tcol); return; }
+    if c == "*" { emit(t, TK_STAR(), "*", tline, tcol); return; }
+    if c == "/" { emit(t, TK_SLASH(), "/", tline, tcol); return; }
+    if c == "%" { emit(t, TK_PERCENT(), "%", tline, tcol); return; }
+    if c == "=" { emit(t, TK_ASSIGN(), "=", tline, tcol); return; }
+    if c == "<" { emit(t, TK_LT(), "<", tline, tcol); return; }
+    if c == ">" { emit(t, TK_GT(), ">", tline, tcol); return; }
+    if c == "!" { emit(t, TK_NOT(), "!", tline, tcol); return; }
+    if c == "&" { emit(t, TK_BIT_AND(), "&", tline, tcol); return; }
+    if c == "|" { emit(t, TK_BIT_OR(), "|", tline, tcol); return; }
+    if c == "^" { emit(t, TK_BIT_XOR(), "^", tline, tcol); return; }
+    if c == "(" { emit(t, TK_LPAREN(), "(", tline, tcol); return; }
+    if c == ")" { emit(t, TK_RPAREN(), ")", tline, tcol); return; }
+    if c == "{" { emit(t, TK_LBRACE(), "{", tline, tcol); return; }
+    if c == "}" { emit(t, TK_RBRACE(), "}", tline, tcol); return; }
+    if c == "[" { emit(t, TK_LBRACK(), "[", tline, tcol); return; }
+    if c == "]" { emit(t, TK_RBRACK(), "]", tline, tcol); return; }
+    if c == "," { emit(t, TK_COMMA(), ",", tline, tcol); return; }
+    if c == ";" { emit(t, TK_SEMI(), ";", tline, tcol); return; }
+    if c == ":" { emit(t, TK_COLON(), ":", tline, tcol); return; }
+    if c == "." { emit(t, TK_DOT(), ".", tline, tcol); return; }
+    if c == "@" { emit(t, TK_AT(), "@", tline, tcol); return; }
+    if c == "#" { emit(t, TK_HASH(), "#", tline, tcol); return; }
+    if c == "?" { emit(t, TK_QUESTION(), "?", tline, tcol); return; }
+
+    // Unknown character: skip it silently
+}
+
+// --- Main tokenize loop ---
+fn tokenize(t: &mut Tok) {
+    let mut go = true;
+    while go {
+        if t.pos >= t.ilen {
+            go = false;
+        } else {
+            // Skip whitespace
+            skip_whitespace(t);
+            if t.pos >= t.ilen {
+                go = false;
+            } else {
+                let c = peek(t);
+                let c2 = peek_at(t, 1);
+
+                // Comments
+                if c == "/" && c2 == "/" {
+                    skip_line_comment(t);
+                } else if c == "/" && c2 == "*" {
+                    skip_block_comment(t);
+                }
+                // String literal
+                else if c == "\"" {
+                    read_string(t);
+                }
+                // Char literal
+                else if c == "'" {
+                    read_char(t);
+                }
+                // Number
+                else if is_digit(c) {
+                    read_number(t);
+                }
+                // Identifier or keyword
+                else if is_alpha(c) {
+                    read_ident_or_keyword(t);
+                }
+                // Operator / punctuation
+                else {
+                    read_operator(t);
+                }
+            }
+        }
+    }
+}
+
+// --- Token type name ---
+fn type_name(ttype: i32) -> String {
+    if ttype == 1 { return "KEYWORD"; }
+    if ttype == 2 { return "IDENT"; }
+    if ttype == 3 { return "INT_LIT"; }
+    if ttype == 4 { return "FLOAT_LIT"; }
+    if ttype == 5 { return "STR_LIT"; }
+    if ttype == 6 { return "CHAR_LIT"; }
+    if ttype == 10 { return "PLUS"; }
+    if ttype == 11 { return "MINUS"; }
+    if ttype == 12 { return "STAR"; }
+    if ttype == 13 { return "SLASH"; }
+    if ttype == 14 { return "PERCENT"; }
+    if ttype == 15 { return "ASSIGN"; }
+    if ttype == 16 { return "EQ"; }
+    if ttype == 17 { return "NEQ"; }
+    if ttype == 18 { return "LT"; }
+    if ttype == 19 { return "GT"; }
+    if ttype == 20 { return "LE"; }
+    if ttype == 21 { return "GE"; }
+    if ttype == 22 { return "AND"; }
+    if ttype == 23 { return "OR"; }
+    if ttype == 24 { return "NOT"; }
+    if ttype == 25 { return "BIT_AND"; }
+    if ttype == 26 { return "BIT_OR"; }
+    if ttype == 27 { return "BIT_XOR"; }
+    if ttype == 28 { return "SHL"; }
+    if ttype == 29 { return "SHR"; }
+    if ttype == 30 { return "PLUS_EQ"; }
+    if ttype == 31 { return "MINUS_EQ"; }
+    if ttype == 32 { return "STAR_EQ"; }
+    if ttype == 33 { return "SLASH_EQ"; }
+    if ttype == 34 { return "ARROW"; }
+    if ttype == 35 { return "FAT_ARROW"; }
+    if ttype == 36 { return "COLONCOLON"; }
+    if ttype == 37 { return "DOTDOT"; }
+    if ttype == 38 { return "DOTDOTEQ"; }
+    if ttype == 40 { return "LPAREN"; }
+    if ttype == 41 { return "RPAREN"; }
+    if ttype == 42 { return "LBRACE"; }
+    if ttype == 43 { return "RBRACE"; }
+    if ttype == 44 { return "LBRACK"; }
+    if ttype == 45 { return "RBRACK"; }
+    if ttype == 46 { return "COMMA"; }
+    if ttype == 47 { return "SEMI"; }
+    if ttype == 48 { return "COLON"; }
+    if ttype == 49 { return "DOT"; }
+    if ttype == 50 { return "AT"; }
+    if ttype == 51 { return "HASH"; }
+    if ttype == 52 { return "QUESTION"; }
+    "UNKNOWN"
+}
+
+// --- Pad string to fixed width ---
+fn pad_right(s: String, width: i32) -> String {
+    let slen = s.len();
+    let mut out = s;
+    let mut i = slen;
+    while i < width {
+        out = out + " ";
+        i = i + 1;
+    }
+    out
+}
+
+fn pad_left(s: String, width: i32) -> String {
+    let slen = s.len();
+    let mut out = "";
+    let mut i = slen;
+    while i < width {
+        out = out + " ";
+        i = i + 1;
+    }
+    out + s
+}
+
+// --- Output: default tabular format ---
+fn output_table(t: &Tok) {
+    let mut i: i32 = 0;
+    while i < t.count {
+        let ttype = vec_get(t.t_types, i);
+        let tstart = vec_get(t.t_starts, i);
+        let tlen = vec_get(t.t_lens, i);
+        let tline = vec_get(t.t_lines, i);
+        let tcol = vec_get(t.t_cols, i);
+        let text = pool_get(t, tstart, tlen);
+        let name = type_name(ttype);
+
+        let line_s = to_string_i32(tline);
+        let col_s = to_string_i32(tcol);
+        let loc = pad_right(line_s + ":" + col_s, 8);
+        let tname = pad_right(name, 12);
+        println!("  {} {} {}", loc, tname, text);
+
+        i = i + 1;
+    }
+}
+
+// --- Output: JSON format ---
+fn output_json(t: &Tok) {
+    println!("[");
+    let mut i: i32 = 0;
+    while i < t.count {
+        let ttype = vec_get(t.t_types, i);
+        let tstart = vec_get(t.t_starts, i);
+        let tlen = vec_get(t.t_lens, i);
+        let tline = vec_get(t.t_lines, i);
+        let tcol = vec_get(t.t_cols, i);
+        let text = pool_get(t, tstart, tlen);
+        let name = type_name(ttype);
+
+        let comma = if i < t.count - 1 { "," } else { "" };
+
+        // Escape text for JSON: replace \ with \\, " with \"
+        let mut escaped = "";
+        let text_len = text.len();
+        let mut j: i32 = 0;
+        while j < text_len {
+            let c = text.char_at(j);
+            if c == "\\" {
+                escaped = escaped + "\\\\";
+            } else if c == "\"" {
+                escaped = escaped + "\\\"";
+            } else if c == "\n" {
+                escaped = escaped + "\\n";
+            } else if c == "\t" {
+                escaped = escaped + "\\t";
+            } else {
+                escaped = escaped + c;
+            }
+            j = j + 1;
+        }
+
+        println!("  {{\"type\":\"{}\",\"text\":\"{}\",\"line\":{},\"col\":{}}}{}",
+                 name, escaped, tline, tcol, comma);
+
+        i = i + 1;
+    }
+    println!("]");
+}
+
+// --- Output: count by type ---
+fn output_count(t: &Tok) {
+    // Count each type using simple counters
+    let mut n_kw: i32 = 0;
+    let mut n_id: i32 = 0;
+    let mut n_int: i32 = 0;
+    let mut n_flt: i32 = 0;
+    let mut n_str: i32 = 0;
+    let mut n_chr: i32 = 0;
+    let mut n_op: i32 = 0;
+    let mut n_punc: i32 = 0;
+
+    let mut i: i32 = 0;
+    while i < t.count {
+        let ttype = vec_get(t.t_types, i);
+        if ttype == 1 { n_kw = n_kw + 1; }
+        else if ttype == 2 { n_id = n_id + 1; }
+        else if ttype == 3 { n_int = n_int + 1; }
+        else if ttype == 4 { n_flt = n_flt + 1; }
+        else if ttype == 5 { n_str = n_str + 1; }
+        else if ttype == 6 { n_chr = n_chr + 1; }
+        else if ttype >= 10 && ttype <= 38 { n_op = n_op + 1; }
+        else if ttype >= 40 { n_punc = n_punc + 1; }
+        i = i + 1;
+    }
+
+    println!("Token counts:");
+    println!("  KEYWORD      {}", n_kw);
+    println!("  IDENT        {}", n_id);
+    println!("  INT_LIT      {}", n_int);
+    println!("  FLOAT_LIT    {}", n_flt);
+    println!("  STR_LIT      {}", n_str);
+    println!("  CHAR_LIT     {}", n_chr);
+    println!("  OPERATOR     {}", n_op);
+    println!("  PUNCTUATION  {}", n_punc);
+    println!("  ─────────────────");
+    println!("  TOTAL        {}", t.count);
+}
+
+// --- Help ---
+fn print_help() {
+    println!("qtok - QuantaLang tokenizer (self-hosting compiler step 1)");
+    println!("");
+    println!("Usage:");
+    println!("  qtok FILE              tokenize, print token stream");
+    println!("  qtok --json FILE       output as JSON array");
+    println!("  qtok --count FILE      count tokens by type");
+    println!("  cat file | qtok        tokenize from stdin");
+    println!("  qtok --help            display this help and exit");
+    println!("");
+    println!("Token types:");
+    println!("  KEYWORD  IDENT  INT_LIT  FLOAT_LIT  STR_LIT  CHAR_LIT");
+    println!("  Operators: + - * / % = == != < > <= >= && || ! & | ^");
+    println!("             << >> += -= *= /= -> => :: .. ..=");
+    println!("  Punctuation: ( ) {{ }} [ ] , ; : . @ # ?");
+}
+
+// --- Main ---
+fn main() {
+    let nargs = args_count();
+
+    // Parse flags
+    let mut mode: i32 = 0;   // 0=table, 1=json, 2=count
+    let mut filename = "";
+    let mut has_file = false;
+
+    let mut i: i32 = 1;
+    while i < nargs {
+        let arg = args_get(i);
+
+        if arg == "--help" || arg == "-h" {
+            print_help();
+            process_exit(0);
+        } else if arg == "--json" {
+            mode = 1;
+        } else if arg == "--count" {
+            mode = 2;
+        } else if arg.starts_with("-") {
+            // Unknown flag
+            println!("qtok: unknown option '{}'", arg);
+            process_exit(2);
+        } else {
+            filename = arg;
+            has_file = true;
+        }
+
+        i = i + 1;
+    }
+
+    // Read input
+    let input = if has_file {
+        let exists = file_exists(filename);
+        if !exists {
+            println!("qtok: {}: No such file or directory", filename);
+            process_exit(2);
+        }
+        read_file(filename)
+    } else {
+        let piped = stdin_is_pipe();
+        if !piped {
+            print_help();
+            process_exit(0);
+        }
+        read_all()
+    };
+
+    if input.len() == 0 {
+        process_exit(0);
+    }
+
+    // Tokenize
+    let mut t = tok_new(input);
+    tokenize(&mut t);
+
+    // Output
+    if mode == 1 {
+        output_json(&t);
+    } else if mode == 2 {
+        output_count(&t);
+    } else {
+        output_table(&t);
+    }
+}
