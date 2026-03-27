@@ -4,6 +4,28 @@ All notable changes to the QuantaLang program suite.
 
 ## [Unreleased]
 
+### include!() Preprocessing + Builtins + Self-Compilation (2026-03-27)
+
+**include!() preprocessing added to qcodegen:**
+- Scans source for `include!("path")`, reads referenced files, splices inline
+- Double-inclusion guard (pipe-delimited path tracking)
+- Path resolution relative to source file directory
+- All 16 stdlib-using programs now generate correct C
+- **Self-compilation works:** qcodegen processes its own source (2,081 lines)
+  including `include!("stdlib/chars.quanta")` and `include!("stdlib/tokenizer.quanta")`
+  → produces 3,352 lines of C
+
+**15 missing builtins mapped:**
+- Functions: time_unix, clock_ms, getenv, to_string_i32, to_string_f64
+- String methods: ends_with, trim, split, split_whitespace, parse_float,
+  compare, to_lowercase, to_uppercase, replace
+- Runtime helpers added: qc_itoa, qc_ftoa, qc_clock_ms, qc_ends_with,
+  qc_trim, qc_to_lower, qc_to_upper, qc_replace
+
+**getenv return type fixed:** now inferred as `const char*` (was `int64_t`)
+
+codegen.quanta: 1,835 → 2,081 lines (+246)
+
 ### Impl Method Dispatch + E2E Audit (2026-03-27)
 
 **Impl/method dispatch added to qcodegen:**

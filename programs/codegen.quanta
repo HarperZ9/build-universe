@@ -175,6 +175,13 @@ fn is_str_expr(cg: &CG, expr: String) -> bool {
     if expr.starts_with("qc_read_file(") { return true; }
     if expr.starts_with("qc_read_all(") { return true; }
     if expr.starts_with("qc_strcat(") { return true; }
+    if expr.starts_with("getenv(") { return true; }
+    if expr.starts_with("qc_itoa(") { return true; }
+    if expr.starts_with("qc_ftoa(") { return true; }
+    if expr.starts_with("qc_to_lower(") { return true; }
+    if expr.starts_with("qc_to_upper(") { return true; }
+    if expr.starts_with("qc_replace(") { return true; }
+    if expr.starts_with("qc_trim(") { return true; }
     // Check variable registry
     let vtype = lookup_var(cg, expr);
     if vtype == "const char*" { return true; }
@@ -678,6 +685,31 @@ fn parse_postfix_expr(cg: &mut CG) -> String {
                     } else if field == "index_of" {
                         cg.needs_str_runtime = 1;
                         result = "qc_index_of(" + result + ", " + args + ")";
+                    } else if field == "ends_with" {
+                        cg.needs_str_runtime = 1;
+                        result = "qc_ends_with(" + result + ", " + args + ")";
+                    } else if field == "trim" {
+                        cg.needs_str_runtime = 1;
+                        result = "qc_trim(" + result + ")";
+                    } else if field == "split" {
+                        cg.needs_str_runtime = 1;
+                        result = "qc_split(" + result + ", " + args + ")";
+                    } else if field == "split_whitespace" {
+                        cg.needs_str_runtime = 1;
+                        result = "qc_split_ws(" + result + ")";
+                    } else if field == "parse_float" {
+                        result = "atof(" + result + ")";
+                    } else if field == "compare" {
+                        result = "strcmp(" + result + ", " + args + ")";
+                    } else if field == "to_lowercase" {
+                        cg.needs_str_runtime = 1;
+                        result = "qc_to_lower(" + result + ")";
+                    } else if field == "to_uppercase" {
+                        cg.needs_str_runtime = 1;
+                        result = "qc_to_upper(" + result + ")";
+                    } else if field == "replace" {
+                        cg.needs_str_runtime = 1;
+                        result = "qc_replace(" + result + ", " + args + ")";
                     } else {
                         // Check for impl method dispatch: obj.method(args) -> Type_method(&obj, args)
                         let obj_type = lookup_var(cg, result);
@@ -760,6 +792,19 @@ fn parse_postfix_expr(cg: &mut CG) -> String {
                 // vec_len(v) -> qv_len(&v)
                 cg.needs_vec_runtime = 1;
                 result = "qv_len(&" + args + ")";
+            } else if result == "time_unix" {
+                result = "time(NULL)";
+            } else if result == "clock_ms" {
+                cg.needs_str_runtime = 1;
+                result = "qc_clock_ms()";
+            } else if result == "getenv" {
+                result = "getenv(" + args + ")";
+            } else if result == "to_string_i32" || result == "to_string_i64" {
+                cg.needs_str_runtime = 1;
+                result = "qc_itoa(" + args + ")";
+            } else if result == "to_string_f64" {
+                cg.needs_str_runtime = 1;
+                result = "qc_ftoa(" + args + ")";
             } else {
                 result = result + "(" + args + ")";
             }
@@ -1314,12 +1359,28 @@ fn infer_type(cg: &CG, init: String) -> String {
     if init.starts_with("qc_read_file(") { return "const char*"; }
     if init.starts_with("qc_read_all(") { return "const char*"; }
     if init.starts_with("qc_strcat(") { return "const char*"; }
+    // Feature 3: getenv returns const char*
+    if init.starts_with("getenv(") { return "const char*"; }
+    // to_string helpers return const char*
+    if init.starts_with("qc_itoa(") { return "const char*"; }
+    if init.starts_with("qc_ftoa(") { return "const char*"; }
+    // String transform helpers return const char*
+    if init.starts_with("qc_to_lower(") { return "const char*"; }
+    if init.starts_with("qc_to_upper(") { return "const char*"; }
+    if init.starts_with("qc_replace(") { return "const char*"; }
+    if init.starts_with("qc_trim(") { return "const char*"; }
     // Int-returning helpers
     if init.starts_with("qc_strlen(") { return "int64_t"; }
     if init.starts_with("qc_parse_int(") { return "int64_t"; }
     if init.starts_with("qc_index_of(") { return "int64_t"; }
+    // time(NULL) returns int64_t
+    if init == "time(NULL)" { return "int64_t"; }
+    if init.starts_with("qc_clock_ms(") { return "int64_t"; }
+    // Float-returning helpers
+    if init.starts_with("atof(") { return "double"; }
     // Bool-returning helpers
     if init.starts_with("qc_starts_with(") { return "int"; }
+    if init.starts_with("qc_ends_with(") { return "int"; }
     if init.starts_with("qc_contains(") { return "int"; }
     if init.starts_with("qc_file_exists(") { return "int"; }
     if init.starts_with("qc_stdin_is_pipe(") { return "int"; }
@@ -1612,6 +1673,10 @@ fn generate(cg: &mut CG) -> String {
     header = header + "#include <stdlib.h>\n";
     header = header + "#include <string.h>\n";
     header = header + "#include <stdbool.h>\n";
+    header = header + "#include <time.h>\n";
+    header = header + "#ifdef _WIN32\n";
+    header = header + "#include <windows.h>\n";
+    header = header + "#endif\n";
     header = header + "\n";
 
     // Emit string runtime helpers if needed
@@ -1701,6 +1766,69 @@ fn generate(cg: &mut CG) -> String {
         header = header + "    buf[len] = '\\0';\n";
         header = header + "    return buf;\n";
         header = header + "}\n";
+        // to_string helpers
+        header = header + "static const char* qc_itoa(int64_t n) {\n";
+        header = header + "    static char buf[32]; snprintf(buf, 32, \"%lld\", (long long)n); return buf;\n";
+        header = header + "}\n";
+        header = header + "static const char* qc_ftoa(double n) {\n";
+        header = header + "    static char buf[64]; snprintf(buf, 64, \"%g\", n); return buf;\n";
+        header = header + "}\n";
+        // clock_ms helper
+        header = header + "static int64_t qc_clock_ms(void) {\n";
+        header = header + "#ifdef _WIN32\n";
+        header = header + "    return (int64_t)GetTickCount64();\n";
+        header = header + "#else\n";
+        header = header + "    struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts);\n";
+        header = header + "    return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;\n";
+        header = header + "#endif\n";
+        header = header + "}\n";
+        // ends_with helper
+        header = header + "static int qc_ends_with(const char* s, const char* suffix) {\n";
+        header = header + "    size_t sl = strlen(s), xl = strlen(suffix);\n";
+        header = header + "    if (xl > sl) return 0;\n";
+        header = header + "    return strcmp(s + sl - xl, suffix) == 0;\n";
+        header = header + "}\n";
+        // trim helper
+        header = header + "static const char* qc_trim(const char* s) {\n";
+        header = header + "    while (*s == ' ' || *s == '\\t' || *s == '\\n' || *s == '\\r') s++;\n";
+        header = header + "    size_t len = strlen(s);\n";
+        header = header + "    if (len == 0) return \"\";\n";
+        header = header + "    static char buf[4096];\n";
+        header = header + "    if (len >= 4095) len = 4095;\n";
+        header = header + "    memcpy(buf, s, len);\n";
+        header = header + "    buf[len] = '\\0';\n";
+        header = header + "    while (len > 0 && (buf[len-1]==' '||buf[len-1]=='\\t'||buf[len-1]=='\\n'||buf[len-1]=='\\r')) buf[--len]='\\0';\n";
+        header = header + "    return buf;\n";
+        header = header + "}\n";
+        // to_lowercase / to_uppercase helpers
+        header = header + "static const char* qc_to_lower(const char* s) {\n";
+        header = header + "    size_t len = strlen(s);\n";
+        header = header + "    char* buf = (char*)malloc(len + 1);\n";
+        header = header + "    for (size_t i = 0; i <= len; i++) buf[i] = (s[i]>='A'&&s[i]<='Z') ? s[i]+32 : s[i];\n";
+        header = header + "    return buf;\n";
+        header = header + "}\n";
+        header = header + "static const char* qc_to_upper(const char* s) {\n";
+        header = header + "    size_t len = strlen(s);\n";
+        header = header + "    char* buf = (char*)malloc(len + 1);\n";
+        header = header + "    for (size_t i = 0; i <= len; i++) buf[i] = (s[i]>='a'&&s[i]<='z') ? s[i]-32 : s[i];\n";
+        header = header + "    return buf;\n";
+        header = header + "}\n";
+        // replace helper
+        header = header + "static const char* qc_replace(const char* s, const char* from, const char* to) {\n";
+        header = header + "    size_t sl=strlen(s), fl=strlen(from), tl=strlen(to);\n";
+        header = header + "    if (fl==0) return s;\n";
+        header = header + "    size_t cap=sl*2+1; char* buf=(char*)malloc(cap); size_t pos=0;\n";
+        header = header + "    const char* p=s;\n";
+        header = header + "    while (*p) {\n";
+        header = header + "        if (strncmp(p,from,fl)==0) {\n";
+        header = header + "            if (pos+tl>=cap){cap*=2;buf=(char*)realloc(buf,cap);}\n";
+        header = header + "            memcpy(buf+pos,to,tl); pos+=tl; p+=fl;\n";
+        header = header + "        } else { if(pos+1>=cap){cap*=2;buf=(char*)realloc(buf,cap);} buf[pos++]=*p++; }\n";
+        header = header + "    }\n";
+        header = header + "    buf[pos]='\\0'; return buf;\n";
+        header = header + "}\n";
+        // split helpers (return pipe-delimited string for simplicity)
+        header = header + "/* qc_split is not yet needed - programs use lr_new/lr_get pattern */\n";
         header = header + "\n";
     }
 
@@ -1739,6 +1867,120 @@ fn generate(cg: &mut CG) -> String {
     }
 
     header + cg.out
+}
+
+// ===========================================================================
+// INCLUDE PREPROCESSING
+// ===========================================================================
+// Before tokenizing, scan for include!("path"); lines and splice in file
+// contents. Resolves paths relative to the source file's directory.
+// Tracks already-included files to prevent double-inclusion.
+
+// Extract a single line from source starting at pos. Returns the line text.
+// Sets line_end_out to the position after the newline (or end of source).
+fn extract_line(source: String, pos: i32, slen: i32) -> String {
+    // Find next newline
+    let mut scan: i32 = pos;
+    let mut go = true;
+    while go && scan < slen {
+        let ch = source.char_at(scan);
+        if ch == "\n" {
+            go = false;
+        } else {
+            scan = scan + 1;
+        }
+    }
+    let line_len = scan - pos;
+    if line_len <= 0 { return ""; }
+    if line_len > 3900 { return source.substring(pos, 3900); }
+    source.substring(pos, line_len)
+}
+
+// Find where the next line starts (skip past newline)
+fn next_line_start(source: String, pos: i32, slen: i32) -> i32 {
+    let mut scan: i32 = pos;
+    let mut go = true;
+    while go && scan < slen {
+        let ch = source.char_at(scan);
+        if ch == "\n" {
+            return scan + 1;
+        }
+        scan = scan + 1;
+    }
+    slen
+}
+
+// Extract include path from a line like: include!("stdlib/lines.quanta");
+// Returns the path string or "" if not an include line.
+fn extract_include_path(line: String) -> String {
+    let inc_pos = line.index_of("include!(\"");
+    if inc_pos < 0 { return ""; }
+    let after_inc = inc_pos + 10;
+    let ll = line.len();
+    // Find closing quote
+    let mut qi: i32 = after_inc;
+    let mut go = true;
+    while go && qi < ll {
+        let qc = line.char_at(qi);
+        if qc == "\"" {
+            let path_len = qi - after_inc;
+            if path_len > 0 {
+                return line.substring(after_inc, path_len);
+            }
+            return "";
+        }
+        qi = qi + 1;
+    }
+    ""
+}
+
+fn preprocess(source: String, base_dir: String) -> String {
+    let slen = source.len();
+    let mut result = "";
+    let mut included = "";
+    let mut pos: i32 = 0;
+    let mut go = true;
+    while go {
+        if pos >= slen { go = false; }
+        else {
+            let line = extract_line(source, pos, slen);
+            pos = next_line_start(source, pos, slen);
+            let inc_path = extract_include_path(line);
+            if inc_path != "" {
+                // Check for double-inclusion
+                let check = "|" + inc_path + "|";
+                if !included.contains(check) {
+                    included = included + check;
+                    // Resolve relative to base_dir
+                    let full_path = base_dir + inc_path;
+                    if file_exists(full_path) {
+                        let inc_source = read_file(full_path);
+                        // Non-recursive: just inline (stdlib files don't include other files)
+                        result = result + inc_source + "\n";
+                    }
+                }
+            } else {
+                result = result + line + "\n";
+            }
+        }
+    }
+    result
+}
+
+// Derive the directory part of a file path (everything up to last / or \)
+fn path_dir(path: String) -> String {
+    let plen = path.len();
+    let mut last_sep: i32 = -1;
+    let mut i: i32 = 0;
+    while i < plen {
+        let c = path.char_at(i);
+        if c == "/" || c == "\\" {
+            last_sep = i;
+        }
+        i = i + 1;
+    }
+    if last_sep < 0 { return ""; }
+    path.substring(0, last_sep + 1)
 }
 
 // ===========================================================================
@@ -1812,10 +2054,14 @@ fn main() {
         println!("qcodegen: {}: No such file or directory", filename);
         process_exit(2);
     }
-    let input = read_file(filename);
-    if input.len() == 0 {
+    let raw_input = read_file(filename);
+    if raw_input.len() == 0 {
         process_exit(0);
     }
+
+    // Preprocess: expand include!() directives
+    let base_dir = path_dir(filename);
+    let input = preprocess(raw_input, base_dir);
 
     // Tokenize
     let mut t = tok_new(input);

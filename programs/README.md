@@ -148,9 +148,17 @@ verified (C compiles and runs correctly): test_hello, yes, echo, basename,
 dirname, seq. The remaining programs generate C but may have runtime-level
 type issues that require the Rust-based `quantac` for correct binaries.
 
-**Remaining codegen gaps:** closures as arguments, include!() preprocessing,
-if-expression blocks with let bindings, some missing builtin mappings.
-Impl/method dispatch is now supported (Type_method mangling, self-> access).
+**Remaining codegen gaps:** closures as function arguments, if-expression blocks
+with multi-statement let bindings (simple ternary if-expressions work).
+
+The self-hosted compiler now handles: functions, let, if/else, while, return,
+structs (typedef/literal/field access/assignment), impl methods (Type_method
+mangling, self->field, &obj dispatch), Vec (vec!/push/get/len), include!()
+preprocessing, string operations (15 methods), builtins (args, file I/O,
+time, clock, getenv), println! with type-aware format specifiers.
+
+**Self-compilation:** qcodegen processes its own 2,081-line source → 3,352 lines
+of C, proving the self-hosted compiler can handle substantial QuantaLang code.
 
 ## Database Engine (qdb)
 
