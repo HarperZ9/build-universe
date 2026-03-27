@@ -288,6 +288,198 @@ fn skip_to_semi(cg: &mut CG) {
     }
 }
 
+// Check if the next brace-block contains multiple statements (let or >1 semicolon).
+// Saves and restores cg.pos — non-destructive lookahead.
+fn is_multi_stmt_block(cg: &mut CG) -> bool {
+    let saved = cg.pos;
+    // We expect pos to be at '{'
+    if pk(cg) != TK_LBRACE() { cg.pos = saved; return false; }
+    adv(cg); // skip '{'
+    let mut depth: i32 = 1;
+    let mut semi_count: i32 = 0;
+    let mut has_let = false;
+    let mut go = true;
+    while go {
+        if at_end(cg) { go = false; }
+        else if pk(cg) == TK_LBRACE() { depth = depth + 1; adv(cg); }
+        else if pk(cg) == TK_RBRACE() {
+            depth = depth - 1;
+            if depth == 0 { go = false; }
+            else { adv(cg); }
+        }
+        else {
+            // Only count at top-level depth (depth==1)
+            if depth == 1 {
+                if pk(cg) == TK_SEMI() { semi_count = semi_count + 1; }
+                if pk(cg) == TK_KEYWORD() && ptxt(cg) == "let" { has_let = true; }
+            }
+            adv(cg);
+        }
+    }
+    cg.pos = saved;
+    // Multi-statement if it has a let binding, or more than 1 semicolon
+    if has_let { return true; }
+    if semi_count > 1 { return true; }
+    false
+}
+
+// Check if an if-expression (pos at 'if') has multi-statement branches.
+// Scans: if <expr> { ... } else { ... } — checks both branches.
+fn if_has_multi_stmt(cg: &mut CG) -> bool {
+    let saved = cg.pos;
+    // Skip "if" keyword
+    adv(cg);
+    // Skip the condition expression — scan until we hit '{'
+    let mut go = true;
+    while go {
+        if at_end(cg) || pk(cg) == TK_LBRACE() { go = false; }
+        else { adv(cg); }
+    }
+    // Check first branch
+    let first_multi = is_multi_stmt_block(cg);
+    // Skip past the first block
+    skip_balanced_braces(cg);
+    // Check else branch if present
+    let mut second_multi = false;
+    if ptxt(cg) == "else" {
+        adv(cg); // skip "else"
+        if ptxt(cg) == "if" {
+            // else-if chain — treat as multi-statement to be safe
+            second_multi = true;
+        } else {
+            second_multi = is_multi_stmt_block(cg);
+        }
+    }
+    cg.pos = saved;
+    if first_multi { return true; }
+    if second_multi { return true; }
+    false
+}
+
+// Emit a multi-statement if-expression block that assigns to a target variable.
+// The caller has already emitted `c_type target_var;`.
+// Parses: if <cond> { stmts...; last_expr } else { stmts...; last_expr }
+// Emits C: if (cond) { stmts; target = last_expr; } else { stmts; target = last_expr; }
+fn codegen_if_block_assign(cg: &mut CG, target: String) {
+    // "if" keyword already consumed by caller
+    let cond = parse_expr(cg);
+
+    // --- then branch ---
+    emit_line(cg, "if (" + cond + ") {");
+    cg.indent = cg.indent + 1;
+    codegen_if_branch_body(cg, target);
+    cg.indent = cg.indent - 1;
+
+    // --- else / else-if chain ---
+    let mut ego = true;
+    while ego {
+        if ptxt(cg) == "else" {
+            adv(cg);
+            if ptxt(cg) == "if" {
+                adv(cg);
+                let cond2 = parse_expr(cg);
+                emit_line(cg, "} else if (" + cond2 + ") {");
+                cg.indent = cg.indent + 1;
+                codegen_if_branch_body(cg, target);
+                cg.indent = cg.indent - 1;
+            } else {
+                emit_line(cg, "} else {");
+                cg.indent = cg.indent + 1;
+                codegen_if_branch_body(cg, target);
+                cg.indent = cg.indent - 1;
+                ego = false;
+            }
+        } else { ego = false; }
+    }
+    emit_line(cg, "}");
+}
+
+// Parse a single if-branch body: { stmt; stmt; last_expr }
+// All statements except the last are emitted normally.
+// The last expression becomes `target = expr;`.
+fn codegen_if_branch_body(cg: &mut CG, target: String) {
+    expect_kind(cg, TK_LBRACE());
+    let mut go = true;
+    while go {
+        if at_end(cg) || pk(cg) == TK_RBRACE() { go = false; }
+        else {
+            // Peek ahead: is this the last expression before '}'?
+            // Save pos, try to parse an expr, check if '}' follows
+            let save_pos = cg.pos;
+            // If the next token is a let/while/if/return statement keyword, emit it normally
+            let kk = pk(cg);
+            let tt = ptxt(cg);
+            if kk == TK_KEYWORD() && (tt == "let" || tt == "while" || tt == "loop" || tt == "return") {
+                codegen_stmt(cg);
+            }
+            // println!/eprintln!/print! macro — always a statement, never the last expr
+            else if kk == TK_IDENT() && (tt == "println" || tt == "eprintln" || tt == "print") && pk_at(cg, 1) == TK_NOT() {
+                codegen_stmt(cg);
+            }
+            else {
+                // Parse expression
+                let expr = parse_expr(cg);
+                // Skip optional semicolon
+                let had_semi = pk(cg) == TK_SEMI();
+                if had_semi { adv(cg); }
+                // If '}' follows, this is the last expression — assign to target
+                if pk(cg) == TK_RBRACE() {
+                    emit_line(cg, target + " = " + expr + ";");
+                } else {
+                    // Not the last — emit as regular statement
+                    emit_line(cg, expr + ";");
+                }
+            }
+        }
+    }
+    expect_kind(cg, TK_RBRACE());
+}
+
+// Infer the C type of a multi-statement if-expression by peeking at the last
+// token before '}' in the first branch.  Non-destructive (saves/restores pos).
+fn infer_if_block_type(cg: &mut CG) -> String {
+    let saved = cg.pos;
+    // We are positioned at "if". Skip to the first '{'.
+    let mut go = true;
+    while go {
+        if at_end(cg) || pk(cg) == TK_LBRACE() { go = false; }
+        else { adv(cg); }
+    }
+    if pk(cg) != TK_LBRACE() { cg.pos = saved; return "int64_t"; }
+    adv(cg); // skip '{'
+    // Scan the block at depth 1, recording the last token text before depth returns to 0
+    let mut depth: i32 = 1;
+    let mut last_txt = "";
+    let mut go2 = true;
+    while go2 {
+        if at_end(cg) { go2 = false; }
+        else if pk(cg) == TK_LBRACE() { depth = depth + 1; adv(cg); }
+        else if pk(cg) == TK_RBRACE() {
+            depth = depth - 1;
+            if depth == 0 { go2 = false; }
+            else { adv(cg); }
+        }
+        else {
+            if depth == 1 {
+                // Track last meaningful token (skip semicolons)
+                if pk(cg) != TK_SEMI() {
+                    last_txt = ptxt(cg);
+                }
+            }
+            adv(cg);
+        }
+    }
+    cg.pos = saved;
+    // If the last expression in the branch is a string literal, return const char*
+    if last_txt.starts_with("\"") { return "const char*"; }
+    // If it's a known string-returning function
+    if last_txt == "qc_strcat" || last_txt == "qc_substring" || last_txt == "qc_read_file" { return "const char*"; }
+    // If it references a known string variable
+    if is_str_expr(cg, last_txt) { return "const char*"; }
+    // Default
+    "int64_t"
+}
+
 // ===========================================================================
 // Type mapping: QuantaLang types -> C types
 // ===========================================================================
@@ -1165,6 +1357,27 @@ fn codegen_stmt(cg: &mut CG) {
         let mut init_val = "";
         if pk(cg) == TK_ASSIGN() {
             adv(cg);
+
+            // Check for multi-statement if-expression: let x = if cond { let t = ...; t + 1 } else { 0 };
+            if pk(cg) == TK_KEYWORD() && ptxt(cg) == "if" && if_has_multi_stmt(cg) {
+                // Determine C type from explicit annotation or infer from branch content
+                let mut c_type = "";
+                if explicit_type != "" {
+                    c_type = explicit_type;
+                } else {
+                    c_type = infer_if_block_type(cg);
+                }
+                reg_var(cg, var_name, c_type);
+                // Emit: type varname;
+                emit_line(cg, c_type + " " + var_name + ";");
+                // Skip "if" keyword, then emit the block-assignment
+                adv(cg);
+                codegen_if_block_assign(cg, var_name);
+                // Skip trailing semicolon after the if-expression
+                if pk(cg) == TK_SEMI() { adv(cg); }
+                return;
+            }
+
             init_val = parse_expr(cg);
         }
         if pk(cg) == TK_SEMI() { adv(cg); }

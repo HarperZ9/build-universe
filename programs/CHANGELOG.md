@@ -4,6 +4,20 @@ All notable changes to the QuantaLang program suite.
 
 ## [Unreleased]
 
+### Multi-Statement If-Blocks + Full Audit (2026-03-27)
+
+**If-expression blocks with let bindings — FIXED:**
+- Single-expression branches: still emit compact C ternary
+- Multi-statement branches: emit `if (cond) { stmts; target = last; } else { ... }`
+- 5 new functions: is_multi_stmt_block, if_has_multi_stmt, codegen_if_block_assign,
+  codegen_if_branch_body, infer_if_block_type
+- codegen.quanta: 2,081 → 2,294 lines (+213)
+
+**Full re-audit: 62/62 programs produce structurally valid C**
+- All have `#include`, `int main`, >20 lines
+- 0 programs fail codegen
+- Largest: db (4,579 lines C), codegen (3,565), qc (3,258)
+
 ### include!() Preprocessing + Builtins + Self-Compilation (2026-03-27)
 
 **include!() preprocessing added to qcodegen:**
