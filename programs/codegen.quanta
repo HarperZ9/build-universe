@@ -52,6 +52,11 @@ struct CG {
     fwd: String,
     // Indentation level
     indent: i32,
+    // Variable type registry: pipe-delimited "name1|name2|" and "type1|type2|"
+    var_names: String,
+    var_types: String,
+    // Whether we need the string runtime helpers
+    needs_str_runtime: i32,
 }
 
 fn cg_new(t: &Tok) -> CG {
@@ -63,7 +68,81 @@ fn cg_new(t: &Tok) -> CG {
         out: "",
         fwd: "",
         indent: 0,
+        var_names: "",
+        var_types: "",
+        needs_str_runtime: 0,
     }
+}
+
+// --- Variable type registry ---
+// Register a variable with its C type
+fn reg_var(cg: &mut CG, name: String, ctype: String) {
+    cg.var_names = cg.var_names + name + "|";
+    cg.var_types = cg.var_types + ctype + "|";
+}
+
+// Look up the C type of a variable. Returns "" if not found.
+fn lookup_var(cg: &CG, name: String) -> String {
+    let search = name + "|";
+    let names = cg.var_names;
+    let types = cg.var_types;
+    let nlen = names.len();
+    let slen = search.len();
+    // Walk through var_names counting entries to find the index
+    let mut pos: i32 = 0;
+    let mut idx: i32 = 0;
+    let mut found = false;
+    let mut go = true;
+    while go && pos + slen <= nlen {
+        let chunk = names.substring(pos, slen);
+        if chunk == search {
+            found = true;
+            go = false;
+        } else {
+            // Advance past this entry (find next |)
+            let rest = names.substring(pos, nlen - pos);
+            let pipe = rest.index_of("|");
+            if pipe < 0 { go = false; }
+            else {
+                pos = pos + pipe + 1;
+                idx = idx + 1;
+            }
+        }
+    }
+    if !found { return ""; }
+    // Now find the idx-th entry in var_types
+    let tlen = types.len();
+    let mut tpos: i32 = 0;
+    let mut tidx: i32 = 0;
+    let mut tgo = true;
+    while tgo && tidx < idx {
+        let trest = types.substring(tpos, tlen - tpos);
+        let tpipe = trest.index_of("|");
+        if tpipe < 0 { return ""; }
+        tpos = tpos + tpipe + 1;
+        tidx = tidx + 1;
+    }
+    // Extract this entry up to the next |
+    let trest2 = types.substring(tpos, tlen - tpos);
+    let tpipe2 = trest2.index_of("|");
+    if tpipe2 < 0 { return trest2; }
+    types.substring(tpos, tpipe2)
+}
+
+// Check if a C expression is "string-typed" based on its shape
+fn is_str_expr(cg: &CG, expr: String) -> bool {
+    if expr.starts_with("\"") { return true; }
+    if expr.starts_with("argv[") { return true; }
+    // qc_ helpers that return strings
+    if expr.starts_with("qc_substring(") { return true; }
+    if expr.starts_with("qc_char_at(") { return true; }
+    if expr.starts_with("qc_read_file(") { return true; }
+    if expr.starts_with("qc_read_all(") { return true; }
+    if expr.starts_with("qc_strcat(") { return true; }
+    // Check variable registry
+    let vtype = lookup_var(cg, expr);
+    if vtype == "const char*" { return true; }
+    false
 }
 
 // --- Token access helpers ---
@@ -345,8 +424,25 @@ fn parse_and_expr(cg: &mut CG) -> String {
 fn parse_cmp_expr(cg: &mut CG) -> String {
     let mut result = parse_add_expr(cg);
     let k = pk(cg);
-    if k == TK_EQ() { adv(cg); let r = parse_add_expr(cg); result = result + " == " + r; }
-    else if k == TK_NEQ() { adv(cg); let r = parse_add_expr(cg); result = result + " != " + r; }
+    if k == TK_EQ() {
+        adv(cg);
+        let r = parse_add_expr(cg);
+        // Use strcmp for string comparisons
+        if is_str_expr(cg, result) || is_str_expr(cg, r) {
+            result = "strcmp(" + result + ", " + r + ") == 0";
+        } else {
+            result = result + " == " + r;
+        }
+    }
+    else if k == TK_NEQ() {
+        adv(cg);
+        let r = parse_add_expr(cg);
+        if is_str_expr(cg, result) || is_str_expr(cg, r) {
+            result = "strcmp(" + result + ", " + r + ") != 0";
+        } else {
+            result = result + " != " + r;
+        }
+    }
     else if k == TK_LT() { adv(cg); let r = parse_add_expr(cg); result = result + " < " + r; }
     else if k == TK_GT() { adv(cg); let r = parse_add_expr(cg); result = result + " > " + r; }
     else if k == TK_LE() { adv(cg); let r = parse_add_expr(cg); result = result + " <= " + r; }
@@ -359,7 +455,17 @@ fn parse_add_expr(cg: &mut CG) -> String {
     let mut go = true;
     while go {
         let k = pk(cg);
-        if k == TK_PLUS() { adv(cg); let r = parse_mul_expr(cg); result = result + " + " + r; }
+        if k == TK_PLUS() {
+            adv(cg);
+            let r = parse_mul_expr(cg);
+            // String concatenation: use qc_strcat if either side is a string
+            if is_str_expr(cg, result) || is_str_expr(cg, r) {
+                cg.needs_str_runtime = 1;
+                result = "qc_strcat(" + result + ", " + r + ")";
+            } else {
+                result = result + " + " + r;
+            }
+        }
         else if k == TK_MINUS() { adv(cg); let r = parse_mul_expr(cg); result = result + " - " + r; }
         else { go = false; }
     }
@@ -402,12 +508,36 @@ fn parse_postfix_expr(cg: &mut CG) -> String {
                 let field = ptxt(cg);
                 adv(cg);
                 if pk(cg) == TK_LPAREN() {
-                    // Method call: obj.method(args) -> method(obj, args) or special
+                    // Method call: obj.method(args) -> C helper function
                     adv(cg);
                     let args = parse_call_args(cg);
                     expect_kind(cg, TK_RPAREN());
-                    // For now, translate as method_call style
-                    result = result + "." + field + "(" + args + ")";
+                    // Translate string methods to C helper calls
+                    if field == "starts_with" {
+                        cg.needs_str_runtime = 1;
+                        result = "qc_starts_with(" + result + ", " + args + ")";
+                    } else if field == "len" {
+                        cg.needs_str_runtime = 1;
+                        result = "qc_strlen(" + result + ")";
+                    } else if field == "substring" {
+                        cg.needs_str_runtime = 1;
+                        result = "qc_substring(" + result + ", " + args + ")";
+                    } else if field == "parse_int" {
+                        cg.needs_str_runtime = 1;
+                        result = "qc_parse_int(" + result + ")";
+                    } else if field == "char_at" {
+                        cg.needs_str_runtime = 1;
+                        result = "qc_char_at(" + result + ", " + args + ")";
+                    } else if field == "contains" {
+                        cg.needs_str_runtime = 1;
+                        result = "qc_contains(" + result + ", " + args + ")";
+                    } else if field == "index_of" {
+                        cg.needs_str_runtime = 1;
+                        result = "qc_index_of(" + result + ", " + args + ")";
+                    } else {
+                        // Generic method call passthrough
+                        result = result + "." + field + "(" + args + ")";
+                    }
                 } else {
                     result = result + "." + field;
                 }
@@ -417,7 +547,31 @@ fn parse_postfix_expr(cg: &mut CG) -> String {
             adv(cg);
             let args = parse_call_args(cg);
             expect_kind(cg, TK_RPAREN());
-            result = result + "(" + args + ")";
+            // Translate QuantaLang builtins to C equivalents
+            if result == "args_count" {
+                result = "argc";
+            } else if result == "args_get" {
+                result = "argv[" + args + "]";
+            } else if result == "process_exit" {
+                result = "exit(" + args + ")";
+            } else if result == "file_exists" {
+                cg.needs_str_runtime = 1;
+                result = "qc_file_exists(" + args + ")";
+            } else if result == "read_file" {
+                cg.needs_str_runtime = 1;
+                result = "qc_read_file(" + args + ")";
+            } else if result == "write_file" {
+                cg.needs_str_runtime = 1;
+                result = "qc_write_file(" + args + ")";
+            } else if result == "stdin_is_pipe" {
+                cg.needs_str_runtime = 1;
+                result = "qc_stdin_is_pipe()";
+            } else if result == "read_all" {
+                cg.needs_str_runtime = 1;
+                result = "qc_read_all()";
+            } else {
+                result = result + "(" + args + ")";
+            }
         } else if pk(cg) == TK_LBRACK() {
             // Index: a[i]
             adv(cg);
@@ -524,8 +678,10 @@ fn parse_primary_expr(cg: &mut CG) -> String {
 // ===========================================================================
 
 // Build a printf/fprintf C format string from a QuantaLang format string token.
-// The token text includes the quotes: "format {}" -> we strip quotes, replace {} with %lld.
-fn build_c_format(fmt_tok: String, newline: bool) -> String {
+// The token text includes the quotes: "format {}" -> we strip quotes.
+// arg_types is a pipe-delimited list of C types for each {} placeholder.
+// For each {}, emits %s if the corresponding arg is const char*, else %lld.
+fn build_c_format(fmt_tok: String, newline: bool, arg_types: String) -> String {
     // Strip surrounding quotes: "..." -> ...
     let flen = fmt_tok.len();
     let mut inner = fmt_tok;
@@ -534,16 +690,51 @@ fn build_c_format(fmt_tok: String, newline: bool) -> String {
             inner = fmt_tok.substring(1, flen - 2);
         }
     }
-    // Replace {} with %lld
+    // Replace {} with appropriate format specifier
     let ilen = inner.len();
+    let atlen = arg_types.len();
     let mut result = "";
     let mut i: i32 = 0;
+    let mut arg_idx: i32 = 0;
+    let mut at_pos: i32 = 0;
     while i < ilen {
         let ch = inner.char_at(i);
         if ch == "{" && i + 1 < ilen {
             let next = inner.char_at(i + 1);
             if next == "}" {
-                result = result + "%lld";
+                // Find the arg_idx-th type in arg_types (pipe-delimited)
+                let mut cur_at_pos = at_pos;
+                // Advance at_pos to current arg
+                let mut skip: i32 = 0;
+                let mut sgo = true;
+                while sgo && skip < arg_idx {
+                    if cur_at_pos >= atlen { sgo = false; }
+                    else {
+                        let atrest = arg_types.substring(cur_at_pos, atlen - cur_at_pos);
+                        let atp = atrest.index_of("|");
+                        if atp < 0 { sgo = false; }
+                        else { cur_at_pos = cur_at_pos + atp + 1; skip = skip + 1; }
+                    }
+                }
+                // Extract this type entry
+                let mut this_type = "int64_t";
+                if cur_at_pos < atlen {
+                    let atrest2 = arg_types.substring(cur_at_pos, atlen - cur_at_pos);
+                    let atp2 = atrest2.index_of("|");
+                    if atp2 >= 0 {
+                        this_type = arg_types.substring(cur_at_pos, atp2);
+                    } else {
+                        this_type = atrest2;
+                    }
+                }
+                if this_type == "const char*" {
+                    result = result + "%s";
+                } else if this_type == "double" || this_type == "float" {
+                    result = result + "%f";
+                } else {
+                    result = result + "%lld";
+                }
+                arg_idx = arg_idx + 1;
                 i = i + 2;
             } else {
                 result = result + ch;
@@ -567,7 +758,6 @@ fn codegen_macro_print(cg: &mut CG, macro_name: String) {
 
     let is_println = macro_name == "println";
     let is_eprintln = macro_name == "eprintln";
-    // is_print = !is_println && !is_eprintln
 
     // Check for no-arg println!()
     if pk(cg) == TK_RPAREN() {
@@ -584,28 +774,32 @@ fn codegen_macro_print(cg: &mut CG, macro_name: String) {
     }
 
     // First arg should be a format string literal
-    let mut c_fmt = "";
+    let mut fmt_tok = "";
+    let mut has_fmt = false;
     if pk(cg) == TK_STR_LIT() {
-        let fmt_tok = ptxt(cg);
+        fmt_tok = ptxt(cg);
+        has_fmt = true;
         adv(cg);
-        c_fmt = build_c_format(fmt_tok, is_println);
     } else {
-        // Not a string literal — just emit the arg as-is with a format
+        // Not a string literal - just emit the arg as-is with a format
         let arg = parse_expr(cg);
         if pk(cg) == TK_RPAREN() { adv(cg); }
         if pk(cg) == TK_SEMI() { adv(cg); }
+        let mut spec = "%lld";
+        if is_str_expr(cg, arg) { spec = "%s"; }
         if is_println {
-            emit_line(cg, "printf(\"%lld\\n\", " + arg + ");");
+            emit_line(cg, "printf(\"" + spec + "\\n\", " + arg + ");");
         } else if is_eprintln {
-            emit_line(cg, "fprintf(stderr, \"%lld\\n\", " + arg + ");");
+            emit_line(cg, "fprintf(stderr, \"" + spec + "\\n\", " + arg + ");");
         } else {
-            emit_line(cg, "printf(\"%lld\", " + arg + ");");
+            emit_line(cg, "printf(\"" + spec + "\", " + arg + ");");
         }
         return;
     }
 
-    // Collect remaining args (comma-separated expressions)
+    // Collect remaining args and their types (for format specifier selection)
     let mut args_str = "";
+    let mut arg_types = "";
     let mut has_args = false;
     if pk(cg) == TK_COMMA() {
         adv(cg); // skip comma after format string
@@ -619,6 +813,12 @@ fn codegen_macro_print(cg: &mut CG, macro_name: String) {
                 has_args = true;
                 let arg = parse_expr(cg);
                 args_str = args_str + arg;
+                // Determine the type of this arg for format string
+                if is_str_expr(cg, arg) {
+                    arg_types = arg_types + "const char*|";
+                } else {
+                    arg_types = arg_types + "int64_t|";
+                }
                 if pk(cg) == TK_COMMA() { adv(cg); }
                 else { ago = false; }
             }
@@ -627,6 +827,9 @@ fn codegen_macro_print(cg: &mut CG, macro_name: String) {
 
     expect_kind(cg, TK_RPAREN());
     if pk(cg) == TK_SEMI() { adv(cg); }
+
+    // Build the format string with correct specifiers
+    let c_fmt = build_c_format(fmt_tok, is_println, arg_types);
 
     // Build the printf/fprintf call
     let mut call = "";
@@ -687,8 +890,11 @@ fn codegen_stmt(cg: &mut CG) {
             c_type = explicit_type;
         } else {
             // Infer type from the initializer
-            c_type = infer_type(init_val);
+            c_type = infer_type(cg, init_val);
         }
+
+        // Register variable type for later lookups
+        reg_var(cg, var_name, c_type);
 
         if init_val != "" {
             emit_line(cg, c_type + " " + var_name + " = " + init_val + ";");
@@ -824,14 +1030,33 @@ fn codegen_stmt(cg: &mut CG) {
 
 // Infer C type from an initializer expression (simple heuristic)
 // Uses only .starts_with() which works on both String and &str
-fn infer_type(init: String) -> String {
+fn infer_type(cg: &CG, init: String) -> String {
     if init == "" { return "int64_t"; }
     // String literal
     if init.starts_with("\"") { return "const char*"; }
     // Char literal
     if init.starts_with("'") { return "char"; }
-    // Boolean
-    if init == "1" || init == "0" { return "int64_t"; }
+    // args_get returns const char*
+    if init.starts_with("argv[") { return "const char*"; }
+    // String method returns: qc_substring, qc_char_at, qc_read_file, qc_read_all
+    if init.starts_with("qc_substring(") { return "const char*"; }
+    if init.starts_with("qc_char_at(") { return "const char*"; }
+    if init.starts_with("qc_read_file(") { return "const char*"; }
+    if init.starts_with("qc_read_all(") { return "const char*"; }
+    if init.starts_with("qc_strcat(") { return "const char*"; }
+    // Int-returning helpers
+    if init.starts_with("qc_strlen(") { return "int64_t"; }
+    if init.starts_with("qc_parse_int(") { return "int64_t"; }
+    if init.starts_with("qc_index_of(") { return "int64_t"; }
+    // Bool-returning helpers
+    if init.starts_with("qc_starts_with(") { return "int"; }
+    if init.starts_with("qc_contains(") { return "int"; }
+    if init.starts_with("qc_file_exists(") { return "int"; }
+    if init.starts_with("qc_stdin_is_pipe(") { return "int"; }
+    // argc
+    if init == "argc" { return "int64_t"; }
+    // Variable that is already known to be a string
+    if is_str_expr(cg, init) { return "const char*"; }
     // Float literal (contains .) — check with contains-style
     if init.contains(".") { return "double"; }
     // Default: i64 for numeric
@@ -858,6 +1083,10 @@ fn codegen_function(cg: &mut CG) {
     let name = ptxt(cg);
     adv(cg); // skip name
 
+    // Clear variable registry for this function scope
+    cg.var_names = "";
+    cg.var_types = "";
+
     // Parse params
     expect_kind(cg, TK_LPAREN());
     let mut params_c = "";
@@ -875,6 +1104,8 @@ fn codegen_function(cg: &mut CG) {
             expect_kind(cg, TK_COLON());
             let pty = parse_type(cg);
             params_c = params_c + pty + " " + pname;
+            // Register parameter types
+            reg_var(cg, pname, pty);
             if pk(cg) == TK_COMMA() { adv(cg); }
             else { pgo = false; }
         }
@@ -979,14 +1210,109 @@ fn generate(cg: &mut CG) -> String {
     // Pass 1: collect forward declarations
     pass1_scan(cg);
 
-    // Build the output
+    // Pass 2: generate function bodies (this sets needs_str_runtime)
+    cg.pos = 0;
+    codegen_module(cg);
+
+    // Build the output header
     let mut header = "";
     header = header + "/* Generated by qcodegen - QuantaLang to C compiler */\n";
     header = header + "#include <stdio.h>\n";
     header = header + "#include <stdint.h>\n";
     header = header + "#include <stdlib.h>\n";
     header = header + "#include <string.h>\n";
+    header = header + "#include <stdbool.h>\n";
     header = header + "\n";
+
+    // Emit string runtime helpers if needed
+    if cg.needs_str_runtime == 1 {
+        header = header + "/* QuantaLang string runtime helpers */\n";
+        header = header + "static int qc_starts_with(const char* s, const char* prefix) {\n";
+        header = header + "    size_t plen = strlen(prefix);\n";
+        header = header + "    return strncmp(s, prefix, plen) == 0;\n";
+        header = header + "}\n";
+        header = header + "static int64_t qc_strlen(const char* s) {\n";
+        header = header + "    return (int64_t)strlen(s);\n";
+        header = header + "}\n";
+        header = header + "static const char* qc_substring(const char* s, int64_t start, int64_t len) {\n";
+        header = header + "    static char buf[4096];\n";
+        header = header + "    if (start < 0) start = 0;\n";
+        header = header + "    int64_t slen = (int64_t)strlen(s);\n";
+        header = header + "    if (start >= slen) { buf[0] = '\\0'; return buf; }\n";
+        header = header + "    if (start + len > slen) len = slen - start;\n";
+        header = header + "    if (len < 0) len = 0;\n";
+        header = header + "    if (len >= 4095) len = 4095;\n";
+        header = header + "    memcpy(buf, s + start, (size_t)len);\n";
+        header = header + "    buf[len] = '\\0';\n";
+        header = header + "    return buf;\n";
+        header = header + "}\n";
+        header = header + "static int64_t qc_parse_int(const char* s) {\n";
+        header = header + "    return (int64_t)strtoll(s, NULL, 10);\n";
+        header = header + "}\n";
+        header = header + "static const char* qc_char_at(const char* s, int64_t idx) {\n";
+        header = header + "    static char cbuf[2];\n";
+        header = header + "    int64_t slen = (int64_t)strlen(s);\n";
+        header = header + "    if (idx < 0 || idx >= slen) { cbuf[0] = '\\0'; return cbuf; }\n";
+        header = header + "    cbuf[0] = s[idx]; cbuf[1] = '\\0';\n";
+        header = header + "    return cbuf;\n";
+        header = header + "}\n";
+        header = header + "static const char* qc_strcat(const char* a, const char* b) {\n";
+        header = header + "    size_t la = strlen(a), lb = strlen(b);\n";
+        header = header + "    char* buf = (char*)malloc(la + lb + 1);\n";
+        header = header + "    memcpy(buf, a, la);\n";
+        header = header + "    memcpy(buf + la, b, lb);\n";
+        header = header + "    buf[la + lb] = '\\0';\n";
+        header = header + "    return buf;\n";
+        header = header + "}\n";
+        header = header + "static int qc_contains(const char* s, const char* sub) {\n";
+        header = header + "    return strstr(s, sub) != NULL;\n";
+        header = header + "}\n";
+        header = header + "static int64_t qc_index_of(const char* s, const char* sub) {\n";
+        header = header + "    const char* p = strstr(s, sub);\n";
+        header = header + "    if (!p) return -1;\n";
+        header = header + "    return (int64_t)(p - s);\n";
+        header = header + "}\n";
+        header = header + "static int qc_file_exists(const char* path) {\n";
+        header = header + "    FILE* f = fopen(path, \"r\");\n";
+        header = header + "    if (f) { fclose(f); return 1; }\n";
+        header = header + "    return 0;\n";
+        header = header + "}\n";
+        header = header + "static const char* qc_read_file(const char* path) {\n";
+        header = header + "    FILE* f = fopen(path, \"rb\");\n";
+        header = header + "    if (!f) return \"\";\n";
+        header = header + "    fseek(f, 0, SEEK_END);\n";
+        header = header + "    long sz = ftell(f);\n";
+        header = header + "    fseek(f, 0, SEEK_SET);\n";
+        header = header + "    char* buf = (char*)malloc((size_t)sz + 1);\n";
+        header = header + "    fread(buf, 1, (size_t)sz, f);\n";
+        header = header + "    buf[sz] = '\\0';\n";
+        header = header + "    fclose(f);\n";
+        header = header + "    return buf;\n";
+        header = header + "}\n";
+        header = header + "static void qc_write_file(const char* path, const char* data) {\n";
+        header = header + "    FILE* f = fopen(path, \"wb\");\n";
+        header = header + "    if (f) { fputs(data, f); fclose(f); }\n";
+        header = header + "}\n";
+        header = header + "#ifdef _WIN32\n";
+        header = header + "#include <io.h>\n";
+        header = header + "static int qc_stdin_is_pipe(void) { return !_isatty(_fileno(stdin)); }\n";
+        header = header + "#else\n";
+        header = header + "#include <unistd.h>\n";
+        header = header + "static int qc_stdin_is_pipe(void) { return !isatty(fileno(stdin)); }\n";
+        header = header + "#endif\n";
+        header = header + "static const char* qc_read_all(void) {\n";
+        header = header + "    size_t cap = 4096, len = 0;\n";
+        header = header + "    char* buf = (char*)malloc(cap);\n";
+        header = header + "    int c;\n";
+        header = header + "    while ((c = getchar()) != EOF) {\n";
+        header = header + "        if (len + 1 >= cap) { cap *= 2; buf = (char*)realloc(buf, cap); }\n";
+        header = header + "        buf[len++] = (char)c;\n";
+        header = header + "    }\n";
+        header = header + "    buf[len] = '\\0';\n";
+        header = header + "    return buf;\n";
+        header = header + "}\n";
+        header = header + "\n";
+    }
 
     // Forward declarations
     if cg.fwd != "" {
@@ -994,10 +1320,6 @@ fn generate(cg: &mut CG) -> String {
         header = header + cg.fwd;
         header = header + "\n";
     }
-
-    // Pass 2: generate function bodies
-    cg.pos = 0;
-    codegen_module(cg);
 
     header + cg.out
 }

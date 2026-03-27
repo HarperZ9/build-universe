@@ -8,6 +8,8 @@
 //   qrev --help                    -> usage
 // =============================================================================
 
+include!("stdlib/lines.quanta");
+
 fn print_help() {
     println!("qrev -- reverse lines characterwise");
     println!("");
@@ -39,30 +41,13 @@ fn reverse_line(line: String) -> String {
     out
 }
 
-fn strip_cr(line: String) -> String {
-    let len = line.len();
-    if len == 0 { return ""; }
-    if line.char_at(len - 1) == "\r" {
-        if len == 1 { return ""; }
-        line.substring(0, len - 1)
-    } else { line }
-}
-
 fn process_content(content: String) {
-    let clen = content.len();
-    let mut pos: i64 = 0;
-
-    while pos < clen {
-        let rest = content.substring(pos, clen - pos);
-        let nl = rest.index_of("\n");
-        let raw = if nl < 0 { rest } else { rest.substring(0, nl) };
-        if nl < 0 {
-            pos = clen;
-        } else {
-            pos = pos + nl + 1;
-        }
-        let line = strip_cr(raw);
+    let lr = lr_new(content);
+    let mut i = 0;
+    while i < lr.count {
+        let line = lr_get(&lr, i);
         println!("{}", reverse_line(line));
+        i = i + 1;
     }
 }
 

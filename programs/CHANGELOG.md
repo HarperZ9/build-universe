@@ -4,6 +4,38 @@ All notable changes to the QuantaLang program suite.
 
 ## [Unreleased]
 
+### Self-Hosted Compiler Proven End-to-End (2026-03-27)
+
+**qcodegen compiles real programs to working native binaries:**
+- `yes.quanta` (81 lines) → 156 lines of C → compiles → runs correctly
+  (tested: `yes -n 5`, `yes hello -n 3`, `yes --help`)
+- `echo.quanta` (131 lines) → 195 lines of C → compiles → runs correctly
+  (tested: `echo hello world`, `echo -n hello`, `echo --help`)
+- `test_hello.quanta` → compiles → `3628800`, `5050` (correct)
+
+**7 codegen fixes applied:**
+1. Variable type tracking (string vs int for correct format specifiers)
+2. Builtin function translation (args_count→argc, args_get→argv[i])
+3. String method translation (.starts_with, .len, .substring, .parse_int, etc.)
+4. String comparison (== → strcmp)
+5. Format specifier detection (%s for strings, %lld for ints)
+6. String concatenation (+ → qc_strcat)
+7. Embedded C runtime with all qc_* helpers
+
+**Remaining codegen gaps (honest):**
+- Structs, if-expressions, Vec, trait methods not yet handled
+- Programs using these features still need the Rust compiler
+
+**2 more programs migrated to stdlib/lines.quanta:**
+- grep.quanta (-16 lines), rev.quanta (-15 lines)
+- sort, uniq, wc couldn't migrate (architecture mismatch, already clean)
+
+**Artifact cleanup:**
+- Removed stale .bat build scripts
+- Added 3 while-loop test programs to git
+- Updated .gitignore for generated .c files
+- Working tree: zero dirty files
+
 ### Principal-Grade Polish (2026-03-27)
 
 **Compiler DESIGN.md (436 lines):**

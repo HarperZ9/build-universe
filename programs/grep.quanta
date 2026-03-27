@@ -15,6 +15,8 @@
 //   qgrep --help                — usage
 // =============================================================================
 
+include!("stdlib/lines.quanta");
+
 fn print_help() {
     println!("Usage: qgrep [OPTION]... PATTERN [FILE]...");
     println!("Search for PATTERN in each FILE or standard input.");
@@ -32,62 +34,44 @@ fn print_help() {
 
 // Search content line by line, printing matches.
 // Returns the count of matching lines.
-// Uses manual line splitting via index_of / substring for reliability.
 fn search_content(content: String, pattern: String, filename: String,
                   case_i: bool, show_ln: bool, count_only: bool,
                   invert: bool, multi_file: bool) -> i64 {
     // Prepare pattern for matching
     let search_pat = if case_i { pattern.to_lowercase() } else { pattern };
 
-    let clen = content.len();
+    let lr = lr_new(content);
     let mut match_count: i64 = 0;
-    let mut line_num: i64 = 0;
-    let mut pos: i64 = 0;
+    let mut i = 0;
 
-    // Scan through content, extracting lines manually
-    let mut go = true;
-    while go {
-        if pos >= clen {
-            go = false;
-        } else {
-            // Find end of current line
-            let rest = content.substring(pos, clen - pos);
-            let nl_idx = rest.index_of("\n");
+    while i < lr.count {
+        let line = lr_get(&lr, i);
+        let line_num = i + 1;
 
-            // Extract line and advance position
-            let line = if nl_idx < 0 { rest } else { rest.substring(0, nl_idx) };
-            if nl_idx < 0 {
-                pos = clen;
-            } else {
-                pos = pos + nl_idx + 1;
-            }
+        // Determine if line matches
+        let check_line = if case_i { line.to_lowercase() } else { line };
+        let has_match = check_line.contains(search_pat);
 
-            line_num = line_num + 1;
+        // Apply invert logic
+        let is_hit = if invert { !has_match } else { has_match };
 
-            // Determine if line matches
-            let check_line = if case_i { line.to_lowercase() } else { line };
-            let has_match = check_line.contains(search_pat);
+        if is_hit {
+            match_count = match_count + 1;
 
-            // Apply invert logic
-            let is_hit = if invert { !has_match } else { has_match };
-
-            if is_hit {
-                match_count = match_count + 1;
-
-                if !count_only {
-                    // Print matching line with optional prefix
-                    if multi_file && show_ln {
-                        println!("{}:{}:{}", filename, line_num, line);
-                    } else if multi_file {
-                        println!("{}:{}", filename, line);
-                    } else if show_ln {
-                        println!("{}:{}", line_num, line);
-                    } else {
-                        println!("{}", line);
-                    }
+            if !count_only {
+                // Print matching line with optional prefix
+                if multi_file && show_ln {
+                    println!("{}:{}:{}", filename, line_num, line);
+                } else if multi_file {
+                    println!("{}:{}", filename, line);
+                } else if show_ln {
+                    println!("{}:{}", line_num, line);
+                } else {
+                    println!("{}", line);
                 }
             }
         }
+        i = i + 1;
     }
 
     match_count

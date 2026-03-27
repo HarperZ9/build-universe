@@ -123,16 +123,26 @@ source.quanta --> qtok (tokenize) --> qparse (AST) --> qcheck (typecheck) --> qc
 ```
 
 The `qc` program (2,323 lines) combines all four stages into a single binary.
-It successfully compiles simple programs (functions, let, if, while, arithmetic,
-`println!`) to valid C that produces correct output.
+The `qcodegen` component (1,415 lines) has been proven end-to-end:
 
-`qc` was validated by compiling `wc.quanta` to a working native binary that
-produces identical output to the Rust-compiled version.
+**Programs compiled by the self-hosted compiler to working binaries:**
+- `yes.quanta` (81 lines) → 156 lines of C → native exe → correct output
+- `echo.quanta` (131 lines) → 195 lines of C → native exe → correct output
+- `test_hello.quanta` → factorial(10) = 3628800, sum(1..100) = 5050
 
-**Known limitations:** qc does not yet handle structs, string methods, or Vec
-operations. These require runtime function dispatch that the self-hosted codegen
-doesn't implement. The self-hosted compiler chain is a proof-of-concept, not a
-replacement for the Rust compiler.
+The generated C includes an embedded runtime with string helpers (starts_with,
+substring, strlen, strcmp, strcat), argument handling (argc/argv translation),
+and cross-platform stdin detection.
+
+**What qcodegen handles:** functions, let/let mut, if/else/else-if, while loops,
+return, break, arithmetic, comparisons, string operations (==, +, .len(),
+.starts_with(), .substring(), .parse_int(), .char_at(), .contains()),
+args_count/args_get, process_exit, file I/O builtins, println! with type-aware
+format specifiers (%s for strings, %lld for ints).
+
+**Known limitations:** structs, if-expressions as values, Vec operations,
+trait/impl method dispatch. Programs using these features require the Rust-based
+`quantac` compiler.
 
 ## Database Engine (qdb)
 
