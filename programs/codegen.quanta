@@ -16,6 +16,7 @@
 //   - Function calls
 //   - println!("{}", x) -> printf("%lld\n", x)
 //   - String literals, booleans, integers, floats
+//   - Vec: vec![], vec_push, vec_get, vec_len -> QVec runtime
 //
 // Type mapping:
 //   i64 -> int64_t    i32 -> int32_t    f64 -> double    f32 -> float
@@ -58,6 +59,8 @@ struct CG {
     var_types: String,
     // Whether we need the string runtime helpers
     needs_str_runtime: i32,
+    // Whether we need the Vec runtime helpers
+    needs_vec_runtime: i32,
     // Known struct type names: pipe-delimited "Point|Rect|"
     struct_names: String,
 }
@@ -74,6 +77,7 @@ fn cg_new(t: &Tok) -> CG {
         var_names: "",
         var_types: "",
         needs_str_runtime: 0,
+        needs_vec_runtime: 0,
         struct_names: "",
     }
 }
@@ -278,6 +282,7 @@ fn map_type(ty: String) -> String {
     if ty == "String" { return "const char*"; }
     if ty == "&str" { return "const char*"; }
     if ty == "()" { return "void"; }
+    if ty == "Vec" { return "QVec"; }
     // Default: pass through
     ty
 }
@@ -608,6 +613,32 @@ fn parse_postfix_expr(cg: &mut CG) -> String {
             } else if result == "read_all" {
                 cg.needs_str_runtime = 1;
                 result = "qc_read_all()";
+            } else if result == "vec_push" {
+                // vec_push(v, x) -> qv_push(&v, x)
+                cg.needs_vec_runtime = 1;
+                let comma_pos = args.index_of(",");
+                if comma_pos > 0 {
+                    let first_arg = args.substring(0, comma_pos);
+                    let rest_args = args.substring(comma_pos, args.len() - comma_pos);
+                    result = "qv_push(&" + first_arg + rest_args + ")";
+                } else {
+                    result = "qv_push(&" + args + ")";
+                }
+            } else if result == "vec_get" {
+                // vec_get(v, i) -> qv_get(&v, i)
+                cg.needs_vec_runtime = 1;
+                let comma_pos = args.index_of(",");
+                if comma_pos > 0 {
+                    let first_arg = args.substring(0, comma_pos);
+                    let rest_args = args.substring(comma_pos, args.len() - comma_pos);
+                    result = "qv_get(&" + first_arg + rest_args + ")";
+                } else {
+                    result = "qv_get(&" + args + ")";
+                }
+            } else if result == "vec_len" {
+                // vec_len(v) -> qv_len(&v)
+                cg.needs_vec_runtime = 1;
+                result = "qv_len(&" + args + ")";
             } else {
                 result = result + "(" + args + ")";
             }
@@ -631,7 +662,13 @@ fn parse_postfix_expr(cg: &mut CG) -> String {
                 adv(cg);
                 let args = parse_call_args(cg);
                 expect_kind(cg, TK_RBRACK());
-                result = result + "![" + args + "]";
+                // vec![] -> qv_new()
+                if result == "vec" {
+                    cg.needs_vec_runtime = 1;
+                    result = "qv_new()";
+                } else {
+                    result = result + "![" + args + "]";
+                }
             }
         } else { go = false; }
     }
@@ -1114,6 +1151,8 @@ fn codegen_stmt(cg: &mut CG) {
 // Uses only .starts_with() which works on both String and &str
 fn infer_type(cg: &CG, init: String) -> String {
     if init == "" { return "int64_t"; }
+    // Vec: qv_new() -> QVec
+    if init == "qv_new()" { return "QVec"; }
     // Struct literal: (StructName){ ... } -> StructName
     if init.starts_with("(") {
         let ilen = init.len();
@@ -1123,9 +1162,18 @@ fn infer_type(cg: &CG, init: String) -> String {
             if is_struct_type(cg, sname) { return sname; }
         }
     }
-    // Ternary from if-expression: check if result is struct
-    if init.starts_with("(") && init.contains("?") {
-        // handled by other cases below
+    // Ternary from if-expression: check if branch is a string
+    if init.contains(") ? (") {
+        // Extract the then-branch from (cond) ? (then_expr) : (else_expr)
+        let qpos = init.index_of(") ? (");
+        if qpos > 0 {
+            let after_q = init.substring(qpos + 5, init.len() - qpos - 5);
+            let close_paren = after_q.index_of(")");
+            if close_paren > 0 {
+                let then_expr = after_q.substring(0, close_paren);
+                if is_str_expr(cg, then_expr) { return "const char*"; }
+            }
+        }
     }
     // String literal
     if init.starts_with("\"") { return "const char*"; }
@@ -1415,6 +1463,33 @@ fn generate(cg: &mut CG) -> String {
         header = header + "\n";
     }
 
+    // Emit Vec runtime helpers if needed
+    if cg.needs_vec_runtime == 1 {
+        header = header + "/* QuantaLang Vec runtime helpers */\n";
+        header = header + "typedef struct { int64_t* data; int64_t len; int64_t cap; } QVec;\n";
+        header = header + "static QVec qv_new(void) {\n";
+        header = header + "    QVec v;\n";
+        header = header + "    v.cap = 64;\n";
+        header = header + "    v.len = 0;\n";
+        header = header + "    v.data = (int64_t*)malloc(64 * sizeof(int64_t));\n";
+        header = header + "    return v;\n";
+        header = header + "}\n";
+        header = header + "static void qv_push(QVec* v, int64_t val) {\n";
+        header = header + "    if (v->len >= v->cap) {\n";
+        header = header + "        v->cap *= 2;\n";
+        header = header + "        v->data = (int64_t*)realloc(v->data, v->cap * sizeof(int64_t));\n";
+        header = header + "    }\n";
+        header = header + "    v->data[v->len++] = val;\n";
+        header = header + "}\n";
+        header = header + "static int64_t qv_get(QVec* v, int64_t idx) {\n";
+        header = header + "    return v->data[idx];\n";
+        header = header + "}\n";
+        header = header + "static int64_t qv_len(QVec* v) {\n";
+        header = header + "    return v->len;\n";
+        header = header + "}\n";
+        header = header + "\n";
+    }
+
     // Forward declarations
     if cg.fwd != "" {
         header = header + "/* Forward declarations */\n";
@@ -1439,11 +1514,13 @@ fn print_help() {
     println!("Translates a subset of QuantaLang to C:");
     println!("  fn, let, if/else, while, return, arithmetic,");
     println!("  function calls, println!/eprintln!/print! macros,");
-    println!("  structs (typedef, literals, field access), if-expressions.");
+    println!("  structs (typedef, literals, field access), if-expressions,");
+    println!("  Vec (vec![], vec_push, vec_get, vec_len).");
     println!("");
     println!("Type mapping:");
     println!("  i64 -> int64_t   i32 -> int32_t   f64 -> double");
     println!("  f32 -> float     bool -> int       String -> const char*");
+    println!("  Vec<T> -> QVec   (int64_t-backed dynamic array)");
 }
 
 // ===========================================================================

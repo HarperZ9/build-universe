@@ -4,6 +4,24 @@ All notable changes to the QuantaLang program suite.
 
 ## [Unreleased]
 
+### Self-Hosted Compiler: 62/62 Programs Compile (2026-03-27)
+
+**qcodegen now compiles ALL 62 programs to C.**
+- Added Vec codegen: `vec![]` → `qv_new()`, `vec_push`/`vec_get`/`vec_len` → `qv_push`/`qv_get`/`qv_len` with embedded QVec runtime
+- Fixed ternary type inference for string branches
+- codegen.quanta: 1,517 → 1,594 lines
+
+**Audit results:**
+- 62/62 programs produce valid C output
+- Largest: db.quanta → 4,429 lines of C
+- Self-compilation: codegen.quanta → 1,773 lines C, qc.quanta → 2,228 lines C
+- Smallest: test_hello → 36 lines C
+
+**Note:** "compiles to C" means syntactically valid C is generated. Some programs
+may have runtime issues (wrong types, missing methods) that prevent the C from
+compiling with gcc/MSVC. The proven end-to-end programs (C compiles AND runs
+correctly) are: test_hello, yes, echo, basename, dirname, seq, + struct test.
+
 ### Struct Codegen in Self-Hosted Compiler (2026-03-27)
 
 **qcodegen now handles structs:**
