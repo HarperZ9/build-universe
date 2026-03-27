@@ -845,6 +845,21 @@ fn print_drop(s: &SQL) {
 fn main() {
     let nargs = args_count();
 
+    if nargs > 1 {
+        let first = args_get(1);
+        if first == "--help" || first == "-h" {
+            println!("Usage: qsql <sql-statement>");
+            println!("       echo \"SELECT * FROM users;\" | qsql");
+            println!("       qsql \"SELECT name, age FROM users WHERE id = 1\"");
+            println!("");
+            println!("Parses SQL into a structured representation and prints it.");
+            println!("");
+            println!("Supported statements:");
+            println!("  CREATE TABLE, INSERT INTO, SELECT, UPDATE, DELETE FROM, DROP TABLE");
+            process_exit(0);
+        }
+    }
+
     let input = if nargs > 1 {
         args_get(1)
     } else {
@@ -853,6 +868,7 @@ fn main() {
         } else {
             println!("Usage: qsql <sql-statement>");
             println!("       echo \"SELECT * FROM users;\" | qsql");
+            println!("Try 'qsql --help' for more information.");
             process_exit(0);
             ""
         }

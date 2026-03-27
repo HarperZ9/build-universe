@@ -992,6 +992,40 @@ fn execute_pipeline(j: &mut JP, ch: Vec<i32>, ok: Vec<i32>, root: i32) -> Vec<i3
 
 fn main() {
     let ac = args_count();
+
+    // --help / -h
+    if ac > 1 {
+        let first = args_get(1);
+        if first == "--help" || first == "-h" {
+            println!("Usage: qjq [filter] [file]");
+            println!("       echo '{{\"a\":1}}' | qjq '.a'");
+            println!("       qjq '.name' data.json");
+            println!("");
+            println!("Filters:");
+            println!("  .           identity (pretty-print)");
+            println!("  .foo        field access");
+            println!("  .foo.bar    chained field access");
+            println!("  .[N]        array index");
+            println!("  .[]         array iteration");
+            println!("  expr | expr pipe (chain expressions)");
+            println!("  keys        object keys as array");
+            println!("  values      object values as array");
+            println!("  length      array/string/object length");
+            println!("  type        value type as string");
+            println!("  add         sum numbers / concat strings");
+            process_exit(0);
+        }
+    }
+
+    // If no args and stdin is not a pipe, show help instead of hanging
+    if ac < 2 {
+        if !stdin_is_pipe() {
+            println!("Usage: qjq [filter] [file]");
+            println!("Try 'qjq --help' for more information.");
+            process_exit(0);
+        }
+    }
+
     // First arg is query, second (optional) is file
     let query = if ac > 1 { args_get(1) } else { "." };
     let input = if ac > 2 { read_file(args_get(2)) } else { read_all() };
