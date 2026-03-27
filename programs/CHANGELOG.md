@@ -4,6 +4,25 @@ All notable changes to the QuantaLang program suite.
 
 ## [Unreleased]
 
+### Struct Codegen in Self-Hosted Compiler (2026-03-27)
+
+**qcodegen now handles structs:**
+- Struct typedef emission: `struct Point { x: i64 }` → `typedef struct { int64_t x; } Point;`
+- Struct literal construction: `Point { x: 3 }` → `(Point){ .x = 3 }`
+- Field access: `p.x` → `p.x`
+- Field assignment: `q.x = 10` → `q.x = 10`
+- Struct parameters in functions: `fn foo(p: Point)` → `int64_t foo(Point p)`
+
+**New programs compilable by self-hosted compiler:**
+- basename.quanta (232 lines C), dirname.quanta (235), seq.quanta (349)
+- Any program using simple structs now works
+
+**Programs proven end-to-end with qcodegen: 6**
+(test_hello, yes, echo, + struct test, basename, dirname)
+
+**4 more programs migrated to stdlib/lines.quanta:**
+- awk (-18), sed (-13), cut (-12), paste (-30) = **-73 lines**
+
 ### Self-Hosted Compiler Proven End-to-End (2026-03-27)
 
 **qcodegen compiles real programs to working native binaries:**

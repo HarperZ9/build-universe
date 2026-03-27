@@ -9,9 +9,10 @@
 //
 // Scope (handles a subset of QuantaLang):
 //   - Functions (fn name(params) -> ret { ... })
+//   - Structs (typedef, literals, field access)
 //   - Let bindings (let x = 5; let mut y = 0;)
 //   - Arithmetic, comparisons, logical operators
-//   - If/else, while, return
+//   - If/else, while, return, if-expressions
 //   - Function calls
 //   - println!("{}", x) -> printf("%lld\n", x)
 //   - String literals, booleans, integers, floats
@@ -57,6 +58,8 @@ struct CG {
     var_types: String,
     // Whether we need the string runtime helpers
     needs_str_runtime: i32,
+    // Known struct type names: pipe-delimited "Point|Rect|"
+    struct_names: String,
 }
 
 fn cg_new(t: &Tok) -> CG {
@@ -71,6 +74,7 @@ fn cg_new(t: &Tok) -> CG {
         var_names: "",
         var_types: "",
         needs_str_runtime: 0,
+        struct_names: "",
     }
 }
 
@@ -127,6 +131,17 @@ fn lookup_var(cg: &CG, name: String) -> String {
     let tpipe2 = trest2.index_of("|");
     if tpipe2 < 0 { return trest2; }
     types.substring(tpos, tpipe2)
+}
+
+// Register a struct type name
+fn reg_struct(cg: &mut CG, name: String) {
+    cg.struct_names = cg.struct_names + name + "|";
+}
+
+// Check if a name is a known struct type
+fn is_struct_type(cg: &CG, name: String) -> bool {
+    let search = name + "|";
+    cg.struct_names.contains(search)
 }
 
 // Check if a C expression is "string-typed" based on its shape
@@ -330,7 +345,31 @@ fn pass1_scan(cg: &mut CG) {
             if k == TK_KEYWORD() && txt == "pub" { adv(cg); }
             let k2 = pk(cg);
             let txt2 = ptxt(cg);
-            if k2 == TK_KEYWORD() && txt2 == "fn" {
+            if k2 == TK_KEYWORD() && txt2 == "struct" {
+                adv(cg); // skip "struct"
+                let sname = ptxt(cg);
+                adv(cg); // skip struct name
+                reg_struct(cg, sname);
+                // Parse struct body: { field: type, ... }
+                if pk(cg) == TK_LBRACE() {
+                    adv(cg); // skip {
+                    let mut fields_c = "";
+                    let mut fgo = true;
+                    while fgo {
+                        if at_end(cg) || pk(cg) == TK_RBRACE() { fgo = false; }
+                        else {
+                            let fname = ptxt(cg);
+                            adv(cg); // skip field name
+                            expect_kind(cg, TK_COLON()); // skip :
+                            let fty = parse_type(cg);
+                            fields_c = fields_c + " " + fty + " " + fname + ";";
+                            if pk(cg) == TK_COMMA() { adv(cg); }
+                        }
+                    }
+                    expect_kind(cg, TK_RBRACE());
+                    emit_fwd(cg, "typedef struct {" + fields_c + " } " + sname + ";");
+                }
+            } else if k2 == TK_KEYWORD() && txt2 == "fn" {
                 adv(cg); // skip "fn"
                 let name = ptxt(cg);
                 adv(cg); // skip name
@@ -647,8 +686,29 @@ fn parse_primary_expr(cg: &mut CG) -> String {
         let txt = ptxt(cg);
         if txt == "true" { adv(cg); return "1"; }
         if txt == "false" { adv(cg); return "0"; }
+        // If-expression: if cond { a } else { b } -> (cond) ? (a) : (b)
+        if txt == "if" {
+            adv(cg); // skip "if"
+            let cond = parse_expr(cg);
+            // Parse then-block: { expr }
+            expect_kind(cg, TK_LBRACE());
+            let then_val = parse_expr(cg);
+            // Skip optional semicolon inside block
+            if pk(cg) == TK_SEMI() { adv(cg); }
+            expect_kind(cg, TK_RBRACE());
+            // Parse else-block: else { expr }
+            let mut else_val = "0";
+            if ptxt(cg) == "else" {
+                adv(cg); // skip "else"
+                expect_kind(cg, TK_LBRACE());
+                else_val = parse_expr(cg);
+                if pk(cg) == TK_SEMI() { adv(cg); }
+                expect_kind(cg, TK_RBRACE());
+            }
+            return "(" + cond + ") ? (" + then_val + ") : (" + else_val + ")";
+        }
     }
-    // Identifier
+    // Identifier or struct literal
     if k == TK_IDENT() || k == TK_KEYWORD() {
         let name = ptxt(cg);
         adv(cg);
@@ -663,6 +723,28 @@ fn parse_primary_expr(cg: &mut CG) -> String {
                     adv(cg);
                 }
             } else { pgo = false; }
+        }
+        // Struct literal: StructName { field: expr, ... }
+        if pk(cg) == TK_LBRACE() && is_struct_type(cg, path) {
+            adv(cg); // skip {
+            let mut fields_c = "";
+            let mut sfirst = true;
+            let mut sgo = true;
+            while sgo {
+                if at_end(cg) || pk(cg) == TK_RBRACE() { sgo = false; }
+                else {
+                    if !sfirst { fields_c = fields_c + ", "; }
+                    sfirst = false;
+                    let fname = ptxt(cg);
+                    adv(cg); // skip field name
+                    expect_kind(cg, TK_COLON()); // skip :
+                    let fval = parse_expr(cg);
+                    fields_c = fields_c + "." + fname + " = " + fval;
+                    if pk(cg) == TK_COMMA() { adv(cg); }
+                }
+            }
+            expect_kind(cg, TK_RBRACE());
+            return "(" + path + "){ " + fields_c + " }";
         }
         return path;
     }
@@ -1032,6 +1114,19 @@ fn codegen_stmt(cg: &mut CG) {
 // Uses only .starts_with() which works on both String and &str
 fn infer_type(cg: &CG, init: String) -> String {
     if init == "" { return "int64_t"; }
+    // Struct literal: (StructName){ ... } -> StructName
+    if init.starts_with("(") {
+        let ilen = init.len();
+        let close = init.index_of(")");
+        if close > 1 {
+            let sname = init.substring(1, close - 1);
+            if is_struct_type(cg, sname) { return sname; }
+        }
+    }
+    // Ternary from if-expression: check if result is struct
+    if init.starts_with("(") && init.contains("?") {
+        // handled by other cases below
+    }
     // String literal
     if init.starts_with("\"") { return "const char*"; }
     // Char literal
@@ -1057,8 +1152,14 @@ fn infer_type(cg: &CG, init: String) -> String {
     if init == "argc" { return "int64_t"; }
     // Variable that is already known to be a string
     if is_str_expr(cg, init) { return "const char*"; }
-    // Float literal (contains .) — check with contains-style
-    if init.contains(".") { return "double"; }
+    // Float literal (starts with a digit and contains .)
+    if init.len() > 0 {
+        let fc = init.char_at(0);
+        if fc == "0" || fc == "1" || fc == "2" || fc == "3" || fc == "4" ||
+           fc == "5" || fc == "6" || fc == "7" || fc == "8" || fc == "9" {
+            if init.contains(".") { return "double"; }
+        }
+    }
     // Default: i64 for numeric
     "int64_t"
 }
@@ -1337,7 +1438,8 @@ fn print_help() {
     println!("");
     println!("Translates a subset of QuantaLang to C:");
     println!("  fn, let, if/else, while, return, arithmetic,");
-    println!("  function calls, println!/eprintln!/print! macros.");
+    println!("  function calls, println!/eprintln!/print! macros,");
+    println!("  structs (typedef, literals, field access), if-expressions.");
     println!("");
     println!("Type mapping:");
     println!("  i64 -> int64_t   i32 -> int32_t   f64 -> double");

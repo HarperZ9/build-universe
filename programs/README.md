@@ -135,12 +135,13 @@ substring, strlen, strcmp, strcat), argument handling (argc/argv translation),
 and cross-platform stdin detection.
 
 **What qcodegen handles:** functions, let/let mut, if/else/else-if, while loops,
-return, break, arithmetic, comparisons, string operations (==, +, .len(),
+return, break, arithmetic, comparisons, **struct definitions, struct literals,
+field access, field assignment**, string operations (==, +, .len(),
 .starts_with(), .substring(), .parse_int(), .char_at(), .contains()),
 args_count/args_get, process_exit, file I/O builtins, println! with type-aware
 format specifiers (%s for strings, %lld for ints).
 
-**Known limitations:** structs, if-expressions as values, Vec operations,
+**Known limitations:** if-expressions as values, Vec operations,
 trait/impl method dispatch. Programs using these features require the Rust-based
 `quantac` compiler.
 
