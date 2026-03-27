@@ -182,11 +182,64 @@ gcc -O2 -o programs/qwc.exe programs/wc.c
 
 The `build.bat` script in this directory compiles all programs.
 
+## Testing
+
+```bash
+bash programs/tests/run_tests.sh
+```
+
+96 automated tests cover 49 of 57 executables. 8 programs are skipped
+(interactive, network-dependent, or long-running). Zero failures.
+
+## Project Status
+
+| Metric | Value |
+|--------|-------|
+| Programs | 60 |
+| Total QuantaLang LOC | ~30,900 |
+| Automated tests | 96 pass, 0 fail |
+| Compiler tests | 507 pass, 0 warnings |
+| Self-hosting tools | 7 (fmt, lint, tok, parse, check, codegen, qc) |
+| Spectrum compilation | 7,129 lines compiles to 35,241 lines of C |
+
+## Roadblocks and Watch List
+
+### Blocking: Multi-file Compilation
+The compiler does not support `use` imports between `.quanta` files. This forces
+every program to be self-contained, which means the tokenizer is duplicated
+across 5 self-hosting tools (~4,000 lines of identical code). This is the single
+largest architectural debt. Fix requires: adding a module resolution pass to
+`quantac` that reads referenced `.quanta` files and links them.
+
+### Blocking: Struct Field Assignment on Locals
+The C backend doesn't reliably emit struct field assignments on local variables
+(e.g., `my_struct.field = value` in `main()`). All programs work around this by
+passing structs via `&mut` references to helper functions. Fix requires: changes
+to the C backend's local variable emission for struct types.
+
+### Monitoring: String Type Inference
+`let x = ""` infers `&'static str` instead of `String`, which blocks method
+calls like `.char_at()`. Programs use `str.substring(0, 0)` as a workaround.
+This causes subtle bugs when mixing string literals with string operations.
+
+### Monitoring: Sequential While Loops
+A second `while` loop in the same function scope can be silently dropped from
+generated C. Programs work around this with single-loop patterns or by moving
+loops into separate functions.
+
+### Monitoring: Vec<String> Codegen
+Only `Vec<i32>` and `Vec<f64>` have complete codegen. Programs that need string
+arrays use the string pool pattern (string buffer + parallel index arrays).
+
 ## Known Issues
 
-- `qjq` requires piped input or a file argument; invoke with `--help` for usage
 - GROUP BY has rendering issues with some aggregate combinations
 - Self-hosted compiler (qc) handles a subset of the language only
-- No inter-program code reuse (compiler limitation, shared stdlib planned)
-- Generated `.c` files are committed alongside sources (build artifact, but
-  useful for inspection and for users without the compiler)
+- 3 programs (qc, json, test_hello) have `.c` output but no linked binary
+  (requires manual MSVC invocation)
+
+## Related Files
+
+- `CHANGELOG.md` — detailed change history
+- `ARCHITECTURE.md` — qdb database engine architecture
+- `tests/run_tests.sh` — automated test suite
