@@ -1,3 +1,5 @@
+include!("stdlib/lines.quanta");
+
 // =============================================================================
 // qpaste — Merge lines of files (GNU paste clone) written in QuantaLang
 // =============================================================================
@@ -61,61 +63,30 @@ fn sp_get(s: &Paste, id: i32) -> String {
 
 // --- Parse content into lines, adding to the struct for one file ---
 fn add_file_lines(s: &mut Paste, content: String) {
-    let clen = content.len();
     let start_idx = vec_len(s.line_ids);
     vec_push(s.file_starts, start_idx);
     let mut count: i32 = 0;
-    let mut pos: i32 = 0;
-    let mut line_start: i32 = 0;
-    let mut go = true;
 
-    while go {
-        if pos >= clen {
-            // Last line (no trailing newline)
-            let ln = pos - line_start;
-            if ln > 0 {
-                let text = content.substring(line_start, ln);
-                // Strip trailing \r
-                let tlen = text.len();
-                let clean = if tlen > 0 {
-                    let last = text.char_at(tlen - 1);
-                    if last == "\r" {
-                        if tlen == 1 { "" } else { text.substring(0, tlen - 1) }
-                    } else {
-                        text
-                    }
-                } else {
-                    text
-                };
-                let id = sp_add(s, clean);
-                vec_push(s.line_ids, id);
-                count = count + 1;
-            }
-            go = false;
-        } else {
-            let c = content.char_at(pos);
-            if c == "\n" {
-                let mut ln = pos - line_start;
-                // Strip trailing \r
-                if ln > 0 {
-                    let last_pos = line_start + ln - 1;
-                    let lc = content.char_at(last_pos);
-                    if lc == "\r" { ln = ln - 1; }
-                }
-                let text = if ln > 0 {
-                    content.substring(line_start, ln)
-                } else {
-                    ""
-                };
-                let id = sp_add(s, text);
-                vec_push(s.line_ids, id);
-                count = count + 1;
-                line_start = pos + 1;
-                pos = pos + 1;
+    let lr = lr_new(content);
+    let mut i: i32 = 0;
+    while i < lr.count {
+        let raw_line = lr_get(&lr, i);
+        // Strip trailing \r
+        let tlen = raw_line.len();
+        let clean = if tlen > 0 {
+            let last = raw_line.char_at(tlen - 1);
+            if last == "\r" {
+                if tlen == 1 { "" } else { raw_line.substring(0, tlen - 1) }
             } else {
-                pos = pos + 1;
+                raw_line
             }
-        }
+        } else {
+            raw_line
+        };
+        let id = sp_add(s, clean);
+        vec_push(s.line_ids, id);
+        count = count + 1;
+        i = i + 1;
     }
 
     vec_push(s.file_counts, count);

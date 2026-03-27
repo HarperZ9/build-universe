@@ -1,3 +1,5 @@
+include!("stdlib/lines.quanta");
+
 // =============================================================================
 // qcut — Field/character extraction (GNU cut clone) written in QuantaLang
 // =============================================================================
@@ -266,42 +268,29 @@ fn process_line_chars(s: &Cut, line: String) {
 // --- Process input content line by line ---
 fn process_content(s: &mut Cut, content: String, delim: String,
                    char_mode: bool) {
-    let clen = content.len();
-    let mut pos: i32 = 0;
-    let mut go = true;
-
-    while go {
-        if pos >= clen {
-            go = false;
-        } else {
-            let rest = content.substring(pos, clen - pos);
-            let nl_idx = rest.index_of("\n");
-            let line = if nl_idx < 0 { rest } else { rest.substring(0, nl_idx) };
-            if nl_idx < 0 {
-                pos = clen;
-            } else {
-                pos = pos + nl_idx + 1;
-            }
-
-            // Strip trailing \r
-            let llen = line.len();
-            let clean = if llen > 0 {
-                let last = line.char_at(llen - 1);
-                if last == "\r" {
-                    if llen == 1 { "" } else { line.substring(0, llen - 1) }
-                } else {
-                    line
-                }
+    let lr = lr_new(content);
+    let mut i: i32 = 0;
+    while i < lr.count {
+        let line = lr_get(&lr, i);
+        // Strip trailing \r
+        let llen = line.len();
+        let clean = if llen > 0 {
+            let last = line.char_at(llen - 1);
+            if last == "\r" {
+                if llen == 1 { "" } else { line.substring(0, llen - 1) }
             } else {
                 line
-            };
-
-            if char_mode {
-                process_line_chars(s, clean);
-            } else {
-                process_line_fields(s, clean, delim);
             }
+        } else {
+            line
+        };
+
+        if char_mode {
+            process_line_chars(s, clean);
+        } else {
+            process_line_fields(s, clean, delim);
         }
+        i = i + 1;
     }
 }
 

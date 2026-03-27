@@ -1,3 +1,5 @@
+include!("stdlib/lines.quanta");
+
 // =============================================================================
 // qsed — Stream editor (sed clone) written in QuantaLang
 // =============================================================================
@@ -491,70 +493,56 @@ fn apply_command(s: &Sed, ci: i32, line: String, line_num: i32) -> CmdResult {
 
 // --- Process all input lines ---
 fn process_input(s: &Sed, content: String) -> String {
-    let clen = content.len();
+    let lr = lr_new(content);
     let mut line_num: i32 = 0;
-    let mut pos: i32 = 0;
     let mut output = "";
+    let mut i: i32 = 0;
 
-    let mut go = true;
-    while go {
-        if pos >= clen {
-            go = false;
-        } else {
-            // Find end of current line
-            let rest = content.substring(pos, clen - pos);
-            let nl_idx = rest.index_of("\n");
+    while i < lr.count {
+        let line = lr_get(&lr, i);
+        line_num = line_num + 1;
 
-            let line = if nl_idx < 0 { rest } else { rest.substring(0, nl_idx) };
-            if nl_idx < 0 {
-                pos = clen;
-            } else {
-                pos = pos + nl_idx + 1;
-            }
-
-            line_num = line_num + 1;
-
-            // Strip trailing \r
-            let llen = line.len();
-            let clean_line = if llen > 0 {
-                let last_c = line.char_at(llen - 1);
-                if last_c == "\r" {
-                    line.substring(0, llen - 1)
-                } else {
-                    line
-                }
+        // Strip trailing \r
+        let llen = line.len();
+        let clean_line = if llen > 0 {
+            let last_c = line.char_at(llen - 1);
+            if last_c == "\r" {
+                line.substring(0, llen - 1)
             } else {
                 line
-            };
-
-            // Apply all commands
-            let mut cur_line = clean_line;
-            let mut deleted = false;
-            let mut printed = false;
-            let mut ci: i32 = 0;
-
-            while ci < s.num_cmds {
-                if !deleted {
-                    let result = apply_command(s, ci, cur_line, line_num);
-                    cur_line = result.line;
-                    deleted = result.deleted;
-                    if result.printed {
-                        printed = true;
-                    }
-                }
-                ci = ci + 1;
             }
+        } else {
+            line
+        };
 
-            // Output logic
+        // Apply all commands
+        let mut cur_line = clean_line;
+        let mut deleted = false;
+        let mut printed = false;
+        let mut ci: i32 = 0;
+
+        while ci < s.num_cmds {
             if !deleted {
-                if printed {
-                    output = output + cur_line + "\n";
+                let result = apply_command(s, ci, cur_line, line_num);
+                cur_line = result.line;
+                deleted = result.deleted;
+                if result.printed {
+                    printed = true;
                 }
-                if !s.silent {
-                    output = output + cur_line + "\n";
-                }
+            }
+            ci = ci + 1;
+        }
+
+        // Output logic
+        if !deleted {
+            if printed {
+                output = output + cur_line + "\n";
+            }
+            if !s.silent {
+                output = output + cur_line + "\n";
             }
         }
+        i = i + 1;
     }
 
     output

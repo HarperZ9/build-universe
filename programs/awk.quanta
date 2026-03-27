@@ -1,3 +1,5 @@
+include!("stdlib/lines.quanta");
+
 // =============================================================================
 // qawk — AWK-lite text processing tool written in QuantaLang
 // =============================================================================
@@ -727,45 +729,26 @@ fn run_program(a: &mut Awk, prog: String, line: String, mode: i32) {
 
 // --- Process all input lines ---
 fn process_input(a: &mut Awk, prog: String, content: String) {
-    let clen = content.len();
-    let mut pos: i32 = 0;
-
-    let mut go = true;
-    while go {
-        if pos >= clen {
-            go = false;
-        } else {
-            let rest = content.substring(pos, clen - pos);
-            let nl_idx = rest.index_of("\n");
-            let raw_line = if nl_idx < 0 { rest } else { rest.substring(0, nl_idx) };
-            if nl_idx < 0 {
-                pos = clen;
-            } else {
-                pos = pos + nl_idx + 1;
-            }
-
-            // Strip trailing \r
-            let llen = raw_line.len();
-            let clean = if llen > 0 {
-                let last = raw_line.char_at(llen - 1);
-                if last == "\r" {
-                    if llen == 1 { "" } else { raw_line.substring(0, llen - 1) }
-                } else {
-                    raw_line
-                }
+    let lr = lr_new(content);
+    let mut i: i32 = 0;
+    while i < lr.count {
+        let raw_line = lr_get(&lr, i);
+        // Strip trailing \r
+        let llen = raw_line.len();
+        let clean = if llen > 0 {
+            let last = raw_line.char_at(llen - 1);
+            if last == "\r" {
+                if llen == 1 { "" } else { raw_line.substring(0, llen - 1) }
             } else {
                 raw_line
-            };
-
-            // Skip empty trailing line from trailing newline
-            if clean.len() == 0 && nl_idx < 0 && pos >= clen {
-                go = false;
-            } else {
-                a.nr = a.nr + 1;
-                split_line(a, clean);
-                run_program(a, prog, clean, 0);
             }
-        }
+        } else {
+            raw_line
+        };
+        a.nr = a.nr + 1;
+        split_line(a, clean);
+        run_program(a, prog, clean, 0);
+        i = i + 1;
     }
 }
 
