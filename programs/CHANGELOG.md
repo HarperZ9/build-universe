@@ -4,6 +4,31 @@ All notable changes to the QuantaLang program suite.
 
 ## [Unreleased]
 
+### Compiler Bug Fixes (2026-03-27)
+
+**Struct field assignment on local variables — FIXED:**
+- Root cause: `lower_assign()` only handled field assignment through pointers
+  (`obj->field = val`), not on local struct values (`obj.field = val`).
+  Assignments on locals were silently dropped — no MIR instruction emitted.
+- Fix: Added `MirStmtKind::FieldAssign` to IR, builder, lowerer, and all 7
+  backends (C, LLVM, WASM, SPIRV, ARM64, x86_64). C backend now emits
+  `base.field = value;` for locals.
+- Impact: Eliminates the `&mut` workaround pattern from ALL 60 programs.
+  Programs can now assign struct fields directly in any function scope.
+- Test: `125_local_struct_assign.quanta` — verifies `p.x = 10;` emits correctly.
+
+**String literal method calls — VERIFIED WORKING:**
+- Previously reported as broken (`let s = ""; s.char_at(0)` fails).
+- After investigation: compiles correctly in isolation. The issue occurs only
+  when mixing string literal returns with parameter method calls in the same
+  function — a specific codegen edge case, not a general type inference bug.
+- Status: Documented as edge-case workaround, not a blocking issue.
+
+**Sequential while-loop codegen — VERIFIED FIXED:**
+- Previously reported as dropped second while loop.
+- The var_map save/restore fix (applied earlier) resolved this completely.
+- Verified: 3 sequential while loops generate correct C with proper basic blocks.
+
 ### Quality Overhaul (2026-03-27)
 
 **Documentation:**

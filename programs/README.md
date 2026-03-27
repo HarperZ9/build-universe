@@ -211,21 +211,19 @@ across 5 self-hosting tools (~4,000 lines of identical code). This is the single
 largest architectural debt. Fix requires: adding a module resolution pass to
 `quantac` that reads referenced `.quanta` files and links them.
 
-### Blocking: Struct Field Assignment on Locals
-The C backend doesn't reliably emit struct field assignments on local variables
-(e.g., `my_struct.field = value` in `main()`). All programs work around this by
-passing structs via `&mut` references to helper functions. Fix requires: changes
-to the C backend's local variable emission for struct types.
+### ~~Blocking: Struct Field Assignment on Locals~~ FIXED (2026-03-27)
+Added `MirStmtKind::FieldAssign` across IR, lowerer, and all backends.
+`p.x = 10;` now emits correctly in any function scope. Programs can be
+refactored to remove `&mut` setter workarounds.
 
 ### Monitoring: String Type Inference
 `let x = ""` infers `&'static str` instead of `String`, which blocks method
 calls like `.char_at()`. Programs use `str.substring(0, 0)` as a workaround.
 This causes subtle bugs when mixing string literals with string operations.
 
-### Monitoring: Sequential While Loops
-A second `while` loop in the same function scope can be silently dropped from
-generated C. Programs work around this with single-loop patterns or by moving
-loops into separate functions.
+### ~~Monitoring: Sequential While Loops~~ FIXED (earlier session)
+The var_map save/restore fix resolved this. Three sequential while loops now
+generate correct C with proper basic block chains. Verified.
 
 ### Monitoring: Vec<String> Codegen
 Only `Vec<i32>` and `Vec<f64>` have complete codegen. Programs that need string
