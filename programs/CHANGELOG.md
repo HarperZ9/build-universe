@@ -4,6 +4,33 @@ All notable changes to the QuantaLang program suite.
 
 ## [Unreleased]
 
+### Shared Tokenizer Extraction — Major Deduplication (2026-03-27)
+
+**stdlib/tokenizer.quanta created (430 lines):**
+- All 48 TK_* token type constants
+- Tok struct, tok_new constructor
+- Full tokenizer: tokenize(), read_string(), read_number(), read_ident_or_keyword()
+- Token access: tok_text(), tok_emit(), peek_tok(), advance_tok()
+- Helper functions: is_keyword(), skip_whitespace(), skip_line_comment()
+
+**Self-hosting tools migrated (2,118 lines eliminated):**
+
+| File | Before | After | Saved |
+|------|--------|-------|-------|
+| tok.quanta | 916 | 289 | 627 |
+| parse.quanta | 1,420 | 1,050 | 370 |
+| check.quanta | 1,990 | 1,628 | 362 |
+| codegen.quanta | 1,470 | 1,093 | 377 |
+| qc.quanta | 2,280 | 1,898 | 382 |
+| **Total** | **8,076** | **5,958** | **2,118** |
+
+**String pool migration — partially blocked:**
+- csv2json, paste, patch annotated with stdlib pattern reference
+- Cannot directly include stdlib/string_pool.quanta due to function name
+  collisions (each program's sp_add takes a different struct type)
+- Blocked by: compiler lacks function overloading or module-scoped names
+- Documented in program comments for future migration
+
 ### Stdlib Migration — First Real Deduplication (2026-03-27)
 
 **Self-hosting tools migrated to shared stdlib:**

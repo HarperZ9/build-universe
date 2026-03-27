@@ -215,14 +215,16 @@ Double-inclusion guard prevents duplicates. Stdlib modules:
 ```
 stdlib/chars.quanta        — is_digit, is_alpha, is_alnum, is_whitespace,
                              is_hex_digit, is_bin_digit, is_oct_digit
+stdlib/tokenizer.quanta    — Tok struct, 48 TK_* constants, tokenize(),
+                             read_string(), read_number(), peek/advance (430 lines)
 stdlib/string_utils.quanta — trim_left, starts_with_alpha
 stdlib/lines.quanta        — LineReader (split string into lines)
 stdlib/string_pool.quanta  — StringPool (string array via Vec<i32>)
 ```
 
-Self-hosting tools (tok, parse, check, codegen, qc) migrated — 240 lines of
-duplicated char functions eliminated. Next: migrate 10+ programs using string
-pool pattern to shared stdlib/string_pool.quanta.
+Self-hosting tools (tok, parse, check, codegen, qc) migrated to shared
+stdlib — **2,358 total lines of duplication eliminated** (240 from char
+functions + 2,118 from tokenizer).
 
 ### ~~Blocking: Struct Field Assignment on Locals~~ FIXED (2026-03-27)
 Added `MirStmtKind::FieldAssign` across IR, lowerer, and all backends.

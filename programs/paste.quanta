@@ -15,8 +15,10 @@
 // =============================================================================
 
 // --- State struct: holds lines from all files ---
+// String pool fields (sp_buf/sp_starts/sp_lens/sp_n) match stdlib/string_pool.quanta pattern.
+// Kept inline to avoid nested-struct &mut and sp_add/sp_get name collisions.
 struct Paste {
-    // String pool
+    // String pool (matches stdlib/string_pool.quanta pattern)
     sp_buf: String,
     sp_n: i32,
     sp_starts: Vec<i32>,

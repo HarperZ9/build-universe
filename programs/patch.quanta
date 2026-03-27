@@ -1,6 +1,9 @@
 // qpatch — Apply unified diff patches (pairs with qdiff)
 // Usage: qpatch [--dry-run] [-R] FILE DIFF
 
+// String pool fields (pool/starts/lens/n, dpool/dstarts/dlens/dn) match
+// stdlib/string_pool.quanta pattern (x2, one for source lines, one for diff ops).
+// Kept inline to avoid nested-struct &mut and sp_add/sp_get name collisions.
 struct Patch {
     pool: String, starts: Vec<i32>, lens: Vec<i32>, n: i32,
     dpool: String, dstarts: Vec<i32>, dlens: Vec<i32>, dn: i32,
