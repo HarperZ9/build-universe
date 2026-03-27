@@ -210,10 +210,19 @@ Added `include!("path")` preprocessor directive. Programs can now share code:
 include!("stdlib/chars.quanta");
 // is_digit(), is_alpha(), etc. are now available
 ```
-Double-inclusion guard prevents duplicates. Stdlib started:
-`stdlib/chars.quanta`, `stdlib/string_utils.quanta`.
-Next step: migrate self-hosting tools (tok, parse, check, codegen, qc) to use
-shared stdlib, eliminating ~4,000 lines of duplication.
+Double-inclusion guard prevents duplicates. Stdlib modules:
+
+```
+stdlib/chars.quanta        — is_digit, is_alpha, is_alnum, is_whitespace,
+                             is_hex_digit, is_bin_digit, is_oct_digit
+stdlib/string_utils.quanta — trim_left, starts_with_alpha
+stdlib/lines.quanta        — LineReader (split string into lines)
+stdlib/string_pool.quanta  — StringPool (string array via Vec<i32>)
+```
+
+Self-hosting tools (tok, parse, check, codegen, qc) migrated — 240 lines of
+duplicated char functions eliminated. Next: migrate 10+ programs using string
+pool pattern to shared stdlib/string_pool.quanta.
 
 ### ~~Blocking: Struct Field Assignment on Locals~~ FIXED (2026-03-27)
 Added `MirStmtKind::FieldAssign` across IR, lowerer, and all backends.

@@ -73,52 +73,7 @@ fn TK_SEMI() -> i32 { 47 }
 fn TK_COLON() -> i32 { 48 }
 fn TK_DOT() -> i32 { 49 }
 
-// ---------------------------------------------------------------------------
-// Character helpers (same as tok.quanta / parse.quanta / check.quanta)
-// ---------------------------------------------------------------------------
-fn is_alpha(c: String) -> bool {
-    if c == "_" { return true; }
-    let low = c.to_lowercase();
-    if low == "a" { return true; } if low == "b" { return true; }
-    if low == "c" { return true; } if low == "d" { return true; }
-    if low == "e" { return true; } if low == "f" { return true; }
-    if low == "g" { return true; } if low == "h" { return true; }
-    if low == "i" { return true; } if low == "j" { return true; }
-    if low == "k" { return true; } if low == "l" { return true; }
-    if low == "m" { return true; } if low == "n" { return true; }
-    if low == "o" { return true; } if low == "p" { return true; }
-    if low == "q" { return true; } if low == "r" { return true; }
-    if low == "s" { return true; } if low == "t" { return true; }
-    if low == "u" { return true; } if low == "v" { return true; }
-    if low == "w" { return true; } if low == "x" { return true; }
-    if low == "y" { return true; } if low == "z" { return true; }
-    false
-}
-
-fn is_digit(c: String) -> bool {
-    c == "0" || c == "1" || c == "2" || c == "3" || c == "4" ||
-    c == "5" || c == "6" || c == "7" || c == "8" || c == "9"
-}
-
-fn is_hex_digit(c: String) -> bool {
-    if is_digit(c) { return true; }
-    let low = c.to_lowercase();
-    low == "a" || low == "b" || low == "c" || low == "d" ||
-    low == "e" || low == "f"
-}
-
-fn is_bin_digit(c: String) -> bool { c == "0" || c == "1" }
-
-fn is_oct_digit(c: String) -> bool {
-    c == "0" || c == "1" || c == "2" || c == "3" ||
-    c == "4" || c == "5" || c == "6" || c == "7"
-}
-
-fn is_alnum(c: String) -> bool { is_alpha(c) || is_digit(c) }
-
-fn is_whitespace(c: String) -> bool {
-    c == " " || c == "\t" || c == "\r" || c == "\n"
-}
+include!("stdlib/chars.quanta");
 
 // ---------------------------------------------------------------------------
 // Tokenizer (embedded from tok.quanta)

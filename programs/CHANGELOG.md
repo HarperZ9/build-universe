@@ -4,6 +4,33 @@ All notable changes to the QuantaLang program suite.
 
 ## [Unreleased]
 
+### Stdlib Migration — First Real Deduplication (2026-03-27)
+
+**Self-hosting tools migrated to shared stdlib:**
+- tok.quanta: -60 lines (is_alpha/is_digit/etc. replaced with include)
+- parse.quanta: -45 lines
+- check.quanta: -45 lines
+- codegen.quanta: -45 lines
+- qc.quanta: -45 lines
+- Total: **240 lines of duplication eliminated** from 5 files
+- Each file now starts with `include!("stdlib/chars.quanta");`
+
+**Stdlib expanded (3 new modules):**
+- `stdlib/lines.quanta` — LineReader struct (lr_new, lr_get) for splitting
+  strings into lines. Used by 35+ programs.
+- `stdlib/string_pool.quanta` — StringPool struct (sp_new, sp_add, sp_get)
+  for storing string arrays with Vec<i32>. Used by 10+ programs.
+- `stdlib/chars.quanta` — added is_bin_digit, is_oct_digit (needed by tokenizers)
+
+**Stdlib inventory:**
+```
+stdlib/chars.quanta        — is_digit, is_alpha, is_alnum, is_whitespace,
+                             is_hex_digit, is_bin_digit, is_oct_digit
+stdlib/string_utils.quanta — trim_left, starts_with_alpha
+stdlib/lines.quanta        — LineReader (split string into lines)
+stdlib/string_pool.quanta  — StringPool (string array via Vec<i32>)
+```
+
 ### Multi-File Includes + Refactoring (2026-03-27)
 
 **`include!("path")` preprocessor — NEW COMPILER FEATURE:**
