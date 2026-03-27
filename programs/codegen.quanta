@@ -63,6 +63,10 @@ struct CG {
     needs_vec_runtime: i32,
     // Known struct type names: pipe-delimited "Point|Rect|"
     struct_names: String,
+    // Impl method registry: pipe-delimited "Point_sum|Point_scale|"
+    impl_methods: String,
+    // Current impl type name (set during impl block codegen)
+    impl_type: String,
 }
 
 fn cg_new(t: &Tok) -> CG {
@@ -79,6 +83,8 @@ fn cg_new(t: &Tok) -> CG {
         needs_str_runtime: 0,
         needs_vec_runtime: 0,
         struct_names: "",
+        impl_methods: "",
+        impl_type: "",
     }
 }
 
@@ -146,6 +152,17 @@ fn reg_struct(cg: &mut CG, name: String) {
 fn is_struct_type(cg: &CG, name: String) -> bool {
     let search = name + "|";
     cg.struct_names.contains(search)
+}
+
+// Register an impl method: Type_methodname
+fn reg_impl_method(cg: &mut CG, mangled: String) {
+    cg.impl_methods = cg.impl_methods + mangled + "|";
+}
+
+// Check if a mangled name is a known impl method
+fn is_impl_method(cg: &CG, mangled: String) -> bool {
+    let search = mangled + "|";
+    cg.impl_methods.contains(search)
 }
 
 // Check if a C expression is "string-typed" based on its shape
@@ -416,6 +433,89 @@ fn pass1_scan(cg: &mut CG) {
                 }
                 // Skip the body
                 if pk(cg) == TK_LBRACE() { skip_balanced_braces(cg); }
+            } else if k2 == TK_KEYWORD() && txt2 == "impl" {
+                adv(cg); // skip "impl"
+                let impl_tname = ptxt(cg);
+                adv(cg); // skip type name
+                // Parse impl body: { fn method(...) { ... } ... }
+                if pk(cg) == TK_LBRACE() {
+                    adv(cg); // skip {
+                    let mut igo = true;
+                    while igo {
+                        if at_end(cg) || pk(cg) == TK_RBRACE() { igo = false; }
+                        else {
+                            // Skip pub if present
+                            if ptxt(cg) == "pub" { adv(cg); }
+                            if ptxt(cg) == "fn" {
+                                adv(cg); // skip "fn"
+                                let mname = ptxt(cg);
+                                adv(cg); // skip method name
+                                let mangled = impl_tname + "_" + mname;
+                                reg_impl_method(cg, mangled);
+                                // Parse params
+                                expect_kind(cg, TK_LPAREN());
+                                let mut mparams_c = "";
+                                let mut mfirst = true;
+                                let mut has_self = false;
+                                let mut mpgo = true;
+                                while mpgo {
+                                    if at_end(cg) || pk(cg) == TK_RPAREN() { mpgo = false; }
+                                    else {
+                                        let ptok = ptxt(cg);
+                                        // Handle &self or &mut self
+                                        if pk(cg) == TK_BIT_AND() {
+                                            adv(cg); // skip &
+                                            if ptxt(cg) == "mut" { adv(cg); } // skip mut
+                                            if ptxt(cg) == "self" {
+                                                adv(cg); // skip self
+                                                has_self = true;
+                                                mparams_c = impl_tname + "* self";
+                                                mfirst = false;
+                                                if pk(cg) == TK_COMMA() { adv(cg); }
+                                            }
+                                        } else if ptok == "self" || ptok == "mut" {
+                                            // self or mut self (by value)
+                                            if ptok == "mut" { adv(cg); }
+                                            if ptxt(cg) == "self" { adv(cg); }
+                                            has_self = true;
+                                            mparams_c = impl_tname + " self";
+                                            mfirst = false;
+                                            if pk(cg) == TK_COMMA() { adv(cg); }
+                                        } else {
+                                            // Regular param: name: type
+                                            if !mfirst { mparams_c = mparams_c + ", "; }
+                                            mfirst = false;
+                                            if ptxt(cg) == "mut" { adv(cg); }
+                                            let mpname = ptxt(cg);
+                                            adv(cg);
+                                            expect_kind(cg, TK_COLON());
+                                            let mpty = parse_type(cg);
+                                            mparams_c = mparams_c + mpty + " " + mpname;
+                                            if pk(cg) == TK_COMMA() { adv(cg); }
+                                            else { mpgo = false; }
+                                        }
+                                    }
+                                }
+                                expect_kind(cg, TK_RPAREN());
+                                // Return type
+                                let mut mret_c = "void";
+                                if pk(cg) == TK_ARROW() {
+                                    adv(cg);
+                                    mret_c = parse_type(cg);
+                                }
+                                // Emit forward declaration
+                                emit_fwd(cg, mret_c + " " + mangled + "(" + mparams_c + ");");
+                                // Skip the body
+                                if pk(cg) == TK_LBRACE() { skip_balanced_braces(cg); }
+                            } else {
+                                // Skip non-fn inside impl
+                                if pk(cg) == TK_LBRACE() { skip_balanced_braces(cg); }
+                                else { adv(cg); }
+                            }
+                        }
+                    }
+                    expect_kind(cg, TK_RBRACE()); // skip closing }
+                }
             } else {
                 // Skip non-fn items
                 if pk(cg) == TK_LBRACE() { skip_balanced_braces(cg); }
@@ -579,11 +679,32 @@ fn parse_postfix_expr(cg: &mut CG) -> String {
                         cg.needs_str_runtime = 1;
                         result = "qc_index_of(" + result + ", " + args + ")";
                     } else {
-                        // Generic method call passthrough
-                        result = result + "." + field + "(" + args + ")";
+                        // Check for impl method dispatch: obj.method(args) -> Type_method(&obj, args)
+                        let obj_type = lookup_var(cg, result);
+                        let mut dispatched = false;
+                        if obj_type != "" {
+                            let mangled = obj_type + "_" + field;
+                            if is_impl_method(cg, mangled) {
+                                if args != "" {
+                                    result = mangled + "(&" + result + ", " + args + ")";
+                                } else {
+                                    result = mangled + "(&" + result + ")";
+                                }
+                                dispatched = true;
+                            }
+                        }
+                        if !dispatched {
+                            // Generic method call passthrough
+                            result = result + "." + field + "(" + args + ")";
+                        }
                     }
                 } else {
-                    result = result + "." + field;
+                    // Field access: check if receiver is self inside impl -> use ->
+                    if result == "self" && cg.impl_type != "" {
+                        result = "self->" + field;
+                    } else {
+                        result = result + "." + field;
+                    }
                 }
             } else { go = false; }
         } else if pk(cg) == TK_LPAREN() {
@@ -1162,6 +1283,12 @@ fn infer_type(cg: &CG, init: String) -> String {
             if is_struct_type(cg, sname) { return sname; }
         }
     }
+    // Impl associated function: Type_new(...) -> Type
+    let new_pos = init.index_of("_new(");
+    if new_pos > 0 {
+        let candidate = init.substring(0, new_pos);
+        if is_struct_type(cg, candidate) { return candidate; }
+    }
     // Ternary from if-expression: check if branch is a string
     if init.contains(") ? (") {
         // Extract the then-branch from (cond) ? (then_expr) : (else_expr)
@@ -1286,6 +1413,113 @@ fn codegen_function(cg: &mut CG) {
     emit(cg, "}\n\n");
 }
 
+// Codegen a single method inside an impl block.
+// impl_tname is the struct type name. "fn" has already been consumed.
+fn codegen_impl_method(cg: &mut CG, impl_tname: String) {
+    let mname = ptxt(cg);
+    adv(cg); // skip method name
+    let mangled = impl_tname + "_" + mname;
+
+    // Clear variable registry for this method scope
+    cg.var_names = "";
+    cg.var_types = "";
+
+    // Parse params
+    expect_kind(cg, TK_LPAREN());
+    let mut params_c = "";
+    let mut mfirst = true;
+    let mut has_self = false;
+    let mut mpgo = true;
+    while mpgo {
+        if at_end(cg) || pk(cg) == TK_RPAREN() { mpgo = false; }
+        else {
+            let ptok = ptxt(cg);
+            // Handle &self or &mut self
+            if pk(cg) == TK_BIT_AND() {
+                adv(cg); // skip &
+                if ptxt(cg) == "mut" { adv(cg); } // skip mut
+                if ptxt(cg) == "self" {
+                    adv(cg); // skip self
+                    has_self = true;
+                    params_c = impl_tname + "* self";
+                    mfirst = false;
+                    if pk(cg) == TK_COMMA() { adv(cg); }
+                }
+            } else if ptok == "self" || (ptok == "mut" && ptxt_at(cg, 1) == "self") {
+                // self or mut self (by value)
+                if ptok == "mut" { adv(cg); }
+                if ptxt(cg) == "self" { adv(cg); }
+                has_self = true;
+                params_c = impl_tname + " self";
+                mfirst = false;
+                if pk(cg) == TK_COMMA() { adv(cg); }
+            } else {
+                // Regular param: name: type
+                if !mfirst { params_c = params_c + ", "; }
+                mfirst = false;
+                if ptxt(cg) == "mut" { adv(cg); }
+                let mpname = ptxt(cg);
+                adv(cg);
+                expect_kind(cg, TK_COLON());
+                let mpty = parse_type(cg);
+                params_c = params_c + mpty + " " + mpname;
+                reg_var(cg, mpname, mpty);
+                if pk(cg) == TK_COMMA() { adv(cg); }
+                else { mpgo = false; }
+            }
+        }
+    }
+    expect_kind(cg, TK_RPAREN());
+
+    // Return type
+    let mut ret_c = "void";
+    if pk(cg) == TK_ARROW() {
+        adv(cg);
+        ret_c = parse_type(cg);
+    }
+
+    // Set impl_type so self.field -> self->field works in codegen
+    cg.impl_type = impl_tname;
+
+    // Emit function header
+    emit(cg, ret_c + " " + mangled + "(" + params_c + ") {\n");
+
+    // Body
+    cg.indent = cg.indent + 1;
+    codegen_block(cg);
+    cg.indent = cg.indent - 1;
+    emit(cg, "}\n\n");
+
+    cg.impl_type = "";
+}
+
+// Codegen an impl block: impl TypeName { fn method(...) { ... } ... }
+// "impl" has already been consumed.
+fn codegen_impl(cg: &mut CG) {
+    let impl_tname = ptxt(cg);
+    adv(cg); // skip type name
+    if pk(cg) == TK_LBRACE() {
+        adv(cg); // skip {
+        let mut igo = true;
+        while igo {
+            if at_end(cg) || pk(cg) == TK_RBRACE() { igo = false; }
+            else {
+                // Skip pub if present
+                if ptxt(cg) == "pub" { adv(cg); }
+                if ptxt(cg) == "fn" {
+                    adv(cg); // skip "fn"
+                    codegen_impl_method(cg, impl_tname);
+                } else {
+                    // Skip non-fn inside impl
+                    if pk(cg) == TK_LBRACE() { skip_balanced_braces(cg); }
+                    else { adv(cg); }
+                }
+            }
+        }
+        expect_kind(cg, TK_RBRACE());
+    }
+}
+
 fn codegen_item(cg: &mut CG) {
     let k = pk(cg);
     let txt = ptxt(cg);
@@ -1303,8 +1537,15 @@ fn codegen_item(cg: &mut CG) {
         return;
     }
 
-    // struct, enum, impl, trait, mod, use, const, type -> skip
-    if k2 == TK_KEYWORD() && (txt2 == "struct" || txt2 == "enum" || txt2 == "impl" ||
+    // impl block: generate methods with mangled names
+    if k2 == TK_KEYWORD() && txt2 == "impl" {
+        adv(cg); // consume "impl"
+        codegen_impl(cg);
+        return;
+    }
+
+    // struct, enum, trait, mod, use, const, type -> skip
+    if k2 == TK_KEYWORD() && (txt2 == "struct" || txt2 == "enum" ||
        txt2 == "trait" || txt2 == "mod" || txt2 == "type") {
         adv(cg);
         // Skip name

@@ -148,9 +148,9 @@ verified (C compiles and runs correctly): test_hello, yes, echo, basename,
 dirname, seq. The remaining programs generate C but may have runtime-level
 type issues that require the Rust-based `quantac` for correct binaries.
 
-**Remaining codegen gaps:** trait/impl method dispatch, closures as arguments,
-generic type parameters. These are advanced features used by the more complex
-programs.
+**Remaining codegen gaps:** closures as arguments, include!() preprocessing,
+if-expression blocks with let bindings, some missing builtin mappings.
+Impl/method dispatch is now supported (Type_method mangling, self-> access).
 
 ## Database Engine (qdb)
 

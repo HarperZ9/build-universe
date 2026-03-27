@@ -4,6 +4,21 @@ All notable changes to the QuantaLang program suite.
 
 ## [Unreleased]
 
+### Impl Method Dispatch + E2E Audit (2026-03-27)
+
+**Impl/method dispatch added to qcodegen:**
+- `impl Type { fn method(&self) }` → `Type_method(Type* self)` (mangled names)
+- `self.field` → `self->field` (pointer deref inside methods)
+- `obj.method(args)` → `Type_method(&obj, args)` (dispatch with address-of)
+- `Type::new(...)` recognized as constructor returning `Type`
+- codegen.quanta: 1,594 → 1,835 lines (+241 lines for impl support)
+
+**End-to-end audit (qcodegen → MSVC → run):**
+- Previously proven: 6 programs (test_hello, yes, echo, basename, dirname, seq)
+- New proven: tee, + 2 impl test programs = **9 programs total**
+- Remaining gaps: include!() not preprocessed by qcodegen, if-expression blocks
+  with let bindings, missing builtin mappings (time_unix, split, split_whitespace)
+
 ### Self-Hosted Compiler: 62/62 Programs Compile (2026-03-27)
 
 **qcodegen now compiles ALL 62 programs to C.**
