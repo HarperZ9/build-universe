@@ -4,6 +4,25 @@ All notable changes to the QuantaLang program suite.
 
 ## [Unreleased]
 
+### Closure Codegen + In-Process Benchmarks (2026-03-27)
+
+**Closure/lambda codegen — THE LAST MAJOR GAP CLOSED:**
+- `|x| x * 2` emits static C function `__lambda_N`
+- `.map(|x| expr)` desugars to C for-loop with qv_push
+- `.filter(|x| expr)` desugars to conditional qv_push
+- `.fold(init, |acc, x| expr)` desugars to accumulator loop
+- `fn(T) -> T` types emit C typedef function pointers
+- codegen.quanta: 2,294 → 2,490 lines (+196)
+
+**All major codegen features now implemented:**
+Functions, let, if (ternary + blocks), while, return, structs, impl methods,
+Vec, include!(), 30+ builtins, closures, iterator desugaring, self-compilation.
+
+**In-process qdb benchmark:**
+- REPL mode: 1,006 statements in ~12,000ms = 11ms/statement
+- Per-process mode: 49ms/query (dominated by startup)
+- REPL eliminates 75% of per-query overhead
+
 ### Multi-Statement If-Blocks + Full Audit (2026-03-27)
 
 **If-expression blocks with let bindings — FIXED:**

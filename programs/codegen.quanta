@@ -67,6 +67,9 @@ struct CG {
     impl_methods: String,
     // Current impl type name (set during impl block codegen)
     impl_type: String,
+    // Lambda/closure support: counter for unique names, buffer for static functions
+    lambda_count: i32,
+    lambdas: String,
 }
 
 fn cg_new(t: &Tok) -> CG {
@@ -85,6 +88,8 @@ fn cg_new(t: &Tok) -> CG {
         struct_names: "",
         impl_methods: "",
         impl_type: "",
+        lambda_count: 0,
+        lambdas: "",
     }
 }
 
@@ -512,6 +517,41 @@ fn parse_type(cg: &mut CG) -> String {
         let inner = parse_type(cg);
         return inner;
     }
+    // Handle fn(T) -> T function pointer types
+    if pk(cg) == TK_KEYWORD() && ptxt(cg) == "fn" {
+        adv(cg); // skip "fn"
+        // Parse parameter types: (T1, T2, ...)
+        let mut param_types = "";
+        let mut pfirst = true;
+        if pk(cg) == TK_LPAREN() {
+            adv(cg);
+            let mut fpgo = true;
+            while fpgo {
+                if at_end(cg) || pk(cg) == TK_RPAREN() { fpgo = false; }
+                else {
+                    if !pfirst { param_types = param_types + ", "; }
+                    pfirst = false;
+                    let pt = parse_type(cg);
+                    param_types = param_types + pt;
+                    if pk(cg) == TK_COMMA() { adv(cg); }
+                    else { fpgo = false; }
+                }
+            }
+            expect_kind(cg, TK_RPAREN());
+        }
+        // Parse return type: -> T
+        let mut fn_ret = "void";
+        if pk(cg) == TK_ARROW() {
+            adv(cg);
+            fn_ret = parse_type(cg);
+        }
+        // Emit as C function pointer typedef name
+        // We generate a unique typedef in the lambdas buffer
+        cg.lambda_count = cg.lambda_count + 1;
+        let tdef_name = "__QFnPtr_" + to_string_i32(cg.lambda_count);
+        cg.lambdas = cg.lambdas + "typedef " + fn_ret + " (*" + tdef_name + ")(" + param_types + ");\n";
+        return tdef_name;
+    }
     // Handle main type name
     let mut name = "";
     if pk(cg) == TK_IDENT() || pk(cg) == TK_KEYWORD() {
@@ -902,6 +942,32 @@ fn parse_postfix_expr(cg: &mut CG) -> String {
                     } else if field == "replace" {
                         cg.needs_str_runtime = 1;
                         result = "qc_replace(" + result + ", " + args + ")";
+                    } else if field == "iter" {
+                        // .iter() is a no-op in codegen; the receiver is already a QVec
+                        // result stays the same
+                    } else if field == "collect" {
+                        // .collect() is a no-op; the result from map/filter is already a QVec
+                        // result stays the same
+                    } else if field == "map" {
+                        // .map(|x| expr) -> inline for-loop building new QVec
+                        // args is the lambda function name (e.g. __lambda_1)
+                        cg.needs_vec_runtime = 1;
+                        cg.lambda_count = cg.lambda_count + 1;
+                        let map_tmp = "__map_" + to_string_i32(cg.lambda_count);
+                        let map_src = result;
+                        // We emit inline: creates a new vec, loops over source, applies lambda, pushes result
+                        // Use a compound statement expression (GCC/Clang extension) or temp variable approach
+                        // For portability, use a helper macro pattern via a temp QVec in the lambdas buffer
+                        // Actually, we return a special marker that codegen_stmt's let-binding can expand
+                        result = "__QMAP(" + map_src + ", " + args + ")";
+                    } else if field == "filter" {
+                        // .filter(|x| pred) -> inline loop with conditional push
+                        cg.needs_vec_runtime = 1;
+                        result = "__QFILTER(" + result + ", " + args + ")";
+                    } else if field == "fold" {
+                        // .fold(init, |acc, x| expr) -> inline loop that accumulates
+                        // args contains "init, lambda_name"
+                        result = "__QFOLD(" + result + ", " + args + ")";
                     } else {
                         // Check for impl method dispatch: obj.method(args) -> Type_method(&obj, args)
                         let obj_type = lookup_var(cg, result);
@@ -1051,8 +1117,71 @@ fn parse_call_args(cg: &mut CG) -> String {
     result
 }
 
+// Parse a closure: |param1, param2| body_expr
+// Emits a static C function with a unique name and returns that name.
+// Closure params default to int64_t since QuantaLang closures are typically numeric.
+fn parse_closure(cg: &mut CG) -> String {
+    adv(cg); // skip opening |
+    // Parse parameter names
+    let mut param_names = "";
+    let mut param_count: i32 = 0;
+    let mut cgo = true;
+    while cgo {
+        if at_end(cg) || pk(cg) == TK_BIT_OR() { cgo = false; }
+        else {
+            if param_count > 0 { param_names = param_names + ","; }
+            let pname = ptxt(cg);
+            adv(cg);
+            param_names = param_names + pname;
+            param_count = param_count + 1;
+            if pk(cg) == TK_COMMA() { adv(cg); }
+            else { cgo = false; }
+        }
+    }
+    expect_kind(cg, TK_BIT_OR()); // skip closing |
+
+    // Parse the body expression
+    let body = parse_expr(cg);
+
+    // Generate a unique lambda name
+    cg.lambda_count = cg.lambda_count + 1;
+    let lambda_name = "__lambda_" + to_string_i32(cg.lambda_count);
+
+    // Build C parameter list (all int64_t by default)
+    let mut c_params = "";
+    let mut pi: i32 = 0;
+    let mut pstart: i32 = 0;
+    let pnames_len = param_names.len();
+    while pi <= pnames_len {
+        let mut is_sep = false;
+        if pi == pnames_len { is_sep = true; }
+        else {
+            let ch = param_names.char_at(pi);
+            if ch == "," { is_sep = true; }
+        }
+        if is_sep {
+            if pi > pstart {
+                let pn = param_names.substring(pstart, pi - pstart);
+                if c_params != "" { c_params = c_params + ", "; }
+                c_params = c_params + "int64_t " + pn;
+            }
+            pstart = pi + 1;
+        }
+        pi = pi + 1;
+    }
+
+    // Emit the static lambda function into the lambdas buffer
+    cg.lambdas = cg.lambdas + "static int64_t " + lambda_name + "(" + c_params + ") { return " + body + "; }\n";
+
+    lambda_name
+}
+
 fn parse_primary_expr(cg: &mut CG) -> String {
     let k = pk(cg);
+    // Closure/lambda: |params| body -> emit static function, return its name
+    if k == TK_BIT_OR() {
+        return parse_closure(cg);
+    }
     // Parenthesized expression
     if k == TK_LPAREN() {
         adv(cg);
@@ -1394,6 +1523,62 @@ fn codegen_stmt(cg: &mut CG) {
         // Register variable type for later lookups
         reg_var(cg, var_name, c_type);
 
+        // Handle iterator desugaring: __QMAP, __QFILTER, __QFOLD
+        if init_val.starts_with("__QMAP(") {
+            cg.needs_vec_runtime = 1;
+            // Extract: __QMAP(source, lambda_name)
+            let map_inner = init_val.substring(7, init_val.len() - 8); // strip __QMAP( and )
+            let map_comma = map_inner.index_of(", ");
+            let map_src = map_inner.substring(0, map_comma);
+            let map_fn = map_inner.substring(map_comma + 2, map_inner.len() - map_comma - 2);
+            // Emit: QVec var = qv_new(); for loop calling lambda
+            emit_line(cg, "QVec " + var_name + " = qv_new();");
+            emit_line(cg, "for (int64_t __mi = 0; __mi < qv_len(&" + map_src + "); __mi++) {");
+            cg.indent = cg.indent + 1;
+            emit_line(cg, "int64_t __mx = qv_get(&" + map_src + ", __mi);");
+            emit_line(cg, "qv_push(&" + var_name + ", " + map_fn + "(__mx));");
+            cg.indent = cg.indent - 1;
+            emit_line(cg, "}");
+            reg_var(cg, var_name, "QVec");
+            return;
+        }
+        if init_val.starts_with("__QFILTER(") {
+            cg.needs_vec_runtime = 1;
+            let flt_inner = init_val.substring(10, init_val.len() - 11);
+            let flt_comma = flt_inner.index_of(", ");
+            let flt_src = flt_inner.substring(0, flt_comma);
+            let flt_fn = flt_inner.substring(flt_comma + 2, flt_inner.len() - flt_comma - 2);
+            emit_line(cg, "QVec " + var_name + " = qv_new();");
+            emit_line(cg, "for (int64_t __fi = 0; __fi < qv_len(&" + flt_src + "); __fi++) {");
+            cg.indent = cg.indent + 1;
+            emit_line(cg, "int64_t __fx = qv_get(&" + flt_src + ", __fi);");
+            emit_line(cg, "if (" + flt_fn + "(__fx)) { qv_push(&" + var_name + ", __fx); }");
+            cg.indent = cg.indent - 1;
+            emit_line(cg, "}");
+            reg_var(cg, var_name, "QVec");
+            return;
+        }
+        if init_val.starts_with("__QFOLD(") {
+            // Extract: __QFOLD(source, init, lambda_name)
+            let fold_inner = init_val.substring(8, init_val.len() - 9);
+            let fold_c1 = fold_inner.index_of(", ");
+            let fold_src = fold_inner.substring(0, fold_c1);
+            let fold_rest = fold_inner.substring(fold_c1 + 2, fold_inner.len() - fold_c1 - 2);
+            let fold_c2 = fold_rest.index_of(", ");
+            let fold_init = fold_rest.substring(0, fold_c2);
+            let fold_fn = fold_rest.substring(fold_c2 + 2, fold_rest.len() - fold_c2 - 2);
+            cg.needs_vec_runtime = 1;
+            emit_line(cg, "int64_t " + var_name + " = " + fold_init + ";");
+            emit_line(cg, "for (int64_t __di = 0; __di < qv_len(&" + fold_src + "); __di++) {");
+            cg.indent = cg.indent + 1;
+            emit_line(cg, "int64_t __dx = qv_get(&" + fold_src + ", __di);");
+            emit_line(cg, var_name + " = " + fold_fn + "(" + var_name + ", __dx);");
+            cg.indent = cg.indent - 1;
+            emit_line(cg, "}");
+            reg_var(cg, var_name, "int64_t");
+            return;
+        }
+
         if init_val != "" {
             emit_line(cg, c_type + " " + var_name + " = " + init_val + ";");
         } else {
@@ -1532,6 +1717,10 @@ fn infer_type(cg: &CG, init: String) -> String {
     if init == "" { return "int64_t"; }
     // Vec: qv_new() -> QVec
     if init == "qv_new()" { return "QVec"; }
+    // Iterator desugaring markers
+    if init.starts_with("__QMAP(") { return "QVec"; }
+    if init.starts_with("__QFILTER(") { return "QVec"; }
+    if init.starts_with("__QFOLD(") { return "int64_t"; }
     // Struct literal: (StructName){ ... } -> StructName
     if init.starts_with("(") {
         let ilen = init.len();
@@ -2076,6 +2265,13 @@ fn generate(cg: &mut CG) -> String {
     if cg.fwd != "" {
         header = header + "/* Forward declarations */\n";
         header = header + cg.fwd;
+        header = header + "\n";
+    }
+
+    // Lambda/closure static functions and typedefs
+    if cg.lambdas != "" {
+        header = header + "/* Lambda/closure functions */\n";
+        header = header + cg.lambdas;
         header = header + "\n";
     }
 

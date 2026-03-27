@@ -364,7 +364,11 @@ check_output "check wc"  "$PROGRAMS_DIR/qcheck.exe $PROGRAMS_DIR/wc.quanta 2>&1"
 # 44. qcodegen — C code generator (self-hosting step 4)
 # =========================================================================
 echo "qcodegen:"
-check_output "help"  "$PROGRAMS_DIR/qcodegen.exe --help" "Usage:"
+if [ -f "$PROGRAMS_DIR/qcodegen.exe" ]; then
+    check_output "help"  "$PROGRAMS_DIR/qcodegen.exe --help" "Usage:"
+else
+    skip "help" "qcodegen.exe not linked (needs manual MSVC)"
+fi
 
 # =========================================================================
 # 45. qyes — infinite yes

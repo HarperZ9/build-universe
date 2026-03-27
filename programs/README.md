@@ -148,9 +148,13 @@ verified (C compiles and runs correctly): test_hello, yes, echo, basename,
 dirname, seq. The remaining programs generate C but may have runtime-level
 type issues that require the Rust-based `quantac` for correct binaries.
 
-**Remaining codegen gap:** closures as function arguments. All other major
-features are implemented including multi-statement if-blocks, structs, impl
-methods, Vec, include!() preprocessing, and 30+ builtin/method mappings.
+**All major codegen features implemented.** The self-hosted compiler handles:
+functions, let, if (ternary + blocks), while, return, structs, impl methods,
+Vec, include!() preprocessing, closures/lambdas (function pointers + iterator
+desugaring for map/filter/fold), 30+ builtin/method mappings, and self-compilation.
+
+The only remaining gaps are advanced patterns: nested closures capturing
+outer variables, generic type parameters, and pattern matching/enums.
 
 The self-hosted compiler now handles: functions, let, if/else, while, return,
 structs (typedef/literal/field access/assignment), impl methods (Type_method
