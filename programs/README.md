@@ -204,12 +204,16 @@ bash programs/tests/run_tests.sh
 
 ## Roadblocks and Watch List
 
-### Blocking: Multi-file Compilation
-The compiler does not support `use` imports between `.quanta` files. This forces
-every program to be self-contained, which means the tokenizer is duplicated
-across 5 self-hosting tools (~4,000 lines of identical code). This is the single
-largest architectural debt. Fix requires: adding a module resolution pass to
-`quantac` that reads referenced `.quanta` files and links them.
+### ~~Blocking: Multi-file Compilation~~ RESOLVED (2026-03-27)
+Added `include!("path")` preprocessor directive. Programs can now share code:
+```quanta
+include!("stdlib/chars.quanta");
+// is_digit(), is_alpha(), etc. are now available
+```
+Double-inclusion guard prevents duplicates. Stdlib started:
+`stdlib/chars.quanta`, `stdlib/string_utils.quanta`.
+Next step: migrate self-hosting tools (tok, parse, check, codegen, qc) to use
+shared stdlib, eliminating ~4,000 lines of duplication.
 
 ### ~~Blocking: Struct Field Assignment on Locals~~ FIXED (2026-03-27)
 Added `MirStmtKind::FieldAssign` across IR, lowerer, and all backends.

@@ -346,11 +346,6 @@ fn split_delim(a: &mut Awk, line: String, delim: String) {
     }
 }
 
-fn set_delim(a: &mut Awk, d: String) {
-    a.delim = d;
-    a.use_whitespace = false;
-}
-
 fn split_line(a: &mut Awk, line: String) {
     if a.use_whitespace {
         split_whitespace(a, line);
@@ -835,13 +830,15 @@ fn main() {
             i = i + 1;
             if i < nargs {
                 let d = args_get(i);
-                set_delim(&mut a, d);
+                a.delim = d;
+                a.use_whitespace = false;
             }
         } else if arg.starts_with("-F") {
             let alen = arg.len();
             if alen > 2 {
                 let d = arg.substring(2, alen - 2);
-                set_delim(&mut a, d);
+                a.delim = d;
+                a.use_whitespace = false;
             }
         } else if arg.starts_with("-") {
             println!("qawk: unknown option '{}'", arg);

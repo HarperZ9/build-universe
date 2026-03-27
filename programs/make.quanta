@@ -622,21 +622,6 @@ fn build_target(m: &mut Make, tidx: i32, depth: i32) -> bool {
     true
 }
 
-// --- Setters for Make struct (needed because local struct field assignment
-//     is not emitted by the compiler in main) ---
-fn set_makefile(m: &mut Make, f: String) {
-    m.makefile = f;
-}
-
-fn set_target(m: &mut Make, t: String) {
-    m.target_name = t;
-    m.has_target = true;
-}
-
-fn set_dry_run(m: &mut Make) {
-    m.dry_run = true;
-}
-
 // --- Help ---
 fn print_help() {
     println!("qmake -- lightweight build tool");
@@ -688,15 +673,16 @@ fn main() {
             i = i + 1;
             if i < nargs {
                 let f = args_get(i);
-                set_makefile(&mut m, f);
+                m.makefile = f;
             }
         } else if arg == "-n" {
-            set_dry_run(&mut m);
+            m.dry_run = true;
         } else if arg.starts_with("-") {
             println!("qmake: unknown option '{}'", arg);
             process_exit(2);
         } else {
-            set_target(&mut m, arg);
+            m.target_name = arg;
+            m.has_target = true;
         }
 
         i = i + 1;

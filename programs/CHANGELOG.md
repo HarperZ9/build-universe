@@ -4,6 +4,28 @@ All notable changes to the QuantaLang program suite.
 
 ## [Unreleased]
 
+### Multi-File Includes + Refactoring (2026-03-27)
+
+**`include!("path")` preprocessor — NEW COMPILER FEATURE:**
+- Textual file inclusion: `include!("stdlib/chars.quanta");` splices referenced
+  file contents at the directive site, like C's `#include`
+- Double-inclusion guard: each file included at most once (canonical path tracking)
+- Recursion depth limit: 10 levels max with clear error on overflow
+- Error on missing files: prints resolved path, exits with code 1
+- Wired into all 6 compiler commands (lex, parse, check, build, run, compile)
+- Unblocks: stdlib extraction, eliminating 4,000 lines of duplicated code
+
+**Standard library started:**
+- `stdlib/chars.quanta` — `is_digit`, `is_alpha`, `is_alnum`, `is_whitespace`, `is_hex_digit`
+- `stdlib/string_utils.quanta` — `trim_left`, `starts_with_alpha` (includes chars.quanta)
+- Both verified: compiles, correct output, nested inclusion works
+
+**Setter workaround removal:**
+- Refactored awk.quanta (-3 lines), make.quanta (-14 lines), sed.quanta (-13 lines)
+- Removed 7 trivial setter functions, replaced with direct `s.field = value;`
+- Total: 30 lines removed. Proves the struct field fix has real impact.
+- All 96 program tests pass after refactoring.
+
 ### Compiler Bug Fixes (2026-03-27)
 
 **Struct field assignment on local variables — FIXED:**

@@ -572,20 +572,6 @@ fn parse_all_commands(s: &mut Sed) {
     }
 }
 
-// --- Set flag on Sed struct ---
-fn set_silent(s: &mut Sed) {
-    s.silent = true;
-}
-
-fn set_in_place(s: &mut Sed) {
-    s.in_place = true;
-}
-
-fn set_filename(s: &mut Sed, name: String) {
-    s.filename = name;
-    s.has_file = true;
-}
-
 // --- Parse arguments ---
 fn parse_args(s: &mut Sed) {
     let nargs = args_count();
@@ -597,9 +583,9 @@ fn parse_args(s: &mut Sed) {
             print_help();
             process_exit(0);
         } else if arg == "-n" {
-            set_silent(s);
+            s.silent = true;
         } else if arg == "-i" {
-            set_in_place(s);
+            s.in_place = true;
         } else if arg == "-e" {
             i = i + 1;
             if i < nargs {
@@ -607,17 +593,17 @@ fn parse_args(s: &mut Sed) {
                 add_cmd_string(s, cmd_s);
             }
         } else if arg == "-ni" || arg == "-in" {
-            set_silent(s);
-            set_in_place(s);
+            s.silent = true;
+            s.in_place = true;
         } else if arg == "-ne" || arg == "-en" {
-            set_silent(s);
+            s.silent = true;
             i = i + 1;
             if i < nargs {
                 let cmd_s = args_get(i);
                 add_cmd_string(s, cmd_s);
             }
         } else if arg == "-ie" || arg == "-ei" {
-            set_in_place(s);
+            s.in_place = true;
             i = i + 1;
             if i < nargs {
                 let cmd_s = args_get(i);
@@ -631,7 +617,8 @@ fn parse_args(s: &mut Sed) {
             if s.cs_n == 0 {
                 add_cmd_string(s, arg);
             } else {
-                set_filename(s, arg);
+                s.filename = arg;
+                s.has_file = true;
             }
         }
 
