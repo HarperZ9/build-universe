@@ -18,6 +18,8 @@
 //      3\tafter blank
 // =============================================================================
 
+include!("stdlib/lines.quanta");
+
 fn print_help() {
     println!("qnl -- number lines of files");
     println!("");
@@ -78,51 +80,39 @@ fn is_blank(line: String) -> bool {
     true
 }
 
+// Strip trailing \r from a line.
+fn strip_cr(line: String) -> String {
+    let llen = line.len();
+    if llen == 0 { return ""; }
+    let last = line.char_at(llen - 1);
+    if last == "\r" {
+        if llen == 1 { return ""; }
+        line.substring(0, llen - 1)
+    } else {
+        line
+    }
+}
+
 // Process content: split into lines, number them, print.
 fn process(content: String, number_all: bool, sep: String, width: i32) {
-    let clen = content.len();
-    let mut pos: i32 = 0;
+    let lr = lr_new(content);
     let mut line_num: i32 = 0;
-    let bpfx = blank_prefix(width, sep);
 
-    let mut go = true;
-    while go {
-        if pos >= clen {
-            go = false;
+    let mut i = 0;
+    while i < lr.count {
+        let raw = lr_get(&lr, i);
+        let clean = strip_cr(raw);
+        let blank = is_blank(clean);
+
+        if blank && !number_all {
+            // Print empty line (no number)
+            println!("");
         } else {
-            let rest = content.substring(pos, clen - pos);
-            let nl_idx = rest.index_of("\n");
-            let line = if nl_idx < 0 { rest } else { rest.substring(0, nl_idx) };
-            if nl_idx < 0 {
-                pos = clen;
-            } else {
-                pos = pos + nl_idx + 1;
-            }
-
-            // Strip trailing \r
-            let llen = line.len();
-            let clean = if llen > 0 {
-                let last = line.char_at(llen - 1);
-                if last == "\r" {
-                    if llen == 1 { "" } else { line.substring(0, llen - 1) }
-                } else {
-                    line
-                }
-            } else {
-                line
-            };
-
-            let blank = is_blank(clean);
-
-            if blank && !number_all {
-                // Print empty line (no number)
-                println!("");
-            } else {
-                line_num = line_num + 1;
-                let num_str = format_num(line_num, width);
-                println!("{}{}{}", num_str, sep, clean);
-            }
+            line_num = line_num + 1;
+            let num_str = format_num(line_num, width);
+            println!("{}{}{}", num_str, sep, clean);
         }
+        i = i + 1;
     }
 }
 

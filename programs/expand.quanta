@@ -10,6 +10,8 @@
 // Simple: for each line, replace \t with N spaces.
 // =============================================================================
 
+include!("stdlib/lines.quanta");
+
 // --- Build a string of N spaces ---
 fn make_spaces(n: i32) -> String {
     let mut out = "";
@@ -55,22 +57,14 @@ fn expand_line(line: String, tab_width: i32) -> String {
 
 // --- Process content line by line ---
 fn process(content: String, tab_width: i32) {
-    let clen = content.len();
-    let mut pos: i32 = 0;
-
-    while pos < clen {
-        let rest = content.substring(pos, clen - pos);
-        let nl = rest.index_of("\n");
-        let raw = if nl < 0 { rest } else { rest.substring(0, nl) };
-        if nl < 0 {
-            pos = clen;
-        } else {
-            pos = pos + nl + 1;
-        }
-
+    let lr = lr_new(content);
+    let mut i = 0;
+    while i < lr.count {
+        let raw = lr_get(&lr, i);
         let line = strip_cr(raw);
         let expanded = expand_line(line, tab_width);
         println!("{}", expanded);
+        i = i + 1;
     }
 }
 

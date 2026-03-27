@@ -4,6 +4,32 @@ All notable changes to the QuantaLang program suite.
 
 ## [Unreleased]
 
+### Principal-Grade Polish (2026-03-27)
+
+**Compiler DESIGN.md (436 lines):**
+- Full pipeline documentation: preprocessor → lexer → parser → type checker → MIR → backends
+- Every module described with verified line counts
+- Internal architecture: two-pass type checking, SSA basic blocks, closure capture,
+  generic monomorphization, iterator desugaring, vtable generation
+- Key design decisions with rationale (why MIR, why C backend, why flat structs)
+- Complete source file index
+
+**qdb benchmark suite:**
+- `benchmarks/bench_qdb.sh`: INSERT (100/1000 rows), SELECT, WHERE, COUNT,
+  ORDER BY, GROUP BY, JOIN — all timed
+- Results: 34-87ms per query on 1,000 rows (dominated by process startup)
+- Honest documentation of limitations (no in-process mode, per-invocation overhead)
+
+**numpy warnings — FIXED:**
+- quanta-color: 13 RuntimeWarnings → 0 (np.errstate wraps in gamut.py,
+  spaces.py, tonemap.py)
+- 457 tests pass with zero warnings
+
+**5 more programs migrated to stdlib/lines.quanta:**
+- expand (-6), unexpand (-6), fold (-6), nl (-10), tac (-77)
+- Total: 105 lines removed
+- tac.quanta: eliminated entire Tac struct, replaced with lr_new/lr_get
+
 ### Shared Tokenizer Extraction — Major Deduplication (2026-03-27)
 
 **stdlib/tokenizer.quanta created (430 lines):**
