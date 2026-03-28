@@ -282,8 +282,25 @@ arrays use the string pool pattern (string buffer + parallel index arrays).
 - 3 programs (qc, json, test_hello) have `.c` output but no linked binary
   (requires manual MSVC invocation)
 
-## Related Files
+## Building
 
+### With the Rust compiler (quantac):
+```bash
+quantac program.quanta        # generates program.c
+cl /O2 /Fe:qprogram.exe program.c   # MSVC
+gcc -O2 -o qprogram program.c       # GCC
+```
+
+### Batch build (all programs):
+From cmd.exe: `cd programs && build_all.bat`
+
+### Self-hosted build (via qcodegen):
+From cmd.exe: `cd programs && build_all_self.bat`
+
+## Documentation
+
+- **[Website](https://harperz9.github.io/quanta-universe)** — overview, examples, architecture
 - `CHANGELOG.md` — detailed change history
 - `ARCHITECTURE.md` — qdb database engine architecture
 - `tests/run_tests.sh` — automated test suite
+- `benchmarks/` — qdb performance benchmarks
