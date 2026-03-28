@@ -4,6 +4,18 @@ All notable changes to the QuantaLang program suite.
 
 ## [Unreleased]
 
+### Documentation Site + Build Scripts (2026-03-27)
+
+**GitHub Pages site created (docs/index.html):**
+- Single-page documentation at harperz9.github.io/quanta-universe
+- Stats, code examples, program table, architecture overview, quality badges
+- All numbers verified from actual source (30,132 lines, 62 programs, etc.)
+- Enable in repo Settings > Pages > Deploy from branch `main`, folder `/docs`
+
+**Build scripts created:**
+- `build_all.bat` — compile all programs via quantac + MSVC (run from cmd.exe)
+- `build_all_self.bat` — compile all via self-hosted qcodegen + MSVC
+
 ### Closure Codegen + In-Process Benchmarks (2026-03-27)
 
 **Closure/lambda codegen — THE LAST MAJOR GAP CLOSED:**

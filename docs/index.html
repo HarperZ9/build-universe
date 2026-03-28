@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>QuantaLang — A Compiled Programming Language</title>
+    <style>
+        /* Clean, professional design */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            line-height: 1.6; color: #333; max-width: 960px; margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        h2 { font-size: 1.5rem; margin: 2rem 0 0.75rem; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.25rem; }
+        h3 { font-size: 1.2rem; margin: 1.5rem 0 0.5rem; }
+        p { margin-bottom: 1rem; }
+        code { background: #f4f4f4; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.9em; }
+        pre { background: #f8f8f8; padding: 1rem; border-radius: 6px; overflow-x: auto; margin-bottom: 1rem; border: 1px solid #e5e5e5; }
+        pre code { background: none; padding: 0; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; }
+        th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid #e5e5e5; }
+        th { font-weight: 600; }
+        a { color: #0066cc; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .subtitle { color: #666; font-size: 1.1rem; margin-bottom: 2rem; }
+        .stats { display: flex; gap: 2rem; flex-wrap: wrap; margin: 1.5rem 0; }
+        .stat { text-align: center; }
+        .stat-value { font-size: 2rem; font-weight: 700; color: #0066cc; }
+        .stat-label { font-size: 0.85rem; color: #666; }
+        .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 3px; font-size: 0.8rem; font-weight: 500; }
+        .badge-green { background: #e6f9e6; color: #1a7a1a; }
+        .badge-blue { background: #e6f0ff; color: #0052a3; }
+    </style>
+</head>
+<body>
+    <h1>QuantaLang</h1>
+    <p class="subtitle">A compiled programming language with a self-hosting compiler,
+    62 CLI tools, and a SQL database engine.</p>
+
+    <div class="stats">
+        <div class="stat"><div class="stat-value">62</div><div class="stat-label">Programs</div></div>
+        <div class="stat"><div class="stat-value">30K</div><div class="stat-label">Lines of .quanta</div></div>
+        <div class="stat"><div class="stat-value">650</div><div class="stat-label">Compiler Tests</div></div>
+        <div class="stat"><div class="stat-value">99</div><div class="stat-label">Program Tests</div></div>
+        <div class="stat"><div class="stat-value">8</div><div class="stat-label">Backends</div></div>
+    </div>
+
+    <!-- Quick example -->
+    <h2>Hello World</h2>
+    <pre><code>fn main() {
+    println("Hello, QuantaLang!");
+}</code></pre>
+    <pre><code>$ quantac hello.quanta && ./hello
+Hello, QuantaLang!</code></pre>
+
+    <!-- What it is -->
+    <h2>What is QuantaLang?</h2>
+    <p>QuantaLang is a systems programming language that compiles to native binaries via C.
+    The compiler is written in Rust (80K lines, 650 tests, 8 backends) and includes
+    a self-hosted compiler written in QuantaLang itself (2,490 lines).</p>
+
+    <p>The project includes 62 CLI tools — from <code>wc</code> and <code>grep</code> to a
+    <a href="#qdb">SQL database engine</a> with transactions — all compiled from QuantaLang source.</p>
+
+    <!-- Feature highlights -->
+    <h2>Features</h2>
+    <ul style="padding-left:1.5rem; margin-bottom:1rem;">
+        <li>Structs, enums, pattern matching, traits, generics</li>
+        <li>Closures, iterators (.map/.filter/.fold)</li>
+        <li>String operations, Vec, HashMap</li>
+        <li>File I/O, directory traversal, TCP sockets</li>
+        <li><code>include!()</code> preprocessor for multi-file projects</li>
+        <li>8 backends: C (primary), LLVM, WASM, SPIR-V, HLSL, GLSL, ARM64, x86-64</li>
+    </ul>
+
+    <!-- Programs -->
+    <h2>Program Suite (62 programs)</h2>
+    <h3>Self-Hosting Compiler Chain</h3>
+    <pre><code>source.quanta → qtok → qparse → qcheck → qcodegen → valid C code</code></pre>
+    <p>The self-hosted compiler (<code>qc</code>, 1,898 lines) combines all four stages into a
+    single binary. The <code>qcodegen</code> component (2,490 lines) handles functions, structs,
+    impl methods, closures, Vec, include!(), and 30+ builtins. It generates valid C
+    for all 62 programs and can compile itself.</p>
+
+    <h3 id="qdb">SQL Database Engine (qdb)</h3>
+    <pre><code>$ qdb app.db "CREATE TABLE users (id INTEGER, name TEXT, age INTEGER)"
+$ qdb app.db "INSERT INTO users VALUES (1, 'Zain', 25)"
+$ qdb app.db "SELECT * FROM users WHERE age > 20 ORDER BY name"
+id | name | age
+---+------+----
+ 1 | Zain |  25</code></pre>
+    <p>~4,559 lines. JOIN, GROUP BY + HAVING, DISTINCT, LIKE, IN, BETWEEN, AS aliases,
+    CREATE INDEX (binary search), WAL crash recovery, BEGIN/COMMIT/ROLLBACK, in-process REPL mode.</p>
+
+    <h3>Coreutils</h3>
+    <table>
+        <tr><th>Category</th><th>Programs</th></tr>
+        <tr><td>Text</td><td>grep, sed, awk, sort, uniq, cut, paste, wc, tr, nl, expand, fold, head/tail, rev, tac</td></tr>
+        <tr><td>Data</td><td>jq, csv2json, calc, base64, hexdump, printf, markdown-to-HTML, json</td></tr>
+        <tr><td>Files</td><td>find, diff, patch, cmp, comm, join, strings, loc (tokei), watch, sum</td></tr>
+        <tr><td>Shell</td><td>echo, test, date, sleep, which, env, basename, dirname, realpath, seq, yes, tee, xargs</td></tr>
+        <tr><td>Dev</td><td>fmt, lint, make</td></tr>
+        <tr><td>Database</td><td>db (SQL engine), kv (key-value store), sql (SQL parser)</td></tr>
+    </table>
+
+    <!-- Architecture -->
+    <h2>Architecture</h2>
+    <p>The compiler pipeline: preprocessor → lexer → parser → type checker → MIR lowerer → backend.</p>
+    <p>MIR (Mid-level IR) uses SSA-style basic blocks. The type system uses bidirectional
+    inference with Hindley-Milner unification. See
+    <a href="https://github.com/HarperZ9/quantalang/blob/main/DESIGN.md">DESIGN.md</a>
+    for the full architecture documentation.</p>
+
+    <!-- Stdlib -->
+    <h2>Standard Library</h2>
+    <pre><code>include!("stdlib/chars.quanta");       // is_digit, is_alpha, ... (44 lines)
+include!("stdlib/tokenizer.quanta");   // Tok struct, tokenize(), 48 token types (430 lines)
+include!("stdlib/lines.quanta");       // LineReader (split string into lines) (55 lines)
+include!("stdlib/string_pool.quanta"); // StringPool (string arrays via Vec&lt;i32&gt;) (42 lines)
+include!("stdlib/string_utils.quanta");// trim, starts_with_alpha (22 lines)</code></pre>
+
+    <!-- Quality -->
+    <h2>Quality</h2>
+    <ul style="padding-left:1.5rem; margin-bottom:1rem;">
+        <li><span class="badge badge-green">650 compiler tests across 55 Rust modules</span></li>
+        <li><span class="badge badge-green">99 program test assertions, 0 failures</span></li>
+        <li><span class="badge badge-green">62/62 programs produce valid C via self-hosted compiler</span></li>
+        <li><span class="badge badge-blue">5-module shared stdlib — 2,118 lines of duplication removed</span></li>
+        <li><span class="badge badge-blue">DESIGN.md, ARCHITECTURE.md, CHANGELOG.md</span></li>
+    </ul>
+
+    <!-- Links -->
+    <h2>Repositories</h2>
+    <ul style="padding-left:1.5rem;">
+        <li><a href="https://github.com/HarperZ9/quanta-universe">quanta-universe</a> — programs, stdlib, spectrum</li>
+        <li><a href="https://github.com/HarperZ9/quantalang">quantalang</a> — compiler (Rust)</li>
+        <li><a href="https://github.com/HarperZ9/calibrate-pro">calibrate-pro</a> — display calibration</li>
+        <li><a href="https://github.com/HarperZ9/quanta-color">quanta-color</a> — color science</li>
+        <li><a href="https://github.com/HarperZ9/quanta-finance">quanta-finance</a> — algorithmic trading</li>
+        <li><a href="https://github.com/HarperZ9/quanta-oracle">quanta-oracle</a> — time series forecasting</li>
+        <li><a href="https://github.com/HarperZ9/quanta-engine">quanta-engine</a> — adaptive trading</li>
+    </ul>
+
+    <footer style="margin-top:3rem; padding-top:1rem; border-top:1px solid #e5e5e5; color:#999; font-size:0.85rem;">
+        Built by <a href="https://github.com/HarperZ9">Zain Dana Harper</a>.
+    </footer>
+</body>
+</html>
