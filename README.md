@@ -40,8 +40,8 @@ A physics-inspired software ecosystem: programming language, operating system ke
 
 ## Status
 
-**Alpha.** The QuantaLang compiler (74K lines Rust, 591 tests) is the most mature component. The C backend produces correct native binaries. Other backends are experimental. The .quanta modules demonstrate the language's capabilities across domains.
+**Alpha.** The QuantaLang compiler (81K lines Rust, 599 tests passing) is the most mature component. The C backend produces correct native binaries. HLSL/GLSL produce clean shader output. Other backends are experimental. The .quanta modules demonstrate the language's capabilities across domains. See [quantaos/STATUS.md](quantaos/STATUS.md) for kernel implementation state.
 
 ## License
 
-Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
+Copyright (c) 2024-2026 Zain Dana Harper. MIT License.
