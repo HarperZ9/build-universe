@@ -1,7 +1,7 @@
 // =============================================================================
 // QUANTA Photon - Light Clustering and Tiled Deferred Rendering
 // =============================================================================
-// Production-ready clustered and tiled lighting system for handling many lights
+// Clustered and tiled lighting system for handling many lights
 // efficiently using spatial data structures and GPU compute.
 
 module photon::light_clustering {

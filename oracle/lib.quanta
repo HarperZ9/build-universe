@@ -6,7 +6,7 @@
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-// Oracle provides enterprise-grade prediction capabilities:
+// Oracle provides prediction capabilities:
 // - Time series forecasting (ARIMA, Prophet-style, Neural)
 // - Bayesian inference with uncertainty quantification
 // - Ensemble methods with automatic model selection

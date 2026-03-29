@@ -1,7 +1,7 @@
 // =============================================================================
 // QUANTA Photon - Render Graph System
 // =============================================================================
-// Production-ready frame graph / render graph for automatic resource management,
+// Frame graph / render graph for automatic resource management,
 // pass scheduling, barrier insertion, and GPU synchronization.
 
 module photon::render_graph {
