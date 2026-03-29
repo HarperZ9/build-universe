@@ -1,22 +1,19 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// ZEUS™ TRADING SYSTEM v1.0.0
+// ZEUS TRADING SYSTEM v1.0.0
 // "The God of Markets"
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Quanta. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending (P039, P040, P041, P042, P043)
-// Trademarks: ZEUS™, HARPER MARKET TENSOR™, FINANCIAL SCHRÖDINGER EQUATION™
+// Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // ZEUS is a complete quantitative trading platform featuring:
 // - 5 Core Strategies: Momentum, Mean Reversion, Trend, Breakout, Ensemble
-// - Quanta Field Tensor™: 4th-order tensor market state representation
-// - Financial Schrödinger Equation™: Quantum-inspired price prediction
+// - Quanta Field Tensor: 4th-order tensor market state representation
+// - Financial Schrödinger Equation: Quantum-inspired price prediction
 // - Persistent Homology: Topological market regime detection
 // - Fisher-Rao Geometry: Information-theoretic portfolio optimization
 //
-// SELLABLE AS: Standalone trading platform
 // DEPENDENCIES: quanta-lang, market-tensor
-// ESTIMATED VALUE: $800,000 - $2,000,000
 // ═══════════════════════════════════════════════════════════════════════════════
 
 module zeus_trading
@@ -267,7 +264,7 @@ impl Position {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// HARPER MARKET TENSOR™
+// HARPER MARKET TENSOR
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// 4th-order tensor for unified market state representation
@@ -328,7 +325,7 @@ impl MarketTensor {
     }
     
     /// Compute Christoffel symbols for geodesic navigation
-    /// Used in Gauge Portfolio Theory™
+    /// Used in Gauge Portfolio Theory
     pub fn christoffel_symbols(&self) -> Vec<Vec<Vec<f64>>> {
         let n = self.shape[1]; // Number of assets
         let mut gamma = vec![vec![vec![0.0; n]; n]; n];
@@ -404,7 +401,7 @@ impl MarketTensor {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// FINANCIAL SCHRÖDINGER EQUATION™
+// FINANCIAL SCHRÖDINGER EQUATION
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Quantum-inspired price prediction using wave functions

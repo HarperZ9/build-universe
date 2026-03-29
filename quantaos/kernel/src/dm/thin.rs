@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - DEVICE MAPPER THIN PROVISIONING
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! Thin Provisioning Target Implementation

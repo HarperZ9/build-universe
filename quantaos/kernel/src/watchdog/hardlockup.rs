@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - HARD LOCKUP DETECTOR (NMI WATCHDOG)
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! Hard lockup detection using NMI watchdog.

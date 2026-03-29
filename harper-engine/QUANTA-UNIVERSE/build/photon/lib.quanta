@@ -1,10 +1,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// HARPER OMNISCIENT ENGINE™ v2.0.0  
+// HARPER OMNISCIENT ENGINE v2.0.0  
 // "See Everything, Control Everything"
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Quanta. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending (P025, P026, P027, P028, P029)
-// Trademarks: Photon Engine™, Universal Hook™
+// Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Universal rendering engine with 99.9% PC game compatibility featuring:
@@ -14,9 +13,7 @@
 // - Game-agnostic Asset Modification
 // - Cross-API Rendering Abstraction
 //
-// SELLABLE AS: Standalone rendering framework
 // DEPENDENCIES: quanta-lang, titan-color
-// ESTIMATED VALUE: $1,500,000 - $3,500,000
 // ═══════════════════════════════════════════════════════════════════════════════
 
 module omniscient_engine
@@ -77,7 +74,7 @@ pub struct HookPoint {
 // UNIVERSAL HOOK SYSTEM
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Universal Hook™ - Hooks any graphics API
+/// Universal Hook - Hooks any graphics API
 pub struct UniversalHook {
     api: Option<GraphicsAPI>,
     game_info: Option<GameInfo>,

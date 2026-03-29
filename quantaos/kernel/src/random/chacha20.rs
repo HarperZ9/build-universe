@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - CHACHA20 CSPRNG
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! ChaCha20-based Cryptographically Secure PRNG

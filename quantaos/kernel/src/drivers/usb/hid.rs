@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - USB HID (HUMAN INTERFACE DEVICE) DRIVER
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 //
 // USB HID class driver supporting keyboards, mice, and generic HID devices.

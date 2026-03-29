@@ -13,7 +13,7 @@
 
 **Version:** 1.0.0 Final  
 **Date:** December 2025  
-**Classification:** Proprietary IP Portfolio
+**Classification:** Technical Documentation
 
 ---
 
@@ -27,7 +27,7 @@ This archive contains the complete Harper Engine technical documentation:
 | **Rendering Techniques** | 800 | Production algorithms (001-800) |
 | **Total IP Assets** | 950 | Complete portfolio |
 
-**Estimated IP Value:** $4.57M - $8.93M (based on patent equivalents)
+**Status:** Technical documentation archive
 
 ---
 
@@ -64,7 +64,7 @@ harper_engine_complete/
 ## QUICK START
 
 ### For Implementers
-Start with the **techniques/** folder. Each volume contains production-ready algorithms with:
+Start with the **techniques/** folder. Each volume contains algorithms with:
 - HLSL/GLSL code snippets
 - Performance metrics
 - Integration guidance
@@ -80,7 +80,7 @@ Start with the **whitepapers/** folder. Papers follow academic structure:
 Read **READERS_GUIDE.md** for:
 - Recommended reading order
 - Topic-based navigation
-- Patent-worthy innovations index
+- Notable innovations index
 
 ---
 

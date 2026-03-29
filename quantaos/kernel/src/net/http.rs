@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - HTTP CLIENT
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 //
 // HTTP/1.1 client implementation for QuantaOS.

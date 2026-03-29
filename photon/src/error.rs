@@ -1,8 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// PHOTON™ - Error Types
+// PHOTON - Error Types
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ═══════════════════════════════════════════════════════════════════════════════
 
 //! Error types for the Photon hook framework.

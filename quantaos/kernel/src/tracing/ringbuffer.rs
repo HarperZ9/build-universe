@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - TRACE RING BUFFER
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! Per-CPU ring buffers for trace events.

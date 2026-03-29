@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-QUANTA UNIVERSE™ Build System v2.0.0
+QUANTA UNIVERSE Build System v2.0.0
 Unified physics-inspired naming convention
 
 Transforms Harper Engine → Quanta Universe with simplified naming:
@@ -25,255 +25,189 @@ MODULES = {
     # QUANTA CORE (3 modules) - Core platform
     "quantalang": {
         "old_name": "Harper Programming Language",
-        "name": "QuantaLang™",
+        "name": "QuantaLang",
         "tagline": "The Language of the Universe",
         "category": "core",
         "tier": "community",
         "source": "core/quantalang",
-        "patents": ["P001", "P002", "P003"],
-        "trademarks": ["QUANTALANG"],
-        "value_low": 500000, "value_high": 1000000,
     },
     "quantaos": {
         "old_name": "QUANTA OS Kernel",
-        "name": "QuantaOS™",
-        "tagline": "AI-Native Operating System",
+        "name": "QuantaOS",
+        "tagline": "Operating System",
         "category": "core",
         "tier": "enterprise",
         "source": "core/quantaos",
-        "patents": ["P006", "P007", "P008", "P009", "P010"],
-        "trademarks": ["QUANTAOS", "NEURAL PROCESS SCHEDULER", "SELF-HEALING ENGINE"],
-        "value_low": 1000000, "value_high": 3000000,
     },
     "axiom": {
         "old_name": "AXIOM Self-Evolving AI",
-        "name": "Axiom™",
+        "name": "Axiom",
         "tagline": "Self-Evolving AI Through Mathematical Truth",
         "category": "core",
         "tier": "enterprise",
         "source": "core/axiom",
-        "patents": ["P004", "P005"],
-        "trademarks": ["AXIOM", "QUANTA EVOLUTION EQUATION", "GEODESIC CROSSOVER"],
-        "value_low": 800000, "value_high": 2000000,
     },
     
     # PHOTON RENDERING (8 modules) - All graphics/rendering
     "photon": {
         "old_name": "Harper Omniscient Engine",
-        "name": "Photon™",
+        "name": "Photon",
         "tagline": "Universal Light Injection Framework",
         "category": "rendering",
         "tier": "professional",
         "source": "rendering/photon",
-        "patents": ["P025", "P026", "P027", "P028", "P029"],
-        "trademarks": ["PHOTON", "UNIVERSAL HOOK"],
-        "value_low": 1500000, "value_high": 3500000,
     },
     "spectrum": {
         "old_name": "TITAN Color Science",
-        "name": "Spectrum™",
+        "name": "Spectrum",
         "tagline": "The Complete Science of Light",
         "category": "rendering",
         "tier": "professional",
         "source": "rendering/spectrum",
-        "patents": ["P030", "P031", "P032"],
-        "trademarks": ["SPECTRUM", "BIO-LUMINANCE"],
-        "value_low": 400000, "value_high": 800000,
     },
     "chromatic": {
         "old_name": "Genesis Symmetric Color Space",
-        "name": "Chromatic™",
+        "name": "Chromatic",
         "tagline": "Perceptually Uniform Color Space",
         "category": "rendering",
         "tier": "professional",
         "source": "rendering/chromatic",
-        "patents": ["P033"],
-        "trademarks": ["CHROMATIC"],
-        "value_low": 200000, "value_high": 400000,
     },
     "lumina": {
         "old_name": "Harper Visual Systems",
-        "name": "Lumina™",
+        "name": "Lumina",
         "tagline": "Visual Post-Processing Systems",
         "category": "rendering",
         "tier": "professional",
         "source": "rendering/lumina",
-        "patents": ["P034", "P035", "P036", "P037", "P038"],
-        "trademarks": ["LUMINA"],
-        "value_low": 300000, "value_high": 600000,
     },
     "nexus": {
         "old_name": "Universal Mod System",
-        "name": "Nexus™",
+        "name": "Nexus",
         "tagline": "Universal Mod Framework",
         "category": "rendering",
         "tier": "professional",
         "source": "rendering/nexus",
-        "patents": [],
-        "trademarks": ["NEXUS"],
-        "value_low": 200000, "value_high": 400000,
     },
     "prism": {
         "old_name": "Harper ReShade Collection",
-        "name": "Prism™",
+        "name": "Prism",
         "tagline": "Light Refraction Shader Collection",
         "category": "rendering",
         "tier": "community",
         "source": "rendering/prism",
-        "patents": [],
-        "trademarks": ["PRISM"],
-        "value_low": 100000, "value_high": 200000,
     },
     "refract": {
         "old_name": "Harper ENB Integration",
-        "name": "Refract™",
+        "name": "Refract",
         "tagline": "ENB Integration Layer",
         "category": "rendering",
         "tier": "community",
         "source": "rendering/refract",
-        "patents": [],
-        "trademarks": ["REFRACT"],
-        "value_low": 100000, "value_high": 200000,
     },
     "neutrino": {
         "old_name": "Neural Rendering Effects",
-        "name": "Neutrino™",
+        "name": "Neutrino",
         "tagline": "Neural Rendering Effects",
         "category": "rendering",
         "tier": "professional",
         "source": "rendering/neutrino",
-        "patents": ["P048", "P049"],
-        "trademarks": ["NEUTRINO"],
-        "value_low": 300000, "value_high": 600000,
     },
     
     # QUANTUM FINANCE (4 modules) - All trading
     "quantum-finance": {
         "old_name": "ZEUS Trading System",
-        "name": "Quantum Finance™",
+        "name": "Quantum Finance",
         "tagline": "Quantitative Trading System",
         "category": "trading",
         "tier": "enterprise",
         "source": "trading/quantum-finance",
-        "patents": ["P039", "P040", "P041", "P042"],
-        "trademarks": ["QUANTUM FINANCE", "FINANCIAL SCHRODINGER EQUATION", "GAUGE PORTFOLIO THEORY"],
-        "value_low": 800000, "value_high": 2000000,
     },
     "field-tensor": {
         "old_name": "Harper Market Tensor",
-        "name": "Field Tensor™",
+        "name": "Field Tensor",
         "tagline": "4D Market Data Structure",
         "category": "trading",
         "tier": "enterprise",
         "source": "trading/field-tensor",
-        "patents": ["P043", "P044"],
-        "trademarks": ["FIELD TENSOR", "MARKET TENSOR"],
-        "value_low": 300000, "value_high": 600000,
     },
     "delta": {
         "old_name": "Harper Options Suite",
-        "name": "Delta™",
+        "name": "Delta",
         "tagline": "Options Pricing & Greeks",
         "category": "trading",
         "tier": "professional",
         "source": "trading/delta",
-        "patents": ["P045"],
-        "trademarks": ["DELTA"],
-        "value_low": 200000, "value_high": 400000,
     },
     "entropy": {
         "old_name": "ML Trading Models",
-        "name": "Entropy™",
+        "name": "Entropy",
         "tagline": "ML Trading Models",
         "category": "trading",
         "tier": "enterprise",
         "source": "trading/entropy",
-        "patents": ["P046", "P047"],
-        "trademarks": ["ENTROPY"],
-        "value_low": 300000, "value_high": 600000,
     },
     
     # ENTANGLE INTEGRATION (3 modules) - Platforms
     "entangle": {
         "old_name": "Genesis Symmetric Platform",
-        "name": "Entangle™",
+        "name": "Entangle",
         "tagline": "PC-Mobile Quantum Sync",
         "category": "integration",
         "tier": "professional",
         "source": "integration/entangle",
-        "patents": ["P050"],
-        "trademarks": ["ENTANGLE"],
-        "value_low": 400000, "value_high": 800000,
     },
     "calibrate": {
         "old_name": "LUMINA TITAN Calibration",
-        "name": "Calibrate™",
+        "name": "Calibrate",
         "tagline": "Display Calibration System",
         "category": "integration",
         "tier": "professional",
         "source": "integration/calibrate",
-        "patents": [],
-        "trademarks": ["CALIBRATE"],
-        "value_low": 200000, "value_high": 400000,
     },
     "nova": {
         "old_name": "Project NOVA Presets",
-        "name": "Nova™",
+        "name": "Nova",
         "tagline": "Rendering Preset System",
         "category": "integration",
         "tier": "professional",
         "source": "integration/nova",
-        "patents": ["P051"],
-        "trademarks": ["NOVA"],
-        "value_low": 100000, "value_high": 200000,
     },
     
     # ORACLE AI (2 modules)
     "oracle": {
         "old_name": "ORACLE Prediction Engine",
-        "name": "Oracle™",
+        "name": "Oracle",
         "tagline": "Prediction Engine",
         "category": "ai",
         "tier": "enterprise",
         "source": "ai/oracle",
-        "patents": ["P052"],
-        "trademarks": ["ORACLE"],
-        "value_low": 300000, "value_high": 600000,
     },
     "wavelength": {
         "old_name": "QUANTA Media Suite",
-        "name": "Wavelength™",
+        "name": "Wavelength",
         "tagline": "Media Processing Suite",
         "category": "ai",
         "tier": "professional",
         "source": "ai/wavelength",
-        "patents": [],
-        "trademarks": ["WAVELENGTH"],
-        "value_low": 200000, "value_high": 400000,
     },
     
     # FORGE TOOLS (2 modules)
     "forge": {
         "old_name": "Harper Developer Tools",
-        "name": "Forge™",
+        "name": "Forge",
         "tagline": "Developer Tools",
         "category": "tools",
         "tier": "community",
         "source": "tools/forge",
-        "patents": [],
-        "trademarks": ["FORGE"],
-        "value_low": 100000, "value_high": 200000,
     },
     "foundation": {
         "old_name": "Harper Standard Library",
-        "name": "Foundation™",
+        "name": "Foundation",
         "tagline": "Standard Library",
         "category": "tools",
         "tier": "community",
         "source": "tools/foundation",
-        "patents": [],
-        "trademarks": ["FOUNDATION"],
-        "value_low": 100000, "value_high": 200000,
     },
 }
 
@@ -329,7 +263,7 @@ class QuantaBuilder:
     def transform(self):
         """Transform Harper Engine to Quanta Universe"""
         print("\n" + "═" * 70)
-        print("QUANTA UNIVERSE™ TRANSFORMATION v2.0.0")
+        print("QUANTA UNIVERSE TRANSFORMATION v2.0.0")
         print("═" * 70 + "\n")
         
         # Create destination structure
@@ -379,25 +313,12 @@ class QuantaBuilder:
                 results["success"].append(module_id)
                 print(f"    ✓ {config['name']} (generated {lines:,} lines)")
         
-        # Calculate totals
-        all_patents = set()
-        all_trademarks = set()
-        for m in results["success"]:
-            all_patents.update(MODULES[m]["patents"])
-            all_trademarks.update(MODULES[m]["trademarks"])
-        
-        value_low = sum(MODULES[m]["value_low"] for m in results["success"])
-        value_high = sum(MODULES[m]["value_high"] for m in results["success"])
-        
         print("\n" + "─" * 70)
         print("TRANSFORMATION COMPLETE")
         print("─" * 70)
         print(f"  Modules: {len(results['success'])}/{len(MODULES)}")
         print(f"  Total Lines: {total_lines:,}")
         print(f"  Total Files: {total_files}")
-        print(f"  Patents: {len(all_patents)}")
-        print(f"  Trademarks: {len(all_trademarks)}")
-        print(f"  Estimated Value: ${value_low:,} - ${value_high:,}")
         print("─" * 70 + "\n")
         
         return results
@@ -480,15 +401,10 @@ class QuantaBuilder:
 // {config["name"].upper()} v1.0.0
 // "{config["tagline"]}"
 // ═══════════════════════════════════════════════════════════════════════════════
-// Copyright © 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending ({", ".join(config["patents"]) if config["patents"] else "None"})
-// Trademarks: {", ".join(config["trademarks"]) if config["trademarks"] else "None"}
+// Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // {config["tagline"]}
-//
-// TIER: {TIERS[config["tier"]][0]} ({TIERS[config["tier"]][1]})
-// VALUE: ${config["value_low"]:,} - ${config["value_high"]:,}
 // ═══════════════════════════════════════════════════════════════════════════════
 
 module {module_id.replace("-", "_")}
@@ -575,7 +491,7 @@ impl VM {
 '''
         elif module_id == "quantaos":
             return '''
-// AI-Native Operating System Kernel
+// Operating System Kernel
 
 pub const PAGE_SIZE: usize = 4096;
 pub const SYS_AI_QUERY: u64 = 500;
@@ -969,7 +885,7 @@ impl Logger {{
     def build(self):
         """Build all modules"""
         print("\n" + "═" * 70)
-        print("QUANTA UNIVERSE™ BUILD SYSTEM v2.0.0")
+        print("QUANTA UNIVERSE BUILD SYSTEM v2.0.0")
         print("═" * 70 + "\n")
         
         results = {"success": [], "failed": []}
@@ -1010,24 +926,12 @@ impl Logger {{
             results["success"].append(module_id)
         
         # Summary
-        all_patents = set()
-        all_trademarks = set()
-        for m in results["success"]:
-            all_patents.update(MODULES[m]["patents"])
-            all_trademarks.update(MODULES[m]["trademarks"])
-        
-        value_low = sum(MODULES[m]["value_low"] for m in results["success"])
-        value_high = sum(MODULES[m]["value_high"] for m in results["success"])
-        
         print("\n" + "─" * 70)
         print("BUILD SUMMARY")
         print("─" * 70)
         print(f"  Modules Built: {len(results['success'])}/{len(MODULES)}")
         print(f"  Total Lines: {total_lines:,}")
         print(f"  Total Files: {total_files}")
-        print(f"  Patents: {len(all_patents)}")
-        print(f"  Trademarks: {len(all_trademarks)}")
-        print(f"  Estimated Value: ${value_low:,} - ${value_high:,}")
         print("─" * 70 + "\n")
         
         return results
@@ -1042,7 +946,7 @@ impl Logger {{
         
         # Catalog
         catalog = {
-            "name": "QUANTA UNIVERSE™",
+            "name": "QUANTA UNIVERSE",
             "version": version,
             "build_date": datetime.now().isoformat(),
             "modules": {m: MODULES[m] for m in results["success"]},
@@ -1072,10 +976,7 @@ impl Logger {{
         print(f"  Size: {size_mb:.2f} MB\n")
     
     def generate_readme(self, modules: list) -> str:
-        value_low = sum(MODULES[m]["value_low"] for m in modules)
-        value_high = sum(MODULES[m]["value_high"] for m in modules)
-        
-        return f'''# QUANTA UNIVERSE™ v1.0.0
+        return f'''# QUANTA UNIVERSE v1.0.0
 
 > "The Complete Physics-Inspired Software Ecosystem"
 
@@ -1084,45 +985,42 @@ impl Logger {{
 | Metric | Value |
 |--------|-------|
 | Modules | {len(modules)} |
-| Patents | {sum(len(MODULES[m]["patents"]) for m in modules)} |
-| Trademarks | {sum(len(MODULES[m]["trademarks"]) for m in modules)} |
-| Est. Value | ${value_low:,} - ${value_high:,} |
 
 ## Module Categories
 
 ### QUANTA CORE (Foundation)
-- **QuantaLang™** - The Language of the Universe
-- **QuantaOS™** - AI-Native Operating System
-- **Axiom™** - Self-Evolving AI Core
+- **QuantaLang** - The Language of the Universe
+- **QuantaOS** - Operating System
+- **Axiom** - Self-Evolving AI Core
 
 ### PHOTON RENDERING (Graphics)
-- **Photon™** - Universal Light Injection Framework
-- **Spectrum™** - The Complete Science of Light
-- **Chromatic™** - Perceptually Uniform Color Space
-- **Lumina™** - Visual Post-Processing Systems
-- **Nexus™** - Universal Mod Framework
-- **Prism™** - Light Refraction Shader Collection
-- **Refract™** - ENB Integration Layer
-- **Neutrino™** - Neural Rendering Effects
+- **Photon** - Universal Light Injection Framework
+- **Spectrum** - The Complete Science of Light
+- **Chromatic** - Perceptually Uniform Color Space
+- **Lumina** - Visual Post-Processing Systems
+- **Nexus** - Universal Mod Framework
+- **Prism** - Light Refraction Shader Collection
+- **Refract** - ENB Integration Layer
+- **Neutrino** - Neural Rendering Effects
 
 ### QUANTUM FINANCE (Trading)
-- **Quantum Finance™** - Quantitative Trading System
-- **Field Tensor™** - 4D Market Data Structure
-- **Delta™** - Options Pricing & Greeks
-- **Entropy™** - ML Trading Models
+- **Quantum Finance** - Quantitative Trading System
+- **Field Tensor** - 4D Market Data Structure
+- **Delta** - Options Pricing & Greeks
+- **Entropy** - ML Trading Models
 
 ### ENTANGLE INTEGRATION (Platforms)
-- **Entangle™** - PC-Mobile Quantum Sync
-- **Calibrate™** - Display Calibration System
-- **Nova™** - Rendering Preset System
+- **Entangle** - PC-Mobile Quantum Sync
+- **Calibrate** - Display Calibration System
+- **Nova** - Rendering Preset System
 
 ### ORACLE AI (Intelligence)
-- **Oracle™** - Prediction Engine
-- **Wavelength™** - Media Processing Suite
+- **Oracle** - Prediction Engine
+- **Wavelength** - Media Processing Suite
 
 ### FORGE TOOLS (Developer)
-- **Forge™** - Developer Tools
-- **Foundation™** - Standard Library
+- **Forge** - Developer Tools
+- **Foundation** - Standard Library
 
 ## Pricing
 
@@ -1139,7 +1037,7 @@ impl Logger {{
 '''
     
     def list_modules(self):
-        print("\nQUANTA UNIVERSE™ MODULES:")
+        print("\nQUANTA UNIVERSE MODULES:")
         print("=" * 70)
         
         for cat_id, cat_name in CATEGORIES.items():

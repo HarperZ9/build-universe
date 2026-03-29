@@ -2,8 +2,7 @@
 // QUANTAOS KERNEL - ADVANCED SMP SCHEDULER
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
-// Trademark: NEURAL PROCESS SCHEDULER™
+// Neural Process Scheduler
 // ===============================================================================
 
 #![allow(dead_code)]

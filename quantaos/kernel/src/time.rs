@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - TIME MANAGEMENT
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! Time and clock management.

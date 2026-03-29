@@ -1,22 +1,19 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// QUANTA™ MEDIA SUITE v1.0.0
+// QUANTA MEDIA SUITE v1.0.0
 // "AI-Powered Creative Excellence"
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Quanta. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending (P053, P054)
-// Trademarks: QUANTA MEDIA™, QUANTA CUT™, QUANTA GRADE™
+// Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // AI creative suite featuring:
-// - QUANTA CUT™: AI-powered video editing
-// - QUANTA GRADE™: Neural color grading
+// - QUANTA CUT: AI-powered video editing
+// - QUANTA GRADE: Neural color grading
 // - AI Composition Assistant
 // - Intelligent Audio Sync
 // - Content-Aware Transitions
 //
-// SELLABLE AS: Standalone media production suite
 // DEPENDENCIES: quanta-lang, axiom-core, titan-color
-// ESTIMATED VALUE: $400,000 - $800,000
 // ═══════════════════════════════════════════════════════════════════════════════
 
 module quanta_media
@@ -149,7 +146,7 @@ pub enum TransitionType {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// QUANTA CUT™ - AI Video Editing
+// QUANTA CUT - AI Video Editing
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// AI-powered video editing engine
@@ -558,7 +555,7 @@ impl QuantaCut {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// QUANTA GRADE™ - Neural Color Grading
+// QUANTA GRADE - Neural Color Grading
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Neural color grading engine

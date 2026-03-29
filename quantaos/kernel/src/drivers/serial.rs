@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - SERIAL PORT DRIVER
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! Serial port (UART) driver for debugging output.

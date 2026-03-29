@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// QUANTA-UNIVERSE™ Comprehensive Benchmark Suite v2.0.0
+// QUANTA-UNIVERSE Comprehensive Benchmark Suite v2.0.0
 // "Universe Benchmarks" - Performance Testing Across All Modules
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
@@ -1145,7 +1145,7 @@ fn bench_concurrency(b: &mut Bencher) {
 
 pub fn main() {
     println!("╔═══════════════════════════════════════════════════════════════════════════╗");
-    println!("║  QUANTA-UNIVERSE™ Comprehensive Benchmark Suite v2.0.0                    ║");
+    println!("║  QUANTA-UNIVERSE Comprehensive Benchmark Suite v2.0.0                    ║");
     println!("║  Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.           ║");
     println!("╚═══════════════════════════════════════════════════════════════════════════╝");
     println!();

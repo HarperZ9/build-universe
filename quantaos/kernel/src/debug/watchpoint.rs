@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - WATCHPOINT SUPPORT
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! Memory Watchpoint Support

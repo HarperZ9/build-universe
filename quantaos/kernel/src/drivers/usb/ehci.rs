@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - EHCI (USB 2.0) HOST CONTROLLER DRIVER
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 //
 // Enhanced Host Controller Interface (EHCI) driver for USB 2.0 High-Speed.

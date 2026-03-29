@@ -1,23 +1,20 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// Axiom™ CORE v1.0.0
+// Axiom CORE v1.0.0
 // "Code That Writes Itself"
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Quanta. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending (P004, P005)
-// Trademarks: Axiom™, QUANTA EVOLUTION EQUATION™, GEODESIC CROSSOVER™
+// Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Axiom is a revolutionary self-evolving AI system featuring:
-// - Quanta Evolution Equation™: ∂P/∂t = -∇L + η·Mutation + λ·Simplicity
+// - Quanta Evolution Equation: ∂P/∂t = -∇L + η·Mutation + λ·Simplicity
 // - Differentiable Program Synthesis
-// - Geodesic Crossover™ for genetic operations
+// - Geodesic Crossover for genetic operations
 // - Neural Architecture Search
 // - Automatic Theorem Proving
 // - Self-Modifying Code Generation
 //
-// SELLABLE AS: Standalone AI evolution framework
 // DEPENDENCIES: quanta-lang
-// ESTIMATED VALUE: $800,000 - $2,000,000
 // ═══════════════════════════════════════════════════════════════════════════════
 
 module axiom_core
@@ -359,10 +356,10 @@ impl GumbelSoftmax {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// QUANTA EVOLUTION EQUATION™
+// QUANTA EVOLUTION EQUATION
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// The Quanta Evolution Equation™:
+/// The Quanta Evolution Equation:
 /// ∂P/∂t = -∇L + η·Mutation + λ·Simplicity
 /// 
 /// Where:
@@ -471,7 +468,7 @@ impl QuantaEvolution {
         population[fitness[best_idx].0].clone()
     }
     
-    /// Geodesic Crossover™: Interpolate programs along manifold
+    /// Geodesic Crossover: Interpolate programs along manifold
     fn geodesic_crossover(&mut self, parent1: &Program, parent2: &Program) -> Program {
         // Compute geodesic parameter t ∈ [0, 1]
         let t = self.rng.next_f64();

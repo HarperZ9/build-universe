@@ -2,7 +2,6 @@
 // QUANTAOS TEXT EDITOR (qedit)
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 //
 // A nano-like text editor for QuantaOS with:

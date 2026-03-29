@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - INTEL HIGH DEFINITION AUDIO (HDA) DRIVER
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 //
 // Intel High Definition Audio driver for modern audio controllers.

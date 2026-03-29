@@ -1,13 +1,12 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// ORACLE™ v2.0.0
+// ORACLE v2.0.0
 // "The Prediction Engine That Sees Tomorrow"
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending (P052)
-// Trademarks: ORACLE™, TEMPORAL FUSION™, PROPHETIC ENSEMBLE™
+// Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-// Oracle™ provides enterprise-grade prediction capabilities:
+// Oracle provides enterprise-grade prediction capabilities:
 // - Time series forecasting (ARIMA, Prophet-style, Neural)
 // - Bayesian inference with uncertainty quantification
 // - Ensemble methods with automatic model selection
@@ -1256,7 +1255,7 @@ impl LSTMForecaster {
 // ENSEMBLE FORECASTER
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Prophetic Ensemble™ - Combines multiple models for robust predictions
+/// Prophetic Ensemble - Combines multiple models for robust predictions
 pub struct PropheticEnsemble {
     arima: Option<ARIMA>,
     holt_winters: Option<HoltWinters>,

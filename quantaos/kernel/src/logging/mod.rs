@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - LOGGING AND TRACING INFRASTRUCTURE
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! Kernel Logging and Tracing Infrastructure

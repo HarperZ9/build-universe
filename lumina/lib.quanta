@@ -1,10 +1,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// HARPER™ VISUAL SYSTEMS v1.5.0
+// HARPER VISUAL SYSTEMS v1.5.0
 // "Perfect Pixels, Every Frame"
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Quanta. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending (P034, P035)
-// Trademarks: Lumina™, Quanta SSGI™, Quanta SSAO™
+// Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Complete post-processing framework including:
@@ -18,9 +17,7 @@
 // - Vignette
 // - Sharpening (CAS, SMAA)
 //
-// SELLABLE AS: Standalone post-processing library
 // DEPENDENCIES: quanta-lang, titan-color
-// ESTIMATED VALUE: $300,000 - $600,000
 // ═══════════════════════════════════════════════════════════════════════════════
 
 module quanta_visual_systems
@@ -164,7 +161,7 @@ pub struct PostProcessContext {
 // SCREEN SPACE AMBIENT OCCLUSION (SSAO)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Quanta SSAO™ - High quality screen space ambient occlusion
+/// Quanta SSAO - High quality screen space ambient occlusion
 pub struct SSAO {
     pub enabled: bool,
     pub radius: f32,
@@ -314,7 +311,7 @@ fn smoothstep(edge0: f32, edge1: f32, x: f32) -> f32 {
 // SCREEN SPACE GLOBAL ILLUMINATION (SSGI)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Quanta SSGI™ - Screen space global illumination
+/// Quanta SSGI - Screen space global illumination
 pub struct SSGI {
     pub enabled: bool,
     pub ray_steps: u32,

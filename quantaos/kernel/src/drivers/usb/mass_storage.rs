@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - USB MASS STORAGE DRIVER
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 //
 // USB Mass Storage Class driver supporting Bulk-Only Transport (BOT) protocol.

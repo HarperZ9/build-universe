@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - USB SUBSYSTEM
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 //
 // Universal Serial Bus (USB) host controller and device management.

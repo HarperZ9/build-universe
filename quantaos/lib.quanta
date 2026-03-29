@@ -1,15 +1,14 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// QUANTAOS™ v2.0.0
-// "The AI-Native Operating System"
+// QUANTAOS v2.0.0
+// Hobby OS kernel for x86-64
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending (P006, P007, P008, P009, P010)
-// Trademarks: QUANTAOS™, NEURAL PROCESS SCHEDULER™, SELF-HEALING ENGINE™
+// Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-// QuantaOS™ is a revolutionary AI-native operating system featuring:
-// - Neural Process Scheduler™ with ML-based priority prediction
-// - Self-Healing Engine™ with automatic fault recovery
+// QuantaOS is a hobby operating system featuring:
+// - Process scheduler with priority-based scheduling
+// - Self-Healing Engine with automatic fault recovery
 // - First-class AI inference support in the kernel
 // - Differential checkpointing for instant recovery
 // - Zero-copy AI tensor sharing between processes
@@ -776,7 +775,7 @@ impl Process {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// NEURAL PROCESS SCHEDULER™
+// NEURAL PROCESS SCHEDULER
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Scheduling policy
@@ -801,7 +800,7 @@ pub enum PriorityClass {
     Critical = 6,
 }
 
-/// Neural Scheduler™ - ML-based process scheduling
+/// Neural Scheduler - ML-based process scheduling
 pub struct NeuralScheduler {
     /// Ready queues for each priority class
     ready_queues: [VecDeque<Tid>; 7],
@@ -1171,7 +1170,7 @@ impl NeuralScheduler {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SELF-HEALING ENGINE™
+// SELF-HEALING ENGINE
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Checkpoint data for process state
@@ -1232,7 +1231,7 @@ pub enum HealingAction {
     RebootSystem,
 }
 
-/// Self-Healing Engine™
+/// Self-Healing Engine
 pub struct SelfHealingEngine {
     /// Checkpoints by checkpoint ID
     checkpoints: HashMap<u64, Checkpoint>,

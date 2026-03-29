@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - ARP (ADDRESS RESOLUTION PROTOCOL)
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! ARP protocol implementation (RFC 826).

@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - READ-COPY-UPDATE (RCU)
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! Read-Copy-Update (RCU) synchronization primitive.

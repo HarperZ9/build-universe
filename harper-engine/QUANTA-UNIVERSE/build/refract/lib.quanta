@@ -1,10 +1,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// HARPER™ ENB INTEGRATION v1.0.0
+// HARPER ENB INTEGRATION v1.0.0
 // "Professional ENB Shader Framework"
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Quanta. All Rights Reserved.
 // Licensed under Apache 2.0 (Community Edition)
-// Trademarks: Quanta ENB™
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Complete ENBSeries integration framework featuring:
@@ -27,9 +26,7 @@
 // - Dark Souls series
 // - And 50+ more titles
 //
-// SELLABLE AS: Community open source (Apache 2.0)
 // DEPENDENCIES: quanta-lang, titan-color
-// ESTIMATED VALUE: $50,000 - $100,000
 // ═══════════════════════════════════════════════════════════════════════════════
 
 module enb_integration

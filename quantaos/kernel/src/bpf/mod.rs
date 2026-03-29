@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - eBPF SUBSYSTEM
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! Extended Berkeley Packet Filter (eBPF) Subsystem

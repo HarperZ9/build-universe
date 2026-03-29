@@ -1,61 +1,47 @@
-# QUANTA UNIVERSE™ v1.0.0
+# Quanta Universe v1.0.0
 
-> "The Complete Physics-Inspired Software Ecosystem"
+A physics-inspired software ecosystem: programming language, operating system kernel, graphics engines, trading systems, and AI frameworks — all written in QuantaLang.
 
-## Overview
+## Modules
 
-| Metric | Value |
-|--------|-------|
-| Modules | 22 |
-| Patents | 38 |
-| Trademarks | 31 |
-| Est. Value | $8,400,000 - $19,100,000 |
+### Core
+- **QuantaLang** — Multi-paradigm systems language with algebraic effects, ownership, and 8 codegen backends
+- **QuantaOS** — Hobby OS kernel (x86-64, ext2/4, context switching, memory management)
+- **Axiom** — Neural architecture search and differentiable program synthesis
 
-## Module Categories
+### Graphics
+- **Photon** — Game rendering engine with shader injection and SPIR-V support
+- **Spectrum** — Color science (ACES, Display P3, Rec.2020, spectral rendering)
+- **Chromatic** — Perceptual color spaces (Oklab, JzAzBz, ICtCp, CAM16)
+- **Lumina** — Post-processing pipeline
+- **Nexus** — Universal mod framework
+- **Prism** — Shader collection
+- **Refract** — ENB integration
+- **Neutrino** — Neural rendering effects
 
-### QUANTA CORE (Foundation)
-- **QuantaLang™** - The Language of the Universe
-- **QuantaOS™** - AI-Native Operating System
-- **Axiom™** - Self-Evolving AI Core
+### Finance
+- **Quantum Finance** — Algorithmic trading (momentum, mean reversion, stat arb)
+- **Field Tensor** — 4D market data structure
+- **Delta** — Options pricing and Greeks (Black-Scholes, binomial, Monte Carlo)
+- **Entropy** — ML feature engineering and model training
 
-### PHOTON RENDERING (Graphics)
-- **Photon™** - Universal Light Injection Framework
-- **Spectrum™** - The Complete Science of Light
-- **Chromatic™** - Perceptually Uniform Color Space
-- **Lumina™** - Visual Post-Processing Systems
-- **Nexus™** - Universal Mod Framework
-- **Prism™** - Light Refraction Shader Collection
-- **Refract™** - ENB Integration Layer
-- **Neutrino™** - Neural Rendering Effects
+### Integration
+- **Entangle** — PC-mobile sync
+- **Calibrate** — Display calibration
+- **Nova** — Rendering presets
 
-### QUANTUM FINANCE (Trading)
-- **Quantum Finance™** - Quantitative Trading System
-- **Field Tensor™** - 4D Market Data Structure
-- **Delta™** - Options Pricing & Greeks
-- **Entropy™** - ML Trading Models
+### Intelligence
+- **Oracle** — Time-series forecasting (ARIMA, Holt-Winters, anomaly detection)
+- **Wavelength** — Media processing
 
-### ENTANGLE INTEGRATION (Platforms)
-- **Entangle™** - PC-Mobile Quantum Sync
-- **Calibrate™** - Display Calibration System
-- **Nova™** - Rendering Preset System
+### Tools
+- **Forge** — Developer tools (formatter, linter, debugger, profiler)
+- **Foundation** — Standard library
 
-### ORACLE AI (Intelligence)
-- **Oracle™** - Prediction Engine
-- **Wavelength™** - Media Processing Suite
+## Status
 
-### FORGE TOOLS (Developer)
-- **Forge™** - Developer Tools
-- **Foundation™** - Standard Library
+**Alpha.** The QuantaLang compiler (74K lines Rust, 591 tests) is the most mature component. The C backend produces correct native binaries. Other backends are experimental. The .quanta modules demonstrate the language's capabilities across domains.
 
-## Pricing
+## License
 
-| Tier | Price | License |
-|------|-------|---------|
-| Community | FREE | Apache 2.0 |
-| Professional | $5K/yr | Commercial |
-| Enterprise | $50K/yr | Commercial |
-| Universe (All) | $150K | Commercial |
-
----
-
-*Copyright © 2024-2025 Zain Dana Harper. All Rights Reserved.*
+Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.

@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - NETFILTER PACKET FILTERING FRAMEWORK
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! Netfilter Packet Filtering Framework

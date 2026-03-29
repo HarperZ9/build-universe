@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - SYSTEM V MESSAGE QUEUES
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! System V Message Queue Implementation

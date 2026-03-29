@@ -2,7 +2,6 @@
 // QUANTAOS SHELL - WITH SCRIPTING SUPPORT
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 //
 // Full-featured interactive command interpreter with scripting support:
@@ -2656,7 +2655,7 @@ fn cmd_help() {
 
 fn cmd_version() {
     println("QuantaOS Shell v2.0.0");
-    println("AI-Native Operating System Shell with Scripting Support");
+    println("Operating System Shell with Scripting Support");
     println("Copyright 2024-2025 Zain Dana Harper");
 }
 

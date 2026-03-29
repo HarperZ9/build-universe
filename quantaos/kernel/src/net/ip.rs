@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - IPv4 (INTERNET PROTOCOL VERSION 4)
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! IPv4 protocol implementation (RFC 791).
