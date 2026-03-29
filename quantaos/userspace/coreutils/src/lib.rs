@@ -2,7 +2,6 @@
 // QUANTAOS COREUTILS - COMMON LIBRARY
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 //
 // Shared functionality for QuantaOS coreutils

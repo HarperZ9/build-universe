@@ -2,13 +2,12 @@
 // QUANTAOS KERNEL - SELF-HEALING ENGINE
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
-// Trademark: SELF-HEALING ENGINE™
+// Self-Healing Engine
 // ===============================================================================
 
 #![allow(dead_code)]
 
-//! Self-Healing Engine™ - Automatic fault recovery system.
+//! Self-Healing Engine - Automatic fault recovery system.
 //!
 //! Features:
 //! - Differential checkpointing for instant recovery

@@ -125,7 +125,7 @@ impl PBRMaterial {
 pub const PBR_VERTEX_SHADER: &str = r#"
 //═══════════════════════════════════════════════════════════════════════════════
 // PBR Vertex Shader
-// QUANTA-PRISM™ Physically-Based Rendering
+// QUANTA-PRISM Physically-Based Rendering
 //═══════════════════════════════════════════════════════════════════════════════
 
 struct VSInput {
@@ -195,7 +195,7 @@ VSOutput main(VSInput input) {
 pub const PBR_FRAGMENT_SHADER: &str = r#"
 //═══════════════════════════════════════════════════════════════════════════════
 // PBR Fragment Shader
-// QUANTA-PRISM™ Physically-Based Rendering
+// QUANTA-PRISM Physically-Based Rendering
 //═══════════════════════════════════════════════════════════════════════════════
 
 // Constants
@@ -555,7 +555,7 @@ float4 main(PSInput input) : SV_Target {
 pub const PBR_COMMON_HLSL: &str = r#"
 //═══════════════════════════════════════════════════════════════════════════════
 // PBR Common Utilities
-// QUANTA-PRISM™
+// QUANTA-PRISM
 //═══════════════════════════════════════════════════════════════════════════════
 
 #ifndef PBR_COMMON_INCLUDED
@@ -734,7 +734,7 @@ float2 Hammersley(uint i, uint N) {
 pub const SKIN_SHADER: &str = r#"
 //═══════════════════════════════════════════════════════════════════════════════
 // Skin/Subsurface Scattering Shader
-// QUANTA-PRISM™
+// QUANTA-PRISM
 //═══════════════════════════════════════════════════════════════════════════════
 
 #include "PBRCommon.hlsli"
@@ -887,7 +887,7 @@ technique SkinShading {
 pub const HAIR_SHADER: &str = r#"
 //═══════════════════════════════════════════════════════════════════════════════
 // Hair/Fur Shader (Marschner Model)
-// QUANTA-PRISM™
+// QUANTA-PRISM
 //═══════════════════════════════════════════════════════════════════════════════
 
 #include "PBRCommon.hlsli"

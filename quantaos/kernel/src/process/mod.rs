@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - PROCESS MANAGEMENT
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! Process and thread management.
@@ -159,7 +158,7 @@ pub struct Process {
     /// Priority (for scheduler)
     pub priority: i32,
 
-    /// AI priority boost (for Neural Process Scheduler)
+    /// Dynamic priority boost
     pub ai_priority_boost: f32,
 
     /// CPU time used (in nanoseconds)

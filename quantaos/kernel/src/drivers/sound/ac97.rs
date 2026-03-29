@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - AC'97 AUDIO DRIVER
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 //
 // Audio Codec '97 (AC'97) driver for legacy audio chipsets.

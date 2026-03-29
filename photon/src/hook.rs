@@ -1,8 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// PHOTON™ - Universal Hook System
+// PHOTON - Universal Hook System
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ═══════════════════════════════════════════════════════════════════════════════
 
 //! Universal hook system supporting multiple graphics APIs.

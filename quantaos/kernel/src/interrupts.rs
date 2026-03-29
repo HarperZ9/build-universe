@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - INTERRUPT HANDLING
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! Interrupt handling: IDT, exceptions, IRQs, and APIC.

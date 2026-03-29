@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - UTS NAMESPACE
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! UTS Namespace Implementation

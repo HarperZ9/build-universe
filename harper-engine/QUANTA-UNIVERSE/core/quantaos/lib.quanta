@@ -1,13 +1,12 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// QUANTAOS™ v1.0.0
-// "AI-Native Operating System"
+// QUANTAOS v1.0.0
+// "Experimental Operating System"
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending (P006, P007, P008, P009, P010)
-// Trademarks: QUANTAOS, NEURAL PROCESS SCHEDULER, SELF-HEALING ENGINE
+// Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-// AI-Native Operating System
+// Experimental Operating System
 //
 // TIER: Enterprise ($50K/yr)
 // VALUE: $1,000,000 - $3,000,000
@@ -16,7 +15,7 @@
 module quantaos
 
 
-// AI-Native Operating System Kernel
+// Experimental Operating System Kernel
 
 pub const PAGE_SIZE: usize = 4096;
 pub const SYS_AI_QUERY: u64 = 500;

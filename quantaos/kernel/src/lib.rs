@@ -2,11 +2,10 @@
 // QUANTAOS KERNEL
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 //
-// QuantaOS AI-Native Kernel featuring:
-// - Neural Process Scheduler with ML-based priority prediction
+// QuantaOS Kernel featuring:
+// - Process scheduler with priority-based scheduling
 // - Self-Healing Engine with automatic fault recovery
 // - First-class AI inference support
 // - Differential checkpointing for instant recovery
@@ -116,7 +115,7 @@ pub extern "sysv64" fn kernel_main(boot_info: *const BootInfo) -> ! {
     }
 
     kprintln!("=================================================");
-    kprintln!("  QuantaOS v2.0.0 - AI-Native Operating System");
+    kprintln!("  QuantaOS v2.0.0");
     kprintln!("  Copyright 2024-2025 Zain Dana Harper");
     kprintln!("=================================================");
     kprintln!("");
@@ -285,7 +284,7 @@ pub extern "sysv64" fn kernel_main(boot_info: *const BootInfo) -> ! {
     kprintln!("[KERNEL] Hrtimer: Per-CPU timer queues ready");
 
     // Phase 11: Initialize scheduler
-    kprintln!("[KERNEL] Initializing Neural Process Scheduler...");
+    kprintln!("[KERNEL] Initializing process scheduler...");
     scheduler::init();
 
     // Phase 11b: Initialize SMP scheduler with per-CPU queues

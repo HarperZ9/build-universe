@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - SOUND SUBSYSTEM
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 //
 // Audio subsystem supporting AC'97 and Intel High Definition Audio (HDA).

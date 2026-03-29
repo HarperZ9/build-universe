@@ -1,377 +1,139 @@
 {
-  "name": "QUANTA UNIVERSE\u2122",
+  "name": "QUANTA UNIVERSE",
   "version": "1.0.0",
   "build_date": "2025-12-18T03:55:16.303314",
   "modules": {
     "quantalang": {
-      "old_name": "Harper Programming Language",
-      "name": "QuantaLang\u2122",
+      "name": "QuantaLang",
       "tagline": "The Language of the Universe",
       "category": "core",
-      "tier": "community",
-      "source": "core/quantalang",
-      "patents": [
-        "P001",
-        "P002",
-        "P003"
-      ],
-      "trademarks": [
-        "QUANTALANG"
-      ],
-      "value_low": 500000,
-      "value_high": 1000000
+      "source": "core/quantalang"
     },
     "quantaos": {
-      "old_name": "QUANTA OS Kernel",
-      "name": "QuantaOS\u2122",
-      "tagline": "AI-Native Operating System",
+      "name": "QuantaOS",
+      "tagline": "Hobby OS Kernel",
       "category": "core",
-      "tier": "enterprise",
-      "source": "core/quantaos",
-      "patents": [
-        "P006",
-        "P007",
-        "P008",
-        "P009",
-        "P010"
-      ],
-      "trademarks": [
-        "QUANTAOS",
-        "NEURAL PROCESS SCHEDULER",
-        "SELF-HEALING ENGINE"
-      ],
-      "value_low": 1000000,
-      "value_high": 3000000
+      "source": "core/quantaos"
     },
     "axiom": {
-      "old_name": "AXIOM Self-Evolving AI",
-      "name": "Axiom\u2122",
+      "name": "Axiom",
       "tagline": "Self-Evolving AI Through Mathematical Truth",
       "category": "core",
-      "tier": "enterprise",
-      "source": "core/axiom",
-      "patents": [
-        "P004",
-        "P005"
-      ],
-      "trademarks": [
-        "AXIOM",
-        "QUANTA EVOLUTION EQUATION",
-        "GEODESIC CROSSOVER"
-      ],
-      "value_low": 800000,
-      "value_high": 2000000
+      "source": "core/axiom"
     },
     "photon": {
-      "old_name": "Harper Omniscient Engine",
-      "name": "Photon\u2122",
+      "name": "Photon",
       "tagline": "Universal Light Injection Framework",
       "category": "rendering",
-      "tier": "professional",
-      "source": "rendering/photon",
-      "patents": [
-        "P025",
-        "P026",
-        "P027",
-        "P028",
-        "P029"
-      ],
-      "trademarks": [
-        "PHOTON",
-        "UNIVERSAL HOOK"
-      ],
-      "value_low": 1500000,
-      "value_high": 3500000
+      "source": "rendering/photon"
     },
     "spectrum": {
-      "old_name": "TITAN Color Science",
-      "name": "Spectrum\u2122",
+      "name": "Spectrum",
       "tagline": "The Complete Science of Light",
       "category": "rendering",
-      "tier": "professional",
-      "source": "rendering/spectrum",
-      "patents": [
-        "P030",
-        "P031",
-        "P032"
-      ],
-      "trademarks": [
-        "SPECTRUM",
-        "BIO-LUMINANCE"
-      ],
-      "value_low": 400000,
-      "value_high": 800000
+      "source": "rendering/spectrum"
     },
     "chromatic": {
-      "old_name": "Genesis Symmetric Color Space",
-      "name": "Chromatic\u2122",
+      "name": "Chromatic",
       "tagline": "Perceptually Uniform Color Space",
       "category": "rendering",
-      "tier": "professional",
-      "source": "rendering/chromatic",
-      "patents": [
-        "P033"
-      ],
-      "trademarks": [
-        "CHROMATIC"
-      ],
-      "value_low": 200000,
-      "value_high": 400000
+      "source": "rendering/chromatic"
     },
     "lumina": {
-      "old_name": "Harper Visual Systems",
-      "name": "Lumina\u2122",
+      "name": "Lumina",
       "tagline": "Visual Post-Processing Systems",
       "category": "rendering",
-      "tier": "professional",
-      "source": "rendering/lumina",
-      "patents": [
-        "P034",
-        "P035",
-        "P036",
-        "P037",
-        "P038"
-      ],
-      "trademarks": [
-        "LUMINA"
-      ],
-      "value_low": 300000,
-      "value_high": 600000
+      "source": "rendering/lumina"
     },
     "nexus": {
-      "old_name": "Universal Mod System",
-      "name": "Nexus\u2122",
+      "name": "Nexus",
       "tagline": "Universal Mod Framework",
       "category": "rendering",
-      "tier": "professional",
-      "source": "rendering/nexus",
-      "patents": [],
-      "trademarks": [
-        "NEXUS"
-      ],
-      "value_low": 200000,
-      "value_high": 400000
+      "source": "rendering/nexus"
     },
     "prism": {
-      "old_name": "Harper ReShade Collection",
-      "name": "Prism\u2122",
+      "name": "Prism",
       "tagline": "Light Refraction Shader Collection",
       "category": "rendering",
-      "tier": "community",
-      "source": "rendering/prism",
-      "patents": [],
-      "trademarks": [
-        "PRISM"
-      ],
-      "value_low": 100000,
-      "value_high": 200000
+      "source": "rendering/prism"
     },
     "refract": {
-      "old_name": "Harper ENB Integration",
-      "name": "Refract\u2122",
+      "name": "Refract",
       "tagline": "ENB Integration Layer",
       "category": "rendering",
-      "tier": "community",
-      "source": "rendering/refract",
-      "patents": [],
-      "trademarks": [
-        "REFRACT"
-      ],
-      "value_low": 100000,
-      "value_high": 200000
+      "source": "rendering/refract"
     },
     "neutrino": {
-      "old_name": "Neural Rendering Effects",
-      "name": "Neutrino\u2122",
+      "name": "Neutrino",
       "tagline": "Neural Rendering Effects",
       "category": "rendering",
-      "tier": "professional",
-      "source": "rendering/neutrino",
-      "patents": [
-        "P048",
-        "P049"
-      ],
-      "trademarks": [
-        "NEUTRINO"
-      ],
-      "value_low": 300000,
-      "value_high": 600000
+      "source": "rendering/neutrino"
     },
     "quantum-finance": {
-      "old_name": "ZEUS Trading System",
-      "name": "Quantum Finance\u2122",
+      "name": "Quantum Finance",
       "tagline": "Quantitative Trading System",
       "category": "trading",
-      "tier": "enterprise",
-      "source": "trading/quantum-finance",
-      "patents": [
-        "P039",
-        "P040",
-        "P041",
-        "P042"
-      ],
-      "trademarks": [
-        "QUANTUM FINANCE",
-        "FINANCIAL SCHRODINGER EQUATION",
-        "GAUGE PORTFOLIO THEORY"
-      ],
-      "value_low": 800000,
-      "value_high": 2000000
+      "source": "trading/quantum-finance"
     },
     "field-tensor": {
-      "old_name": "Harper Market Tensor",
-      "name": "Field Tensor\u2122",
+      "name": "Field Tensor",
       "tagline": "4D Market Data Structure",
       "category": "trading",
-      "tier": "enterprise",
-      "source": "trading/field-tensor",
-      "patents": [
-        "P043",
-        "P044"
-      ],
-      "trademarks": [
-        "FIELD TENSOR",
-        "MARKET TENSOR"
-      ],
-      "value_low": 300000,
-      "value_high": 600000
+      "source": "trading/field-tensor"
     },
     "delta": {
-      "old_name": "Harper Options Suite",
-      "name": "Delta\u2122",
+      "name": "Delta",
       "tagline": "Options Pricing & Greeks",
       "category": "trading",
-      "tier": "professional",
-      "source": "trading/delta",
-      "patents": [
-        "P045"
-      ],
-      "trademarks": [
-        "DELTA"
-      ],
-      "value_low": 200000,
-      "value_high": 400000
+      "source": "trading/delta"
     },
     "entropy": {
-      "old_name": "ML Trading Models",
-      "name": "Entropy\u2122",
+      "name": "Entropy",
       "tagline": "ML Trading Models",
       "category": "trading",
-      "tier": "enterprise",
-      "source": "trading/entropy",
-      "patents": [
-        "P046",
-        "P047"
-      ],
-      "trademarks": [
-        "ENTROPY"
-      ],
-      "value_low": 300000,
-      "value_high": 600000
+      "source": "trading/entropy"
     },
     "entangle": {
-      "old_name": "Genesis Symmetric Platform",
-      "name": "Entangle\u2122",
-      "tagline": "PC-Mobile Quantum Sync",
+      "name": "Entangle",
+      "tagline": "PC-Mobile Sync",
       "category": "integration",
-      "tier": "professional",
-      "source": "integration/entangle",
-      "patents": [
-        "P050"
-      ],
-      "trademarks": [
-        "ENTANGLE"
-      ],
-      "value_low": 400000,
-      "value_high": 800000
+      "source": "integration/entangle"
     },
     "calibrate": {
-      "old_name": "LUMINA TITAN Calibration",
-      "name": "Calibrate\u2122",
+      "name": "Calibrate",
       "tagline": "Display Calibration System",
       "category": "integration",
-      "tier": "professional",
-      "source": "integration/calibrate",
-      "patents": [],
-      "trademarks": [
-        "CALIBRATE"
-      ],
-      "value_low": 200000,
-      "value_high": 400000
+      "source": "integration/calibrate"
     },
     "nova": {
-      "old_name": "Project NOVA Presets",
-      "name": "Nova\u2122",
+      "name": "Nova",
       "tagline": "Rendering Preset System",
       "category": "integration",
-      "tier": "professional",
-      "source": "integration/nova",
-      "patents": [
-        "P051"
-      ],
-      "trademarks": [
-        "NOVA"
-      ],
-      "value_low": 100000,
-      "value_high": 200000
+      "source": "integration/nova"
     },
     "oracle": {
-      "old_name": "ORACLE Prediction Engine",
-      "name": "Oracle\u2122",
+      "name": "Oracle",
       "tagline": "Prediction Engine",
       "category": "ai",
-      "tier": "enterprise",
-      "source": "ai/oracle",
-      "patents": [
-        "P052"
-      ],
-      "trademarks": [
-        "ORACLE"
-      ],
-      "value_low": 300000,
-      "value_high": 600000
+      "source": "ai/oracle"
     },
     "wavelength": {
-      "old_name": "QUANTA Media Suite",
-      "name": "Wavelength\u2122",
+      "name": "Wavelength",
       "tagline": "Media Processing Suite",
       "category": "ai",
-      "tier": "professional",
-      "source": "ai/wavelength",
-      "patents": [],
-      "trademarks": [
-        "WAVELENGTH"
-      ],
-      "value_low": 200000,
-      "value_high": 400000
+      "source": "ai/wavelength"
     },
     "forge": {
-      "old_name": "Harper Developer Tools",
-      "name": "Forge\u2122",
+      "name": "Forge",
       "tagline": "Developer Tools",
       "category": "tools",
-      "tier": "community",
-      "source": "tools/forge",
-      "patents": [],
-      "trademarks": [
-        "FORGE"
-      ],
-      "value_low": 100000,
-      "value_high": 200000
+      "source": "tools/forge"
     },
     "foundation": {
-      "old_name": "Harper Standard Library",
-      "name": "Foundation\u2122",
+      "name": "Foundation",
       "tagline": "Standard Library",
       "category": "tools",
-      "tier": "community",
-      "source": "tools/foundation",
-      "patents": [],
-      "trademarks": [
-        "FOUNDATION"
-      ],
-      "value_low": 100000,
-      "value_high": 200000
+      "source": "tools/foundation"
     }
   }
 }

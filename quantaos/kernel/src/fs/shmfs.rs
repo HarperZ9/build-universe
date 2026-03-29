@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - POSIX SHARED MEMORY (SHMFS)
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! POSIX Shared Memory Filesystem (shmfs/tmpfs)

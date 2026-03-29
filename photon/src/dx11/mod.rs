@@ -1,8 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// PHOTON™ - DirectX 11 Hook Framework
+// PHOTON - DirectX 11 Hook Framework
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ═══════════════════════════════════════════════════════════════════════════════
 
 //! DirectX 11 hooking implementation.

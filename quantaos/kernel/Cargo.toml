@@ -2,7 +2,6 @@
 # QUANTAOS KERNEL
 # ===============================================================================
 # Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-# CONFIDENTIAL - Trade Secret - Patent Pending
 # ===============================================================================
 
 [package]
@@ -11,7 +10,7 @@ version = "2.0.0"
 edition = "2021"
 authors = ["Zain Dana Harper"]
 license = "Proprietary"
-description = "QuantaOS AI-Native Kernel"
+description = "QuantaOS Kernel"
 
 [dependencies]
 spin = "0.9"

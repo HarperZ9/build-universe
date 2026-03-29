@@ -1,10 +1,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// GENESIS SYMMETRIC™ COLOR SPACE v1.0.0
+// GENESIS SYMMETRIC COLOR SPACE v1.0.0
 // "Perfect Perception, Perfect Color"
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Quanta. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending (P033)
-// Trademarks: GENESIS SYMMETRIC™
+// Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // A revolutionary perceptually uniform color space featuring:
@@ -14,9 +13,7 @@
 // - Seamless Integration with Spectrum Science
 // - GPU-Optimized Fast Path Algorithms
 //
-// SELLABLE AS: Professional color science module
 // DEPENDENCIES: quanta-lang
-// ESTIMATED VALUE: $200,000 - $400,000
 // ═══════════════════════════════════════════════════════════════════════════════
 
 module genesis_symmetric_color
@@ -59,7 +56,7 @@ pub struct Lab {
     pub b: f64,
 }
 
-/// Genesis Symmetric™ Color Space - Our proprietary perceptually uniform space
+/// Genesis Symmetric Color Space - Our proprietary perceptually uniform space
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GenesisSymmetric {
     /// Lightness (0-100, perceptually linear)

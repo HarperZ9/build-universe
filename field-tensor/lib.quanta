@@ -1,10 +1,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// HARPER MARKET TENSOR™ v2.0.0
+// HARPER MARKET TENSOR v2.0.0
 // "Unified Market State Representation with Differential Geometry"
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending (P045, P046)
-// Trademarks: Field Tensor™, Market Tensor™, Gauge Portfolio Theory™
+// Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 module field_tensor
@@ -1318,7 +1317,7 @@ impl MarketGeometry {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// GAUGE PORTFOLIO THEORY™
+// GAUGE PORTFOLIO THEORY
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Gauge transformation framework for portfolio analysis

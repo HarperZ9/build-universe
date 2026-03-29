@@ -1,10 +1,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// HARPER™ UNIVERSAL MOD SYSTEM v1.0.0
+// HARPER UNIVERSAL MOD SYSTEM v1.0.0
 // "Modify Any Game, Instantly"
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Quanta. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending (P036)
-// Trademarks: Quanta Nexus™
+// Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Universal game modification framework supporting:
@@ -22,9 +21,7 @@
 // - All OpenGL titles
 // - Unity, Unreal, CryEngine, id Tech, Source, Frostbite
 //
-// SELLABLE AS: Standalone mod management platform
 // DEPENDENCIES: quanta-lang, omniscient-engine
-// ESTIMATED VALUE: $200,000 - $400,000
 // ═══════════════════════════════════════════════════════════════════════════════
 
 module mod_system

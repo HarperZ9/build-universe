@@ -2,7 +2,6 @@
 // QUANTAOS INIT PROCESS
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 //
 // First user-space process - PID 1
@@ -166,7 +165,7 @@ fn main() {
     println("");
     println("=================================================");
     println("  QuantaOS Init v1.0.0");
-    println("  AI-Native Operating System");
+    println("  x86-64 Operating System");
     println("  Copyright 2024-2025 Zain Dana Harper");
     println("=================================================");
     println("");

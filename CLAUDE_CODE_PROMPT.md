@@ -1,8 +1,8 @@
-# QUANTA UNIVERSE™ Production Implementation
+# QUANTA UNIVERSE Production Implementation
 
 ## Project Context
 
-You are expanding a 26K-line software specification into production-scale implementations. The project comprises 22 modules across 6 categories, with estimated production scale of 500K-2M lines.
+You are expanding a 26K-line software specification into working implementations. The project comprises 22 modules across 6 categories.
 
 ## Repository Location
 
@@ -17,55 +17,48 @@ Clone or locate: `QUANTA-UNIVERSE/` containing:
 ## Implementation Priority Order
 
 ### Phase 1: Core Platform (Critical Path)
-1. **QuantaLang™** — Expand compiler to production:
+1. **QuantaLang** — Expand compiler:
    - Full lexer with Unicode support
    - Recursive descent parser with error recovery
    - Type inference engine (Hindley-Milner + extensions)
    - Multiple backends: LLVM IR, WASM, SPIR-V
    - Runtime with GC (tracing or reference counting)
-   - Target: 80K-120K lines
 
-2. **QuantaOS™** — Bootable kernel:
+2. **QuantaOS** — Bootable kernel:
    - UEFI bootloader (Rust, `uefi-rs` crate)
    - Physical/virtual memory management (buddy allocator + 4-level paging)
    - Process scheduler (implement Neural Process Scheduler from spec)
    - System call interface (500-series AI syscalls per spec)
    - VFS layer with initramfs support
-   - Target: 150K-250K lines
    - Test environment: QEMU x86_64
 
-3. **Foundation™** — Standard library:
+3. **Foundation** — Standard library:
    - Collections (Vec, HashMap, BTreeMap, etc.)
    - I/O abstractions
    - Concurrency primitives (Mutex, Channel, async runtime)
-   - Target: 40K-60K lines
 
 ### Phase 2: Rendering Stack
-4. **Photon™** — Graphics hook engine:
+4. **Photon** — Graphics hook engine:
    - DirectX 11/12 hook implementation (detours-based)
    - Vulkan layer intercept
    - Shader bytecode injection framework
-   - Target: 50K-80K lines
 
-5. **Spectrum™** — Color science:
+5. **Spectrum** — Color science:
    - All 12 tonemappers fully implemented with SIMD
    - Color space conversions (sRGB, DCI-P3, Rec.2020, ACES)
    - HDR pipeline
-   - Target: 15K-25K lines
 
 6. Remaining rendering modules: Chromatic, Lumina, Nexus, Prism, Refract, Neutrino
 
 ### Phase 3: Trading Systems
-7. **Quantum Finance™** — Trading engine:
+7. **Quantum Finance** — Trading engine:
    - Order management system
    - Risk management with position limits
    - Alpaca/IBKR broker integration
-   - Target: 40K-60K lines
 
-8. **Field Tensor™** — Market data structure:
+8. **Field Tensor** — Market data structure:
    - 4th-order tensor implementation
    - Real-time OHLCV ingestion
-   - Target: 10K-15K lines
 
 9. Delta, Entropy modules
 
@@ -112,7 +105,7 @@ module_name/
 
 ## Current Session Instructions
 
-Begin with whichever module the user specifies, or if unspecified, start with **QuantaLang™** Phase 1 expansion:
+Begin with whichever module the user specifies, or if unspecified, start with **QuantaLang** Phase 1 expansion:
 
 1. Read existing `/core/quantalang/lib.quanta`
 2. Create production directory structure
@@ -126,17 +119,16 @@ For each implementation session:
 - Show key architectural decisions before coding
 - Write tests alongside implementation
 - Run tests before committing
-- Report line count progress toward production targets
+- Report progress
 
 ## IP Preservation
 
 Maintain all copyright headers:
 ```
-// Copyright © 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
+// Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 ```
 
-Preserve trademark annotations (™) in documentation and comments.
+
 
 ## Begin
 

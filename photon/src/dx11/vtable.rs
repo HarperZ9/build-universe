@@ -1,8 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// PHOTON™ - VTable Manipulation Utilities
+// PHOTON - VTable Manipulation Utilities
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ═══════════════════════════════════════════════════════════════════════════════
 
 //! VTable manipulation and hook installation utilities.

@@ -1,15 +1,12 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// QUANTA-UNIVERSE™ v2.0.0
+// QUANTA-UNIVERSE v2.0.0
 // "The Complete Physics-Inspired Software Universe"
 // ═══════════════════════════════════════════════════════════════════════════════
-// Copyright © 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret
-// 52 Patents Pending │ 31 Trademarks
-// Estimated Value: $8,400,000 - $19,100,000
+// Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 //                    ╔═══════════════════════════════════════╗
-//                    ║       QUANTA-UNIVERSE™ v2.0.0         ║
+//                    ║       QUANTA-UNIVERSE v2.0.0         ║
 //                    ║  "The Language of the Universe"       ║
 //                    ╚═══════════════════════════════════════╝
 //
@@ -103,7 +100,7 @@ fn main() -> Result<(), Error> {
 
     println!();
     println!("═══════════════════════════════════════════════════════════════════");
-    println!("  QUANTA-UNIVERSE™ initialization complete!");
+    println!("  QUANTA-UNIVERSE initialization complete!");
     println!("  All {} modules loaded and ready.", universe::TOTAL_MODULES);
     println!("═══════════════════════════════════════════════════════════════════");
 
@@ -169,7 +166,7 @@ fn demo_rendering() -> Result<(), Error> {
     println!("└─────────────────────────────────────────────────────────────────┘");
 
     // Demonstrate Photon engine
-    println!("  • Photon Engine: Universal Hook™ ready");
+    println!("  • Photon Engine: Universal Hook ready");
     println!("    - Supported APIs: DX9, DX10, DX11, DX12, Vulkan, OpenGL");
 
     // Demonstrate color science
@@ -214,7 +211,7 @@ fn demo_trading() -> Result<(), Error> {
     println!("    - Mean Reversion, Momentum, Stat Arb, Quantum Walk, ML Ensemble");
 
     // Demonstrate the Schrödinger equation for finance
-    println!("  • Financial Schrödinger Equation™: Wave function evolving");
+    println!("  • Financial Schrödinger Equation: Wave function evolving");
 
     println!("  ✓ Trading layer verified");
     println!();
@@ -236,7 +233,7 @@ fn demo_intelligence() -> Result<(), Error> {
     println!("  • TimeSeries: {} data points analyzed", data.len());
 
     // Demonstrate Prophetic Ensemble
-    println!("  • Prophetic Ensemble™: Multi-model forecasting active");
+    println!("  • Prophetic Ensemble: Multi-model forecasting active");
 
     // Demonstrate media processing
     println!("  • Wavelength: Audio/Video processing ready");

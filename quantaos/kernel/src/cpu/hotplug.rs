@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - CPU HOTPLUG
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! CPU hotplug support for dynamic CPU online/offline.

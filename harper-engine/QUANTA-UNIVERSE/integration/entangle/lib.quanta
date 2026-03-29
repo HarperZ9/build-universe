@@ -1,10 +1,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// GENESIS SYMMETRIC™ PLATFORM v3.5.0
+// GENESIS SYMMETRIC PLATFORM v3.5.0
 // "Your Devices, One Mind"
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Quanta. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending (P048, P049)
-// Trademarks: GENESIS SYMMETRIC™, NEURAL NEXUS™
+// Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Genesis Symmetric provides revolutionary PC-Mobile integration featuring:
@@ -19,9 +18,7 @@
 // - Session Continuity
 // - Ambient AI Watcher
 //
-// SELLABLE AS: Standalone cross-platform sync solution
 // DEPENDENCIES: quanta-lang
-// ESTIMATED VALUE: $400,000 - $800,000
 // ═══════════════════════════════════════════════════════════════════════════════
 
 module genesis_symmetric

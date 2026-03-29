@@ -1,9 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// PHOTON™ - Universal Graphics Hook Framework
+// PHOTON - Universal Graphics Hook Framework
 // ═══════════════════════════════════════════════════════════════════════════════
-// Copyright © 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending (P025, P026, P027)
-// Trademarks: Photon Engine™, Universal Hook™
+// Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 //! # Photon Hook Framework

@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - CGROUPS MEMORY CONTROLLER
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! Memory Controller for cgroups v2

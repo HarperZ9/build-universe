@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - AUDIO MIXER
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 //
 // Software audio mixer for combining multiple audio streams.

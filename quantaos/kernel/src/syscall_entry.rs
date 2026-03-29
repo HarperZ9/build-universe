@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - SYSCALL ENTRY/EXIT
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! Fast system call entry/exit using SYSCALL/SYSRET instructions.

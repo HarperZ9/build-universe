@@ -1,9 +1,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// HARPER™ RESHADE COLLECTION v3.0.0
+// HARPER RESHADE COLLECTION v3.0.0
 // "108 Professional Effects for Any Game"
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Quanta. All Rights Reserved.
-// Trademark: Quanta ReShade™
+// Trademark: Quanta ReShade
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Complete ReShade .fx shader collection with Spectrum Science integration.
@@ -17,9 +17,7 @@
 // - Film & Cinematic (15 effects)
 // - Utility & Debug (20 effects)
 //
-// SELLABLE AS: Standalone ReShade preset collection
 // DEPENDENCIES: titan-color (optional, for advanced features)
-// ESTIMATED VALUE: $50,000 - $100,000
 // ═══════════════════════════════════════════════════════════════════════════════
 
 module quanta_reshade
@@ -75,7 +73,7 @@ pub enum UIType {
 
 pub const TITAN_TONEMAPPER_FX: &str = r#"
 /*═══════════════════════════════════════════════════════════════════════════════
- * TITAN™ Tonemapper v2.0
+ * TITAN Tonemapper v2.0
  * Part of Quanta Prism
  * Copyright © 2024-2025 Zain Dana Quanta
  *═══════════════════════════════════════════════════════════════════════════════*/
@@ -284,7 +282,7 @@ float3 KhronosPBR(float3 color) {
 }
 
 float3 QuantaAdaptive(float3 color, float exposure, float contrast) {
-    // Proprietary Quanta Adaptive™ tonemapper
+    // Proprietary Quanta Adaptive tonemapper
     float luminance = dot(color, float3(0.2126, 0.7152, 0.0722));
     
     // Dynamic parameter selection based on luminance
@@ -364,7 +362,7 @@ float4 PS_TITANTonemap(float4 pos : SV_Position, float2 texcoord : TEXCOORD) : S
 
 technique TITANTonemap <
     ui_label = "TITAN Tonemap";
-    ui_tooltip = "Quanta TITAN™ Tonemapper with 13 operators";
+    ui_tooltip = "Quanta TITAN Tonemapper with 13 operators";
 > {
     pass {
         VertexShader = PostProcessVS;
@@ -379,7 +377,7 @@ technique TITANTonemap <
 
 pub const TITAN_COLOR_GRADING_FX: &str = r#"
 /*═══════════════════════════════════════════════════════════════════════════════
- * TITAN™ Color Grading v2.0
+ * TITAN Color Grading v2.0
  * Part of Quanta Prism
  * Copyright © 2024-2025 Zain Dana Quanta
  *═══════════════════════════════════════════════════════════════════════════════*/
@@ -551,7 +549,7 @@ technique TITANColorGrade <
 
 pub const HARPER_SSAO_FX: &str = r#"
 /*═══════════════════════════════════════════════════════════════════════════════
- * Quanta™ SSAO v1.5
+ * Quanta SSAO v1.5
  * Screen Space Ambient Occlusion
  * Part of Quanta Prism
  * Copyright © 2024-2025 Zain Dana Quanta
@@ -690,7 +688,7 @@ technique QuantaSSAO <
 
 pub const HARPER_BLOOM_FX: &str = r#"
 /*═══════════════════════════════════════════════════════════════════════════════
- * Quanta™ Bloom v2.0
+ * Quanta Bloom v2.0
  * Physically-Based Bloom Effect
  * Part of Quanta Prism
  * Copyright © 2024-2025 Zain Dana Quanta

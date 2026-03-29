@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - TCP (TRANSMISSION CONTROL PROTOCOL)
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! TCP protocol implementation (RFC 793).

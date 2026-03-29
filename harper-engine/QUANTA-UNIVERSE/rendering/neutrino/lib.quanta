@@ -1,10 +1,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// HARPER™ NEURAL EFFECTS v1.0.0
+// HARPER NEURAL EFFECTS v1.0.0
 // "AI-Powered Visual Excellence"
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Quanta. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending (P037, P038)
-// Trademarks: Quanta Neural Effects™
+// Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Real-time neural rendering featuring:
@@ -14,9 +13,7 @@
 // - Frame Generation
 // - Temporal Stability
 //
-// SELLABLE AS: Standalone neural rendering library
 // DEPENDENCIES: quanta-lang, axiom-core, titan-color
-// ESTIMATED VALUE: $300,000 - $600,000
 // ═══════════════════════════════════════════════════════════════════════════════
 
 module neural_effects

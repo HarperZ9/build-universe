@@ -1,9 +1,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// QUANTA-UNIVERSE™ Coordinator v2.0.0
+// QUANTA-UNIVERSE Coordinator v2.0.0
 // "The Fabric That Binds All Things"
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
+// Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 module universe
@@ -1672,7 +1672,7 @@ impl Universe {
 
         format!(
             "╔═══════════════════════════════════════════════════════════════╗\n\
-             ║  QUANTA-UNIVERSE™ v{}                                      ║\n\
+             ║  QUANTA-UNIVERSE v{}                                      ║\n\
              ║  \"The Complete Physics-Inspired Software Universe\"          ║\n\
              ╠═══════════════════════════════════════════════════════════════╣\n\
              ║  Modules: {}  │  Patents: {}  │  Trademarks: {}            ║\n\

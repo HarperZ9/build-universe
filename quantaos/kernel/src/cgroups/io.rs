@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - CGROUPS I/O CONTROLLER
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! I/O Controller for cgroups v2

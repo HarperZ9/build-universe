@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - SECURITY SUBSYSTEM
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! Security subsystem providing capabilities, seccomp, and access control.

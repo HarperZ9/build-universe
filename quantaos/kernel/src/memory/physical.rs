@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - PHYSICAL MEMORY MANAGER
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! Physical memory manager using a buddy allocator.

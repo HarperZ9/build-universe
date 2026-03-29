@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - TRACE EVENTS
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! Pre-defined trace events for common kernel operations.

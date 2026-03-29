@@ -1,22 +1,19 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// Calibrate™ CALIBRATION v2.0.0
+// Calibrate CALIBRATION v2.0.0
 // "Perfect Color Without Hardware"
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Quanta. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending (P050, P051)
-// Trademarks: Calibrate™, NeuralUX Calibration™
+// Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Sensorless display calibration featuring:
-// - NeuralUX Calibration™: AI-based display profiling
+// - NeuralUX Calibration: AI-based display profiling
 // - Perceptual Color Targeting
 // - Ambient Light Adaptation
 // - Multi-Display Matching
 // - ICC Profile Generation
 //
-// SELLABLE AS: Display calibration software
 // DEPENDENCIES: quanta-lang, titan-color
-// ESTIMATED VALUE: $300,000 - $600,000
 // ═══════════════════════════════════════════════════════════════════════════════
 
 module lumina_titan
@@ -232,7 +229,7 @@ impl LUT3D {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// NEURALUX CALIBRATION™ - AI-BASED DISPLAY PROFILING
+// NEURALUX CALIBRATION - AI-BASED DISPLAY PROFILING
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Neural network layer for NeuralUX calibration
@@ -299,7 +296,7 @@ impl NeuralLayer {
     }
 }
 
-/// NeuralUX™ Neural Network for display characterization
+/// NeuralUX Neural Network for display characterization
 #[derive(Clone)]
 struct NeuralUXNetwork {
     layers: Vec<NeuralLayer>,
@@ -375,7 +372,7 @@ impl NeuralUXNetwork {
     }
 }
 
-/// NeuralUX™ sensorless calibration engine with AI-based profiling
+/// NeuralUX sensorless calibration engine with AI-based profiling
 pub struct NeuralUXCalibrator {
     display_database: HashMap<String, DisplayCharacteristics>,
     neural_network: NeuralUXNetwork,

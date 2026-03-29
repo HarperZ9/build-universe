@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - CONTROL GROUPS (CGROUPS) SUBSYSTEM
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! Control Groups (cgroups) Subsystem

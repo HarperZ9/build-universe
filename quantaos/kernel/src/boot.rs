@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - BOOT INFORMATION
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! Boot information structures passed from bootloader to kernel.

@@ -1,18 +1,15 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// TITAN™ COLOR SCIENCE v2.0.0
+// TITAN COLOR SCIENCE v2.0.0
 // "The Science of Perfect Color"
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Quanta. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending (P030, P031, P032)
-// Trademarks: TITAN™, BIO-LUMINANCE™, QUANTA-LOG™, HARPER ADAPTIVE™
+// Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Spectrum Science provides revolutionary 5-tier extended gamut color 
-// processing with 13 tonemapping operators and the Bio-Luminance™ EOTF.
+// processing with 13 tonemapping operators and the Bio-Luminance EOTF.
 //
-// SELLABLE AS: Standalone color science library
 // DEPENDENCIES: quanta-lang (core only)
-// ESTIMATED VALUE: $400,000 - $800,000
 // ═══════════════════════════════════════════════════════════════════════════════
 
 module titan_color
@@ -213,7 +210,7 @@ impl OKLab {
     }
 }
 
-/// Genesis Symmetric™ - Quanta's perceptually uniform color space
+/// Genesis Symmetric - Quanta's perceptually uniform color space
 #[derive(Debug, Clone, Copy)]
 pub struct GenesisColor {
     pub l: f32,  // Lightness [0, 1] - symmetric response
@@ -458,7 +455,7 @@ pub mod transfer {
         }
     }
     
-    /// Bio-Luminance™ EOTF - Quanta's biological vision model
+    /// Bio-Luminance EOTF - Quanta's biological vision model
     /// Models actual human visual response including:
     /// - Weber-Fechner law for brightness perception
     /// - Rod/cone transition at scotopic levels
@@ -482,7 +479,7 @@ pub mod transfer {
         (scotopic + photopic) * weber_response / (weber_response + 0.001)
     }
     
-    /// Quanta-Log™ OETF - Quanta's HDR logarithmic encoding
+    /// Quanta-Log OETF - Quanta's HDR logarithmic encoding
     /// Provides superior shadow detail and highlight rolloff
     pub fn quanta_log_oetf(v: f32) -> f32 {
         let cut = 0.0105;
@@ -498,7 +495,7 @@ pub mod transfer {
         }
     }
     
-    /// Quanta-Log™ EOTF
+    /// Quanta-Log EOTF
     pub fn quanta_log_eotf(v: f32) -> f32 {
         let cut = 0.0105 * 0.292393;
         let a = 0.247190;
@@ -647,7 +644,7 @@ pub mod convert {
         )
     }
     
-    /// Convert to Genesis Symmetric™ color space
+    /// Convert to Genesis Symmetric color space
     pub fn to_genesis_symmetric(rgb: RGB) -> GenesisColor {
         // First convert to OKLab for perceptual uniformity
         let linear = srgb_to_linear(rgb);
@@ -686,7 +683,7 @@ pub mod convert {
         h + (red_correction + yellow_correction + cyan_correction) * 180.0 / std::f32::consts::PI
     }
     
-    /// Convert from Genesis Symmetric™ to sRGB
+    /// Convert from Genesis Symmetric to sRGB
     pub fn from_genesis_symmetric(gs: GenesisColor) -> RGB {
         // Reverse symmetric lightness
         let l_oklab = if gs.l < 0.5 {
@@ -1011,7 +1008,7 @@ pub mod tonemap {
         )
     }
     
-    /// Quanta Adaptive™ - Proprietary adaptive tonemapper
+    /// Quanta Adaptive - Proprietary adaptive tonemapper
     /// Automatically adjusts parameters based on image content
     pub fn quanta_adaptive(rgb: RGB) -> RGB {
         // Analyze local luminance

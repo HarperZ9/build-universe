@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// Calibrate™ Automatic Calibration Runner
+// Calibrate Automatic Calibration Runner
 // ═══════════════════════════════════════════════════════════════════════════════
 // Copyright © 2024-2025 Zain Dana Quanta. All Rights Reserved.
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -111,8 +111,8 @@ impl CalibrationSession {
     /// Run automatic calibration on all connected monitors
     pub fn run(&mut self) -> &Vec<CalibrationResult> {
         println!("═══════════════════════════════════════════════════════════════");
-        println!("  Calibrate™ Automatic Display Calibration");
-        println!("  NeuralUX™ AI-Powered Sensorless Calibration");
+        println!("  Calibrate Automatic Display Calibration");
+        println!("  NeuralUX AI-Powered Sensorless Calibration");
         println!("═══════════════════════════════════════════════════════════════");
         println!();
 
@@ -162,7 +162,7 @@ impl CalibrationSession {
         println!();
 
         // Step 3: Calibrate each monitor
-        println!("[3/4] Running NeuralUX™ calibration...");
+        println!("[3/4] Running NeuralUX calibration...");
 
         for (i, monitor) in monitors.iter().enumerate() {
             let start = Instant::now();
@@ -286,7 +286,7 @@ impl CalibrationSession {
 
         println!();
         println!("═══════════════════════════════════════════════════════════════");
-        println!("  Powered by NeuralUX™ — Perfect Color Without Hardware");
+        println!("  Powered by NeuralUX — Perfect Color Without Hardware");
         println!("═══════════════════════════════════════════════════════════════");
 
         &self.results
@@ -353,8 +353,8 @@ pub fn cli_main() -> Result<(), Error> {
                 return Ok(());
             }
             "--version" | "-v" => {
-                println!("Calibrate™ v2.0.0");
-                println!("NeuralUX™ Sensorless Display Calibration");
+                println!("Calibrate v2.0.0");
+                println!("NeuralUX Sensorless Display Calibration");
                 return Ok(());
             }
             _ => {}
@@ -373,7 +373,7 @@ pub fn cli_main() -> Result<(), Error> {
 }
 
 fn print_help() {
-    println!("Calibrate™ - Automatic Display Calibration");
+    println!("Calibrate - Automatic Display Calibration");
     println!();
     println!("USAGE:");
     println!("    calibrate [OPTIONS]");

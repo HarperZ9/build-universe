@@ -2,7 +2,6 @@
 // QUANTAOS KERNEL - CGROUPS DEVICES CONTROLLER
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-// CONFIDENTIAL - Trade Secret - Patent Pending
 // ===============================================================================
 
 //! Devices Controller for cgroups v2
