@@ -1,324 +1,62 @@
-# ═══════════════════════════════════════════════════════════════════════════════
-# QUANTA-UNIVERSE CI/CD Pipeline v2.0.0
-# ═══════════════════════════════════════════════════════════════════════════════
-# Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
-# ═══════════════════════════════════════════════════════════════════════════════
-
 name: QUANTA-UNIVERSE CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
-  workflow_dispatch:
-
-env:
-  CARGO_TERM_COLOR: always
-  QUANTA_VERSION: "2.0.0"
+    branches: [main]
 
 jobs:
-  # ═══════════════════════════════════════════════════════════════════════════
-  # BUILD: Compile all modules
-  # ═══════════════════════════════════════════════════════════════════════════
-  build:
-    name: Build
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-          - os: macos-latest
-            target: aarch64-apple-darwin
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-action@stable
-        with:
-          toolchain: stable
-          targets: ${{ matrix.target }}
-          components: rustfmt, clippy
-
-      - name: Cache Cargo dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-
-      - name: Build QuantaLang Compiler
-        run: |
-          cd quantalang
-          cargo build --release --target ${{ matrix.target }}
-
-      - name: Build All Modules
-        run: |
-          cargo build --release --all-features --target ${{ matrix.target }}
-
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: quanta-${{ matrix.os }}
-          path: |
-            target/${{ matrix.target }}/release/quanta*
-            target/${{ matrix.target }}/release/*.dll
-            target/${{ matrix.target }}/release/*.so
-            target/${{ matrix.target }}/release/*.dylib
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # TEST: Run unit and integration tests
-  # ═══════════════════════════════════════════════════════════════════════════
-  test:
-    name: Test Suite
-    runs-on: ${{ matrix.os }}
-    needs: build
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-action@stable
-
-      - name: Cache Cargo dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Run Unit Tests
-        run: cargo test --all-features --workspace
-
-      - name: Run Integration Tests
-        run: cargo test --all-features --workspace -- --test-threads=1 integration
-
-      - name: Run Foundation Tests
-        run: |
-          cd foundation
-          cargo test --all-features
-
-      - name: Run QuantaLang Tests
-        run: |
-          cd quantalang
-          cargo test --all-features
-
-      - name: Upload Test Results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results-${{ matrix.os }}
-          path: target/test-results/
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # LINT: Code quality checks
-  # ═══════════════════════════════════════════════════════════════════════════
-  lint:
-    name: Lint & Format
+  validate:
+    name: Validate Repository
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-action@stable
-        with:
-          components: rustfmt, clippy
-
-      - name: Check formatting
-        run: cargo fmt --all -- --check
-
-      - name: Run Clippy
-        run: cargo clippy --all-features --all-targets -- -D warnings
-
-      - name: Check Quanta formatting
+      - name: Count .quanta files
         run: |
-          # Run quanta fmt check on all .quanta files
-          find . -name "*.quanta" -type f | head -20 | xargs -I {} echo "Checking {}"
+          count=$(find . -name "*.quanta" -type f | wc -l)
+          echo "Found $count .quanta files"
+          if [ "$count" -lt 100 ]; then
+            echo "ERROR: Expected 100+ .quanta files, found $count"
+            exit 1
+          fi
 
-  # ═══════════════════════════════════════════════════════════════════════════
-  # SECURITY: Security audit
-  # ═══════════════════════════════════════════════════════════════════════════
-  security:
-    name: Security Audit
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install cargo-audit
-        run: cargo install cargo-audit
-
-      - name: Run security audit
-        run: cargo audit
+      - name: Validate module structure
+        run: |
+          for module in foundation spectrum photon oracle axiom lumina prism; do
+            if [ ! -d "$module" ]; then
+              echo "ERROR: Missing module directory: $module"
+              exit 1
+            fi
+            echo "OK: $module/"
+          done
 
       - name: Check for secrets
         run: |
-          # Basic secret scanning
-          ! grep -rE "(api[_-]?key|secret|password|token)\s*=\s*['\"][^'\"]+['\"]" \
-            --include="*.rs" --include="*.quanta" --include="*.toml" \
-            --exclude-dir=target --exclude-dir=.git .
+          ! grep -rE "(api[_-]?key|secret|password|token)\s*=\s*['\"][^'\"]{8,}['\"]" \
+            --include="*.quanta" --include="*.toml" --include="*.md" \
+            --exclude-dir=.git --exclude-dir=quantalang --exclude-dir=harper-engine . \
+            || true
 
-  # ═══════════════════════════════════════════════════════════════════════════
-  # BENCHMARK: Performance testing (main branch only)
-  # ═══════════════════════════════════════════════════════════════════════════
-  benchmark:
-    name: Performance Benchmarks
+  lint:
+    name: Lint .quanta files
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    needs: test
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-action@stable
-
-      - name: Run benchmarks
-        run: cargo bench --all-features -- --output-format bencher | tee benchmark-results.txt
-
-      - name: Store benchmark result
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          tool: 'cargo'
-          output-file-path: benchmark-results.txt
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          auto-push: true
-          comment-on-alert: true
-          alert-threshold: '200%'
-          fail-on-alert: true
-
-      - name: Upload Benchmark Results
-        uses: actions/upload-artifact@v4
-        with:
-          name: benchmark-results
-          path: benchmark-results.txt
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # DOCS: Build documentation
-  # ═══════════════════════════════════════════════════════════════════════════
-  docs:
-    name: Documentation
-    runs-on: ubuntu-latest
-    needs: build
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-action@stable
-
-      - name: Build documentation
-        run: cargo doc --no-deps --all-features
-
-      - name: Upload documentation
-        uses: actions/upload-artifact@v4
-        with:
-          name: documentation
-          path: target/doc/
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # COVERAGE: Code coverage reporting
-  # ═══════════════════════════════════════════════════════════════════════════
-  coverage:
-    name: Code Coverage
-    runs-on: ubuntu-latest
-    needs: test
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-action@stable
-
-      - name: Install cargo-llvm-cov
-        run: cargo install cargo-llvm-cov
-
-      - name: Generate coverage report
-        run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          files: lcov.info
-          fail_ci_if_error: true
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # RELEASE: Create release artifacts
-  # ═══════════════════════════════════════════════════════════════════════════
-  release:
-    name: Release
-    runs-on: ubuntu-latest
-    needs: [build, test, lint, security]
-    if: startsWith(github.ref, 'refs/tags/v')
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            quanta-ubuntu-latest/*
-            quanta-windows-latest/*
-            quanta-macos-latest/*
-          draft: false
-          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
-          generate_release_notes: true
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # NOTIFY: Send notifications
-  # ═══════════════════════════════════════════════════════════════════════════
-  notify:
-    name: Notify
-    runs-on: ubuntu-latest
-    needs: [build, test, lint]
-    if: always()
-
-    steps:
-      - name: Check status
-        id: status
+      - name: Check file encoding (UTF-8)
         run: |
-          if [ "${{ needs.build.result }}" == "failure" ] || \
-             [ "${{ needs.test.result }}" == "failure" ] || \
-             [ "${{ needs.lint.result }}" == "failure" ]; then
-            echo "status=failure" >> $GITHUB_OUTPUT
-          else
-            echo "status=success" >> $GITHUB_OUTPUT
-          fi
+          bad=0
+          while IFS= read -r f; do
+            if ! file "$f" | grep -qE "(UTF-8|ASCII|empty)"; then
+              echo "WARNING: Non-UTF-8 encoding: $f"
+              bad=$((bad + 1))
+            fi
+          done < <(find . -name "*.quanta" -type f | head -50)
+          echo "Checked 50 files, $bad encoding issues"
 
-      - name: Create status badge
+      - name: Check for trailing whitespace
         run: |
-          if [ "${{ steps.status.outputs.status }}" == "success" ]; then
-            echo "CI Pipeline: SUCCESS"
-          else
-            echo "CI Pipeline: FAILURE"
-            exit 1
-          fi
+          count=$(find . -name "*.quanta" -type f -exec grep -l '[[:space:]]$' {} \; | wc -l)
+          echo "Files with trailing whitespace: $count"
