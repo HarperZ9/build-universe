@@ -1,7 +1,7 @@
 // =============================================================================
 // QUANTA Photon - Subsurface Scattering System
 // =============================================================================
-// Production-ready subsurface scattering for skin, wax, marble, leaves,
+// Subsurface scattering for skin, wax, marble, leaves,
 // and other translucent materials using screen-space and separable methods.
 
 module photon::subsurface_scattering {

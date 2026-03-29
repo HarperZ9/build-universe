@@ -1,7 +1,7 @@
 // =============================================================================
 // QUANTA Photon - Water and Ocean Rendering
 // =============================================================================
-// Production-ready water and ocean simulation including FFT ocean waves,
+// Water and ocean simulation including FFT ocean waves,
 // underwater rendering, caustics, foam, and shoreline effects.
 
 module photon::water_ocean {
