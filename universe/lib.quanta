@@ -56,8 +56,8 @@ pub const UNIVERSE_VERSION: &str = "2.0.0";
 pub const UNIVERSE_NAME: &str = "QUANTA-UNIVERSE";
 pub const UNIVERSE_AUTHOR: &str = "Zain Dana Harper";
 pub const TOTAL_MODULES: usize = 22;
-pub const TOTAL_PATENTS: usize = 52;
-pub const TOTAL_TRADEMARKS: usize = 31;
+pub const TOTAL_PATENTS: usize = 0;
+pub const TOTAL_TRADEMARKS: usize = 0;
 pub const BUILD_TIMESTAMP: &str = env!("BUILD_TIMESTAMP", "2025-01-01T00:00:00Z");
 pub const GIT_COMMIT: &str = env!("GIT_COMMIT", "unknown");
 
@@ -461,8 +461,8 @@ impl ModuleRegistry {
             layer: Layer::Foundation,
             dependencies: vec![],
             optional_dependencies: vec![],
-            patents: vec!["P001", "P002", "P003"],
-            trademarks: vec!["QUANTALANG"],
+            patents: vec![],
+            trademarks: vec![],
             value_min: 500_000,
             value_max: 1_500_000,
             capabilities: vec![
@@ -495,8 +495,8 @@ impl ModuleRegistry {
             layer: Layer::Core,
             dependencies: vec!["quantalang", "foundation"],
             optional_dependencies: vec![],
-            patents: vec!["P006", "P007", "P008", "P009", "P010"],
-            trademarks: vec!["QUANTAOS", "NEURAL PROCESS SCHEDULER", "SELF-HEALING ENGINE"],
+            patents: vec![],
+            trademarks: vec![],
             value_min: 1_000_000,
             value_max: 3_000_000,
             capabilities: vec![
@@ -513,8 +513,8 @@ impl ModuleRegistry {
             layer: Layer::Core,
             dependencies: vec!["quantalang", "foundation"],
             optional_dependencies: vec![],
-            patents: vec!["P004", "P005"],
-            trademarks: vec!["AXIOM", "QUANTA EVOLUTION EQUATION"],
+            patents: vec![],
+            trademarks: vec![],
             value_min: 2_000_000,
             value_max: 5_000_000,
             capabilities: vec![
@@ -531,8 +531,8 @@ impl ModuleRegistry {
             layer: Layer::Rendering,
             dependencies: vec!["foundation"],
             optional_dependencies: vec![],
-            patents: vec!["P020", "P021"],
-            trademarks: vec!["SPECTRUM", "TITAN COLOR"],
+            patents: vec![],
+            trademarks: vec![],
             value_min: 250_000,
             value_max: 500_000,
             capabilities: vec![
@@ -547,8 +547,8 @@ impl ModuleRegistry {
             layer: Layer::Rendering,
             dependencies: vec!["foundation", "spectrum"],
             optional_dependencies: vec![],
-            patents: vec!["P022"],
-            trademarks: vec!["CHROMATIC"],
+            patents: vec![],
+            trademarks: vec![],
             value_min: 150_000,
             value_max: 300_000,
             capabilities: vec![
@@ -562,8 +562,8 @@ impl ModuleRegistry {
             layer: Layer::Rendering,
             dependencies: vec!["foundation", "spectrum"],
             optional_dependencies: vec!["axiom"],
-            patents: vec!["P025", "P026", "P027", "P028", "P029"],
-            trademarks: vec!["PHOTON ENGINE", "UNIVERSAL HOOK"],
+            patents: vec![],
+            trademarks: vec![],
             value_min: 1_500_000,
             value_max: 3_500_000,
             capabilities: vec![
@@ -580,8 +580,8 @@ impl ModuleRegistry {
             layer: Layer::Rendering,
             dependencies: vec!["photon", "spectrum", "chromatic"],
             optional_dependencies: vec![],
-            patents: vec!["P030", "P031"],
-            trademarks: vec!["LUMINA"],
+            patents: vec![],
+            trademarks: vec![],
             value_min: 300_000,
             value_max: 600_000,
             capabilities: vec![
@@ -596,8 +596,8 @@ impl ModuleRegistry {
             layer: Layer::Rendering,
             dependencies: vec!["photon", "axiom"],
             optional_dependencies: vec![],
-            patents: vec!["P032", "P033"],
-            trademarks: vec!["NEUTRINO"],
+            patents: vec![],
+            trademarks: vec![],
             value_min: 400_000,
             value_max: 800_000,
             capabilities: vec![
@@ -642,8 +642,8 @@ impl ModuleRegistry {
             layer: Layer::Rendering,
             dependencies: vec!["photon"],
             optional_dependencies: vec!["lumina"],
-            patents: vec!["P034"],
-            trademarks: vec!["NEXUS"],
+            patents: vec![],
+            trademarks: vec![],
             value_min: 200_000,
             value_max: 400_000,
             capabilities: vec![
@@ -659,8 +659,8 @@ impl ModuleRegistry {
             layer: Layer::Trading,
             dependencies: vec!["foundation"],
             optional_dependencies: vec!["axiom"],
-            patents: vec!["P045", "P046"],
-            trademarks: vec!["FIELD TENSOR", "MARKET TENSOR"],
+            patents: vec![],
+            trademarks: vec![],
             value_min: 300_000,
             value_max: 600_000,
             capabilities: vec![
@@ -675,8 +675,8 @@ impl ModuleRegistry {
             layer: Layer::Trading,
             dependencies: vec!["foundation", "field-tensor"],
             optional_dependencies: vec![],
-            patents: vec!["P047"],
-            trademarks: vec!["DELTA"],
+            patents: vec![],
+            trademarks: vec![],
             value_min: 200_000,
             value_max: 400_000,
             capabilities: vec![
@@ -691,8 +691,8 @@ impl ModuleRegistry {
             layer: Layer::Trading,
             dependencies: vec!["foundation", "oracle"],
             optional_dependencies: vec!["field-tensor"],
-            patents: vec!["P048", "P049"],
-            trademarks: vec!["ENTROPY"],
+            patents: vec![],
+            trademarks: vec![],
             value_min: 400_000,
             value_max: 800_000,
             capabilities: vec![
@@ -707,8 +707,8 @@ impl ModuleRegistry {
             layer: Layer::Trading,
             dependencies: vec!["foundation", "oracle", "field-tensor"],
             optional_dependencies: vec!["axiom", "delta", "entropy"],
-            patents: vec!["P040", "P041", "P042", "P043", "P044"],
-            trademarks: vec!["QUANTUM FINANCE", "FINANCIAL SCHRODINGER EQUATION"],
+            patents: vec![],
+            trademarks: vec![],
             value_min: 1_000_000,
             value_max: 2_500_000,
             capabilities: vec![
@@ -725,8 +725,8 @@ impl ModuleRegistry {
             layer: Layer::Intelligence,
             dependencies: vec!["foundation"],
             optional_dependencies: vec!["axiom"],
-            patents: vec!["P052"],
-            trademarks: vec!["ORACLE", "TEMPORAL FUSION", "PROPHETIC ENSEMBLE"],
+            patents: vec![],
+            trademarks: vec![],
             value_min: 300_000,
             value_max: 600_000,
             capabilities: vec![
@@ -742,8 +742,8 @@ impl ModuleRegistry {
             layer: Layer::Intelligence,
             dependencies: vec!["foundation", "oracle"],
             optional_dependencies: vec![],
-            patents: vec!["P050", "P051"],
-            trademarks: vec!["WAVELENGTH"],
+            patents: vec![],
+            trademarks: vec![],
             value_min: 200_000,
             value_max: 400_000,
             capabilities: vec![
@@ -759,8 +759,8 @@ impl ModuleRegistry {
             layer: Layer::Integration,
             dependencies: vec!["foundation"],
             optional_dependencies: vec!["quantaos"],
-            patents: vec!["P035", "P036"],
-            trademarks: vec!["ENTANGLE"],
+            patents: vec![],
+            trademarks: vec![],
             value_min: 250_000,
             value_max: 500_000,
             capabilities: vec![
@@ -776,8 +776,8 @@ impl ModuleRegistry {
             layer: Layer::Integration,
             dependencies: vec!["spectrum", "chromatic"],
             optional_dependencies: vec![],
-            patents: vec!["P037"],
-            trademarks: vec!["CALIBRATE"],
+            patents: vec![],
+            trademarks: vec![],
             value_min: 150_000,
             value_max: 300_000,
             capabilities: vec![
@@ -792,8 +792,8 @@ impl ModuleRegistry {
             layer: Layer::Integration,
             dependencies: vec!["photon", "lumina"],
             optional_dependencies: vec!["nexus"],
-            patents: vec!["P038", "P039"],
-            trademarks: vec!["NOVA"],
+            patents: vec![],
+            trademarks: vec![],
             value_min: 100_000,
             value_max: 200_000,
             capabilities: vec![
@@ -1675,17 +1675,12 @@ impl Universe {
              ║  QUANTA-UNIVERSE v{}                                      ║\n\
              ║  \"The Complete Physics-Inspired Software Universe\"          ║\n\
              ╠═══════════════════════════════════════════════════════════════╣\n\
-             ║  Modules: {}  │  Patents: {}  │  Trademarks: {}            ║\n\
-             ║  Value: ${:,.0} - ${:,.0}                          ║\n\
+             ║  Modules: {}  │  MIT License                                 ║\n\
              ║  Health: {:?} ({}/{} healthy)                            ║\n\
              ║  Uptime: {}ms                                               ║\n\
              ╚═══════════════════════════════════════════════════════════════╝",
             UNIVERSE_VERSION,
             TOTAL_MODULES,
-            TOTAL_PATENTS,
-            TOTAL_TRADEMARKS,
-            val_min as f64,
-            val_max as f64,
             health.status,
             health.healthy_modules,
             health.total_modules,

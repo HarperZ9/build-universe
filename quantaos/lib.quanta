@@ -13,8 +13,7 @@
 // - Differential checkpointing for instant recovery
 // - Zero-copy AI tensor sharing between processes
 //
-// TIER: Enterprise ($50K/yr)
-// VALUE: $1,000,000 - $3,000,000
+//
 // ═══════════════════════════════════════════════════════════════════════════════
 
 module quantaos
