@@ -1204,8 +1204,8 @@ impl TitanPipeline {
             exposure: 0.0,
             contrast: 1.0,
             saturation: 1.0,
-            lift_gamma_gain: grading::LiftGammaGain::neutral(),
-            cdl: grading::ColorDecisionList::neutral(),
+            lift_gamma_gain: LiftGammaGain::neutral(),
+            cdl: ColorDecisionList::neutral(),
         }
     }
     
@@ -3187,9 +3187,9 @@ pub mod icc {
                 TRC::Parametric { gamma, a, b, c, d } => {
                     let threshold = c * d;
                     if y >= threshold {
-                        (y.powf(1.0 / *gamma) - *b) / *a
+                        (y.powf(1.0 / gamma) - b) / a
                     } else {
-                        y / *c
+                        y / c
                     }
                 },
                 TRC::Table(table) => {
@@ -6500,6 +6500,8 @@ pub mod harmony {
             HarmonyType::Monochromatic => {
                 (0..count).map(|i| 0.0).collect()
             }
+            HarmonyType::AnalogousTriad => vec![-40.0, 0.0, 40.0],
+            HarmonyType::DoubleSplit => vec![0.0, 150.0, 180.0, 210.0],
         };
 
         let mut colors = Vec::new();
