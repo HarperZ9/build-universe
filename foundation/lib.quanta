@@ -24,7 +24,7 @@
 // MODULE 1: std::math
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub module std::math {
+pub mod math {
     // Constants
     pub const PI: f64 = 3.14159265358979323846;
     pub const E: f64 = 2.71828182845904523536;
@@ -257,7 +257,7 @@ pub module std::math {
 // MODULE 2: std::string
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub module std::string {
+pub mod string {
     use std::collections::Vec;
     
     /// String builder for efficient concatenation
@@ -356,7 +356,7 @@ pub module std::string {
 // MODULE 3: std::collections
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub module std::collections {
+pub mod collections {
     /// Dynamic array
     pub struct Vec<T> {
         data: *mut T,
@@ -630,7 +630,7 @@ pub module std::collections {
 // MODULE 4: std::io
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub module std::io {
+pub mod io {
     pub trait Read {
         fn read(&mut self, buf: &mut [u8]) -> Result<usize, IoError>;
         
@@ -797,7 +797,7 @@ pub module std::io {
     pub fn stdin() -> Stdin { Stdin }
     pub fn stdout() -> Stdout { Stdout }
     pub fn stderr() -> Stderr { Stderr }
-    
+
     pub struct Stdin;
     pub struct Stdout;
     pub struct Stderr;
@@ -848,7 +848,7 @@ pub module std::io {
 // MODULE 12: std::ai - AI/ML Primitives
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub module std::ai {
+pub mod ai {
     use std::collections::Vec;
     use std::math::{exp, log, sqrt, tanh};
     
