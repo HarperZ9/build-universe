@@ -42,6 +42,13 @@ A physics-inspired software ecosystem: programming language, operating system ke
 
 **Alpha.** The QuantaLang compiler (81K lines Rust, 599 tests passing) is the most mature component. The C backend produces correct native binaries. HLSL/GLSL produce clean shader output. Other backends are experimental. The .quanta modules demonstrate the language's capabilities across domains. See [quantaos/STATUS.md](quantaos/STATUS.md) for kernel implementation state.
 
+## Caveats
+
+- **This ecosystem does not compile as a whole.** Each module depends on the QuantaLang compiler (separate repo: [HarperZ9/quantalang](https://github.com/HarperZ9/quantalang)). The compiler can compile individual modules but cross-module resolution is not yet complete.
+- **QuantaOS** is an educational hobby kernel, not a production OS. See [quantaos/STATUS.md](quantaos/STATUS.md).
+- **Axiom** is an experimental proof-of-concept for differentiable program synthesis.
+- The `.quanta` source files serve as both working code and language specification — demonstrating QuantaLang's syntax across domains.
+
 ## License
 
-Copyright (c) 2024-2026 Zain Dana Harper. MIT License.
+MIT License. See [LICENSE](LICENSE).
