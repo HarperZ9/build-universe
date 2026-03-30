@@ -159,41 +159,55 @@ fn delta_e_ok(a: &OKLab, b: &OKLab) -> f64 {
 
 // --- Entry point ---
 
+fn convert(r: f64, g: f64, b: f64) -> Lab {
+    let rgb = RGB::new(r, g, b);
+    let lin = rgb.to_linear();
+    let xyz = XYZ::from_linear_rgb(&lin);
+    let lab = Lab::from_xyz(&xyz);
+    let ok = OKLab::from_linear_rgb(&lin);
+
+    println!("  sRGB:  ({}, {}, {})", r, g, b);
+    println!("  XYZ:   ({}, {}, {})", xyz.x, xyz.y, xyz.z);
+    println!("  Lab:   ({}, {}, {})", lab.l, lab.a, lab.b);
+    println!("  OKLab: ({}, {}, {})", ok.l, ok.a, ok.b);
+    lab
+}
+
 fn main() {
-    // Test colors
     println!("=== QuantaLang Color Space Converter ===");
+    println!("=== Cross-validation: CIE 1976 + Ottosson 2020 ===");
     println!("");
 
-    // Pure red (sRGB)
-    let red = RGB::new(1.0, 0.0, 0.0);
-    let red_lin = red.to_linear();
-    let red_xyz = XYZ::from_linear_rgb(&red_lin);
-    let red_lab = Lab::from_xyz(&red_xyz);
-    let red_ok = OKLab::from_linear_rgb(&red_lin);
-
-    println!("Red (1, 0, 0):");
-    println!("  XYZ:   ({}, {}, {})", red_xyz.x, red_xyz.y, red_xyz.z);
-    println!("  Lab:   ({}, {}, {})", red_lab.l, red_lab.a, red_lab.b);
-    println!("  OKLab: ({}, {}, {})", red_ok.l, red_ok.a, red_ok.b);
+    println!("Red:");
+    let red_lab = convert(1.0, 0.0, 0.0);
     println!("");
 
-    // Mid gray (sRGB)
-    let gray = RGB::new(0.5, 0.5, 0.5);
-    let gray_lin = gray.to_linear();
-    let gray_xyz = XYZ::from_linear_rgb(&gray_lin);
-    let gray_lab = Lab::from_xyz(&gray_xyz);
-    let gray_ok = OKLab::from_linear_rgb(&gray_lin);
-
-    println!("Gray (0.5, 0.5, 0.5):");
-    println!("  XYZ:   ({}, {}, {})", gray_xyz.x, gray_xyz.y, gray_xyz.z);
-    println!("  Lab:   ({}, {}, {})", gray_lab.l, gray_lab.a, gray_lab.b);
-    println!("  OKLab: ({}, {}, {})", gray_ok.l, gray_ok.a, gray_ok.b);
+    println!("Green:");
+    let green_lab = convert(0.0, 1.0, 0.0);
     println!("");
 
-    // Color difference between red and gray
-    let de76 = delta_e_76(&red_lab, &gray_lab);
-    let deok = delta_e_ok(&red_ok, &gray_ok);
-    println!("Delta E (red vs gray):");
-    println!("  CIE76: {}", de76);
-    println!("  OKLab: {}", deok);
+    println!("Blue:");
+    let blue_lab = convert(0.0, 0.0, 1.0);
+    println!("");
+
+    println!("White:");
+    convert(1.0, 1.0, 1.0);
+    println!("");
+
+    println!("Gray 50%:");
+    let gray_lab = convert(0.5, 0.5, 0.5);
+    println!("");
+
+    println!("Orange:");
+    convert(1.0, 0.5, 0.0);
+    println!("");
+
+    // Delta E
+    let de_rg = delta_e_76(&red_lab, &green_lab);
+    let de_rb = delta_e_76(&red_lab, &blue_lab);
+    let de_gray_red = delta_e_76(&gray_lab, &red_lab);
+    println!("Delta E (CIE76):");
+    println!("  Red-Green: {}", de_rg);
+    println!("  Red-Blue:  {}", de_rb);
+    println!("  Gray-Red:  {}", de_gray_red);
 }
