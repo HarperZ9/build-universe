@@ -128,7 +128,7 @@ fn print_banner() {
     ║                         v2.0.0 - "The Language of the Universe"               ║
     ║                                                                               ║
     ║    Copyright © 2024-2025 Zain Dana Harper. All Rights Reserved.               ║
-    ║    52 Patents Pending │ 31 Trademarks │ 22 Modules                            ║
+    ║    22 Modules │ MIT License                                                   ║
     ║                                                                               ║
     ╚═══════════════════════════════════════════════════════════════════════════════╝
     "#);
