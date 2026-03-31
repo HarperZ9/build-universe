@@ -1,8 +1,8 @@
 # QuantaLang Programs
 
-60 CLI tools compiled from QuantaLang to native binaries via C codegen.
+64 programs compiled from QuantaLang to C via the compiler. All 64 pass the type checker. Several produce verified correct native binaries.
 
-Total: ~30,900 lines of QuantaLang source across 60 programs.
+Total: ~30,500 lines of QuantaLang source across 64 programs.
 
 ## Architecture
 
