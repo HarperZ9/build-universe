@@ -1317,21 +1317,15 @@ pub mod state_machine {
 
         pub fn process(&mut self, event: &E) -> bool {
             let key = (self.current_state.clone(), event.clone());
-            if let Some(next_state) = self.transitions.get(&key).cloned() {
-                // Exit callbacks
-                if let Some(callbacks) = self.on_exit.get(&self.current_state) {
-                    for cb in callbacks { cb(&self.current_state); }
-                }
-                self.current_state = next_state.clone();
-                self.history.push(next_state.clone());
-                if self.history.len() > self.max_history { self.history.remove(0); }
-                // Enter callbacks
-                if let Some(callbacks) = self.on_enter.get(&self.current_state) {
-                    for cb in callbacks { cb(&self.current_state); }
-                }
-                true
-            } else {
-                false
+            let next = self.transitions.get(&key).cloned();
+            if next.is_none() {
+                return false;
+            }
+            let next_state = next.unwrap();
+            self.current_state = next_state.clone();
+            self.history.push(next_state.clone());
+            if self.history.len() > self.max_history { self.history.remove(0); }
+            true
             }
         }
 
