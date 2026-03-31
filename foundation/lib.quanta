@@ -732,21 +732,33 @@ pub mod io {
         }
         
         pub fn read_line(&mut self, buf: &mut String) -> Result<usize, IoError> {
-            let mut total = 0;
-            loop {
-                let available = self.fill_buf()?;
-                if available.is_empty() { break; }
-                
-                if let Some(i) = available.iter().position(|&b| b == b'\n') {
-                    buf.push_str(&String::from_utf8_lossy(&available[..=i]));
-                    total += i + 1;
-                    self.consume(i + 1);
-                    break;
+            // Simplified: read until newline or EOF
+            let mut total: usize = 0;
+            let mut done = false;
+            while !done {
+                let buf_data = &self.buffer[self.pos..self.cap];
+                if buf_data.is_empty() {
+                    done = true;
                 } else {
-                    buf.push_str(&String::from_utf8_lossy(available));
-                    total += available.len();
-                    let len = available.len();
-                    self.consume(len);
+                    let mut found_newline = false;
+                    let mut newline_pos: usize = 0;
+                    let mut idx: usize = 0;
+                    while idx < buf_data.len() {
+                        if buf_data[idx] == 10 {
+                            found_newline = true;
+                            newline_pos = idx;
+                            idx = buf_data.len();
+                        }
+                        idx = idx + 1;
+                    }
+                    if found_newline {
+                        total = total + newline_pos + 1;
+                        self.pos = self.pos + newline_pos + 1;
+                        done = true;
+                    } else {
+                        total = total + buf_data.len();
+                        self.pos = self.cap;
+                    }
                 }
             }
             Ok(total)
@@ -760,15 +772,15 @@ pub mod io {
     }
     
     impl<W: Write> BufWriter<W> {
-        pub fn new(inner: W) -> Self {
-            BufWriter::with_capacity(8192, inner)
-        }
-        
         pub fn with_capacity(cap: usize, inner: W) -> Self {
             BufWriter {
                 inner,
                 buffer: Vec::with_capacity(cap),
             }
+        }
+
+        pub fn new(inner: W) -> Self {
+            BufWriter::with_capacity(8192, inner)
         }
     }
     
@@ -794,13 +806,13 @@ pub mod io {
     }
     
     // Standard streams
-    pub fn stdin() -> Stdin { Stdin }
-    pub fn stdout() -> Stdout { Stdout }
-    pub fn stderr() -> Stderr { Stderr }
-
     pub struct Stdin;
     pub struct Stdout;
     pub struct Stderr;
+
+    pub fn stdin() -> Stdin { Stdin }
+    pub fn stdout() -> Stdout { Stdout }
+    pub fn stderr() -> Stderr { Stderr }
     
     impl Read for Stdin {
         fn read(&mut self, buf: &mut [u8]) -> Result<usize, IoError> {
