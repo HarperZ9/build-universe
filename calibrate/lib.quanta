@@ -3008,7 +3008,7 @@ struct UniformityPoint {
     delta_uv: f64
 }
 
-struct UniformityReport {
+struct MeasuredUniformityReport {
     luminance_deviation: f64,
     chromaticity_deviation: f64,
     worst_corner: (usize, usize),
@@ -3050,7 +3050,7 @@ impl UniformityAnalyzer {
         Ok(())
     }
 
-    fn analyze(self) -> UniformityReport {
+    fn analyze(self) -> MeasuredUniformityReport {
         let mut max_delta_l = 0.0f64;
         let mut max_delta_uv = 0.0f64;
         let mut worst_corner = (0, 0);
@@ -3070,7 +3070,7 @@ impl UniformityAnalyzer {
             d if d < 25.0 => UniformityGrade::Poor,
             _ => UniformityGrade::Failed
         };
-        UniformityReport {
+        MeasuredUniformityReport {
             luminance_deviation: max_delta_l,
             chromaticity_deviation: max_delta_uv,
             worst_corner: worst_corner,
@@ -3452,14 +3452,14 @@ enum PatchSetType {
     Custom
 }
 
-struct ColorPatch {
+struct ProfilingColorPatch {
     id: str,
     rgb: RGB,
     name: str,
-    category: PatchCategory
+    category: ProfilingPatchCategory
 }
 
-enum PatchCategory {
+enum ProfilingPatchCategory {
     Primary,
     Secondary,
     Neutral,
@@ -3470,7 +3470,7 @@ enum PatchCategory {
 }
 
 impl PatchGenerator {
-    fn generate(self) -> [ColorPatch] {
+    fn generate(self) -> [ProfilingColorPatch] {
         match self.patch_type {
             Minimal => Self::colorchecker_24(),
             Standard => Self::standard_118(),
@@ -3479,37 +3479,37 @@ impl PatchGenerator {
             Neutral => Self::neutral_ramp(21),
             Primaries => Self::primaries_secondaries(),
             Custom => self.custom_patches.unwrap_or([]).iter().enumerate()
-                .map(|(i, rgb)| ColorPatch {
+                .map(|(i, rgb)| ProfilingColorPatch {
                     id: format!("custom_{}", i),
                     rgb: *rgb,
                     name: format!("Custom {}", i),
-                    category: PatchCategory::Custom
+                    category: ProfilingPatchCategory::Custom
                 }).collect()
         }
     }
 
-    fn colorchecker_24() -> [ColorPatch] {
+    fn colorchecker_24() -> [ProfilingColorPatch] {
         [
-            ColorPatch { id: "dark_skin", rgb: RGB::new(0.45, 0.32, 0.27), name: "Dark Skin", category: Skin },
-            ColorPatch { id: "light_skin", rgb: RGB::new(0.77, 0.58, 0.50), name: "Light Skin", category: Skin },
-            ColorPatch { id: "blue_sky", rgb: RGB::new(0.35, 0.47, 0.61), name: "Blue Sky", category: Nature },
-            ColorPatch { id: "foliage", rgb: RGB::new(0.35, 0.42, 0.28), name: "Foliage", category: Nature },
-            ColorPatch { id: "blue_flower", rgb: RGB::new(0.51, 0.52, 0.70), name: "Blue Flower", category: Nature },
-            ColorPatch { id: "bluish_green", rgb: RGB::new(0.39, 0.69, 0.64), name: "Bluish Green", category: Nature },
+            ProfilingColorPatch { id: "dark_skin", rgb: RGB::new(0.45, 0.32, 0.27), name: "Dark Skin", category: Skin },
+            ProfilingColorPatch { id: "light_skin", rgb: RGB::new(0.77, 0.58, 0.50), name: "Light Skin", category: Skin },
+            ProfilingColorPatch { id: "blue_sky", rgb: RGB::new(0.35, 0.47, 0.61), name: "Blue Sky", category: Nature },
+            ProfilingColorPatch { id: "foliage", rgb: RGB::new(0.35, 0.42, 0.28), name: "Foliage", category: Nature },
+            ProfilingColorPatch { id: "blue_flower", rgb: RGB::new(0.51, 0.52, 0.70), name: "Blue Flower", category: Nature },
+            ProfilingColorPatch { id: "bluish_green", rgb: RGB::new(0.39, 0.69, 0.64), name: "Bluish Green", category: Nature },
             // ... remaining patches
-            ColorPatch { id: "white", rgb: RGB::new(0.95, 0.95, 0.95), name: "White", category: Neutral },
-            ColorPatch { id: "black", rgb: RGB::new(0.05, 0.05, 0.05), name: "Black", category: Neutral }
+            ProfilingColorPatch { id: "white", rgb: RGB::new(0.95, 0.95, 0.95), name: "White", category: Neutral },
+            ProfilingColorPatch { id: "black", rgb: RGB::new(0.05, 0.05, 0.05), name: "Black", category: Neutral }
         ]
     }
 
-    fn neutral_ramp(steps: usize) -> [ColorPatch] {
+    fn neutral_ramp(steps: usize) -> [ProfilingColorPatch] {
         (0..steps).map(|i| {
             let v = i as f64 / (steps - 1) as f64;
-            ColorPatch {
+            ProfilingColorPatch {
                 id: format!("gray_{}", i),
                 rgb: RGB::new(v, v, v),
                 name: format!("Gray {}%", (v * 100.0) as u32),
-                category: PatchCategory::Neutral
+                category: ProfilingPatchCategory::Neutral
             }
         }).collect()
     }
@@ -3651,7 +3651,7 @@ fn current_time_us() -> u64 { 0 }
 // VIEWING ANGLE ANALYSIS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-enum PanelType { TN, VA, IPS, OLED, MiniLED, MicroLED }
+enum ViewingPanelType { TN, VA, IPS, OLED, MiniLED, MicroLED }
 
 struct ViewingAngleData {
     horizontal_angles: [f64],
@@ -3662,13 +3662,13 @@ struct ViewingAngleData {
 }
 
 struct ViewingAngleAnalyzer {
-    panel_type: PanelType,
+    panel_type: ViewingPanelType,
     reference_angle: (f64, f64),
     data: ViewingAngleData
 }
 
 impl ViewingAngleAnalyzer {
-    fn new(panel_type: PanelType) -> ViewingAngleAnalyzer {
+    fn new(panel_type: ViewingPanelType) -> ViewingAngleAnalyzer {
         let h_angles = (-89..=89).step_by(5).map(|a| a as f64).collect();
         let v_angles = (-89..=89).step_by(5).map(|a| a as f64).collect();
         ViewingAngleAnalyzer {
@@ -3718,24 +3718,24 @@ impl ViewingAngleAnalyzer {
         90.0
     }
 
-    fn estimate_panel_type(self) -> PanelType {
+    fn estimate_panel_type(self) -> ViewingPanelType {
         let h_half = self.get_half_gain_angle_horizontal();
         let max_color_shift = self.data.color_shift_delta_e.iter()
             .flat_map(|row| row.iter()).fold(0.0f64, |a, b| a.max(*b));
-        if h_half < 45.0 { PanelType::TN }
-        else if max_color_shift > 10.0 { PanelType::VA }
-        else { PanelType::IPS }
+        if h_half < 45.0 { ViewingPanelType::TN }
+        else if max_color_shift > 10.0 { ViewingPanelType::VA }
+        else { ViewingPanelType::IPS }
     }
 }
 
-struct Colorimeter { model: string }
-impl Colorimeter {
+struct InlineColorimeter { model: string }
+impl InlineColorimeter {
     fn measure_luminance(self) -> f64 { 100.0 }
     fn measure_xyz(self) -> XYZ { XYZ { x: 0.95, y: 1.0, z: 1.09 } }
 }
 struct XYZ { x: f64, y: f64, z: f64 }
 impl XYZ { fn to_lab(self) -> Lab { Lab { l: 100.0, a: 0.0, b: 0.0 } } }
-struct Lab { l: f64, a: f64, b: f64 }
+struct InlineLab { l: f64, a: f64, b: f64 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PWM / FLICKER ANALYSIS
@@ -4915,7 +4915,7 @@ impl SPD {
         self.values[idx] * (1.0 - t) + self.values[idx + 1] * t
     }
 
-    pub fn to_xyz(&self, observer: &StandardObserver) -> XYZ {
+    pub fn to_xyz(&self, observer: &SpectralStandardObserver) -> XYZ {
         let mut x = 0.0;
         let mut y = 0.0;
         let mut z = 0.0;
@@ -4934,7 +4934,7 @@ impl SPD {
     }
 
     pub fn cct(&self) -> f64 {
-        let xyz = self.to_xyz(&StandardObserver::CIE1931);
+        let xyz = self.to_xyz(&SpectralStandardObserver::CIE1931);
         xyz.to_cct()
     }
 
@@ -4952,34 +4952,34 @@ impl SPD {
 }
 
 /// CIE Standard Observer
-pub enum StandardObserver {
+pub enum SpectralStandardObserver {
     CIE1931,     // 2° observer
     CIE1964,     // 10° observer
     Custom { x: Vec<f64>, y: Vec<f64>, z: Vec<f64> },
 }
 
-impl StandardObserver {
+impl SpectralStandardObserver {
     pub fn x_bar(&self, wavelength: f64) -> f64 {
         match self {
-            StandardObserver::CIE1931 => self.cie1931_x(wavelength),
-            StandardObserver::CIE1964 => self.cie1964_x(wavelength),
-            StandardObserver::Custom { x, .. } => self.interpolate_cmf(x, wavelength),
+            SpectralStandardObserver::CIE1931 => self.cie1931_x(wavelength),
+            SpectralStandardObserver::CIE1964 => self.cie1964_x(wavelength),
+            SpectralStandardObserver::Custom { x, .. } => self.interpolate_cmf(x, wavelength),
         }
     }
 
     pub fn y_bar(&self, wavelength: f64) -> f64 {
         match self {
-            StandardObserver::CIE1931 => self.cie1931_y(wavelength),
-            StandardObserver::CIE1964 => self.cie1964_y(wavelength),
-            StandardObserver::Custom { y, .. } => self.interpolate_cmf(y, wavelength),
+            SpectralStandardObserver::CIE1931 => self.cie1931_y(wavelength),
+            SpectralStandardObserver::CIE1964 => self.cie1964_y(wavelength),
+            SpectralStandardObserver::Custom { y, .. } => self.interpolate_cmf(y, wavelength),
         }
     }
 
     pub fn z_bar(&self, wavelength: f64) -> f64 {
         match self {
-            StandardObserver::CIE1931 => self.cie1931_z(wavelength),
-            StandardObserver::CIE1964 => self.cie1964_z(wavelength),
-            StandardObserver::Custom { z, .. } => self.interpolate_cmf(z, wavelength),
+            SpectralStandardObserver::CIE1931 => self.cie1931_z(wavelength),
+            SpectralStandardObserver::CIE1964 => self.cie1964_z(wavelength),
+            SpectralStandardObserver::Custom { z, .. } => self.interpolate_cmf(z, wavelength),
         }
     }
 
@@ -5027,13 +5027,13 @@ impl StandardObserver {
 }
 
 /// XYZ tristimulus values
-pub struct XYZ {
+pub struct DisplayXYZ {
     pub x: f64,
     pub y: f64,
     pub z: f64,
 }
 
-impl XYZ {
+impl DisplayXYZ {
     pub fn new(x: f64, y: f64, z: f64) -> Self { Self { x, y, z } }
 
     pub fn to_xyy(&self) -> (f64, f64, f64) {
@@ -5042,7 +5042,7 @@ impl XYZ {
         (self.x / sum, self.y / sum, self.y)
     }
 
-    pub fn to_lab(&self, white: &XYZ) -> Lab {
+    pub fn to_lab(&self, white: &DisplayXYZ) -> Lab {
         let xr = self.x / white.x;
         let yr = self.y / white.y;
         let zr = self.z / white.z;
@@ -5096,13 +5096,13 @@ impl XYZ {
 }
 
 /// CIELAB color values
-pub struct Lab {
+pub struct DisplayLab {
     pub l: f64,
     pub a: f64,
     pub b: f64,
 }
 
-impl Lab {
+impl DisplayLab {
     pub fn new(l: f64, a: f64, b: f64) -> Self { Self { l, a, b } }
 
     pub fn to_lch(&self) -> LCh {
@@ -5112,13 +5112,13 @@ impl Lab {
         LCh { l: self.l, c, h }
     }
 
-    pub fn delta_e_76(&self, other: &Lab) -> f64 {
+    pub fn delta_e_76(&self, other: &DisplayLab) -> f64 {
         ((self.l - other.l).powi(2) +
          (self.a - other.a).powi(2) +
          (self.b - other.b).powi(2)).sqrt()
     }
 
-    pub fn delta_e_94(&self, other: &Lab, application: DE94Application) -> f64 {
+    pub fn delta_e_94(&self, other: &DisplayLab, application: DE94Application) -> f64 {
         let (kl, k1, k2) = match application {
             DE94Application::GraphicArts => (1.0, 0.045, 0.015),
             DE94Application::Textiles => (2.0, 0.048, 0.014),
@@ -5143,7 +5143,7 @@ impl Lab {
          (dh / sh).powi(2)).sqrt()
     }
 
-    pub fn delta_e_2000(&self, other: &Lab) -> f64 {
+    pub fn delta_e_2000(&self, other: &DisplayLab) -> f64 {
         let kl = 1.0;
         let kc = 1.0;
         let kh = 1.0;
@@ -5219,8 +5219,8 @@ pub struct LCh {
 }
 
 impl LCh {
-    pub fn to_lab(&self) -> Lab {
-        Lab {
+    pub fn to_lab(&self) -> DisplayLab {
+        DisplayLab {
             l: self.l,
             a: self.c * self.h.to_radians().cos(),
             b: self.c * self.h.to_radians().sin(),
@@ -5248,24 +5248,24 @@ impl ColorimeterInterface {
         }
     }
 
-    pub fn calibrate_black(&mut self) -> Result<(), CalibrationError> {
+    pub fn calibrate_black(&mut self) -> Result<(), MeasurementCalibrationError> {
         // Dark current calibration
         self.measure_dark_current()?;
         Ok(())
     }
 
-    pub fn calibrate_white(&mut self, reference: &XYZ) -> Result<(), CalibrationError> {
+    pub fn calibrate_white(&mut self, reference: &XYZ) -> Result<(), MeasurementCalibrationError> {
         let measured = self.measure_raw()?;
         self.calculate_correction_matrix(&measured, reference);
         Ok(())
     }
 
-    fn measure_dark_current(&mut self) -> Result<XYZ, CalibrationError> {
+    fn measure_dark_current(&mut self) -> Result<XYZ, MeasurementCalibrationError> {
         // Simulated dark current measurement
         Ok(XYZ::new(0.001, 0.001, 0.001))
     }
 
-    fn measure_raw(&self) -> Result<XYZ, CalibrationError> {
+    fn measure_raw(&self) -> Result<XYZ, MeasurementCalibrationError> {
         // Simulated raw measurement
         Ok(XYZ::new(95.047, 100.0, 108.883))
     }
@@ -5276,7 +5276,7 @@ impl ColorimeterInterface {
         self.correction_matrix[2][2] = reference.z / measured.z;
     }
 
-    pub fn measure(&self) -> Result<Measurement, CalibrationError> {
+    pub fn measure(&self) -> Result<Measurement, MeasurementCalibrationError> {
         let raw = self.measure_raw()?;
         let xyz = self.apply_correction(&raw);
         let lab = xyz.to_lab(&XYZ::new(95.047, 100.0, 108.883));
@@ -5305,31 +5305,31 @@ impl ColorimeterInterface {
         )
     }
 
-    pub fn measure_spectral(&self) -> Result<SPD, CalibrationError> {
+    pub fn measure_spectral(&self) -> Result<SPD, MeasurementCalibrationError> {
         match &self.device {
             ColorimeterDevice::Spectrophotometer { .. } => {
                 // Actual spectral measurement
                 Ok(SPD::new(380.0, 730.0, 10.0))
             }
-            _ => Err(CalibrationError::DeviceNotSupported(
+            _ => Err(MeasurementCalibrationError::DeviceNotSupported(
                 "Spectral measurement requires spectrophotometer".into()
             )),
         }
     }
 }
 
-pub struct Measurement {
+pub struct DisplayMeasurement {
     pub xyz: XYZ,
     pub lab: Lab,
     pub luminance: f64,
     pub timestamp: u64,
 }
 
-pub enum CalibrationError {
+pub enum MeasurementCalibrationError {
     DeviceNotFound(String),
     DeviceNotSupported(String),
     CommunicationError(String),
-    MeasurementFailed(String),
+    DisplayMeasurementFailed(String),
     Timeout,
 }
 
@@ -5338,7 +5338,7 @@ pub enum CalibrationError {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Test patch set types
-pub enum PatchSetType {
+pub enum GeneratorPatchSetType {
     Grayscale { steps: u32 },
     Primaries,
     Secondaries,
@@ -5352,16 +5352,16 @@ pub enum PatchSetType {
 }
 
 /// Patch sequence generator
-pub struct PatchGenerator {
-    pub patch_set: PatchSetType,
+pub struct AnalysisPatchGenerator {
+    pub patch_set: GeneratorPatchSetType,
     pub randomize: bool,
     pub include_verification: bool,
     pub warmup_patches: u32,
     pub cooldown_patches: u32,
 }
 
-impl PatchGenerator {
-    pub fn new(patch_set: PatchSetType) -> Self {
+impl AnalysisPatchGenerator {
+    pub fn new(patch_set: GeneratorPatchSetType) -> Self {
         Self {
             patch_set,
             randomize: false,
@@ -5385,7 +5385,7 @@ impl PatchGenerator {
 
         // Generate main patches
         match &self.patch_set {
-            PatchSetType::Grayscale { steps } => {
+            GeneratorPatchSetType::Grayscale { steps } => {
                 for i in 0..*steps {
                     let v = i as f64 / (*steps - 1) as f64;
                     patches.push(TestPatch {
@@ -5395,17 +5395,17 @@ impl PatchGenerator {
                     });
                 }
             }
-            PatchSetType::Primaries => {
+            GeneratorPatchSetType::Primaries => {
                 patches.push(TestPatch { rgb: RGB::new(1.0, 0.0, 0.0), purpose: PatchPurpose::Primary, expected_lab: None });
                 patches.push(TestPatch { rgb: RGB::new(0.0, 1.0, 0.0), purpose: PatchPurpose::Primary, expected_lab: None });
                 patches.push(TestPatch { rgb: RGB::new(0.0, 0.0, 1.0), purpose: PatchPurpose::Primary, expected_lab: None });
             }
-            PatchSetType::Secondaries => {
+            GeneratorPatchSetType::Secondaries => {
                 patches.push(TestPatch { rgb: RGB::new(1.0, 1.0, 0.0), purpose: PatchPurpose::Secondary, expected_lab: None });
                 patches.push(TestPatch { rgb: RGB::new(1.0, 0.0, 1.0), purpose: PatchPurpose::Secondary, expected_lab: None });
                 patches.push(TestPatch { rgb: RGB::new(0.0, 1.0, 1.0), purpose: PatchPurpose::Secondary, expected_lab: None });
             }
-            PatchSetType::NearNeutral { count } => {
+            GeneratorPatchSetType::NearNeutral { count } => {
                 for i in 0..*count {
                     let base = (i as f64 + 1.0) / (*count as f64 + 1.0);
                     let offset = 0.02 * ((i % 3) as f64 - 1.0);
@@ -5416,7 +5416,7 @@ impl PatchGenerator {
                     });
                 }
             }
-            PatchSetType::FullGamut { samples_per_axis } => {
+            GeneratorPatchSetType::FullGamut { samples_per_axis } => {
                 for r in 0..*samples_per_axis {
                     for g in 0..*samples_per_axis {
                         for b in 0..*samples_per_axis {
@@ -5432,14 +5432,14 @@ impl PatchGenerator {
                     }
                 }
             }
-            PatchSetType::ITU709 => patches.extend(self.generate_itu709()),
-            PatchSetType::DCI_P3 => patches.extend(self.generate_dci_p3()),
-            PatchSetType::Rec2020 => patches.extend(self.generate_rec2020()),
-            PatchSetType::ProfileSpecific { profile: _ } => {
+            GeneratorPatchSetType::ITU709 => patches.extend(self.generate_itu709()),
+            GeneratorPatchSetType::DCI_P3 => patches.extend(self.generate_dci_p3()),
+            GeneratorPatchSetType::Rec2020 => patches.extend(self.generate_rec2020()),
+            GeneratorPatchSetType::ProfileSpecific { profile: _ } => {
                 // Would generate based on profile gamut
                 patches.extend(self.generate_itu709());
             }
-            PatchSetType::Custom { patches: custom } => {
+            GeneratorPatchSetType::Custom { patches: custom } => {
                 for rgb in custom {
                     patches.push(TestPatch {
                         rgb: rgb.clone(),
@@ -5687,7 +5687,7 @@ pub struct AnalysisReport {
     pub passed: bool,
 }
 
-pub struct GrayBalanceReport {
+pub struct AnalysisGrayBalanceReport {
     pub max_deviation: f64,
     pub avg_deviation: f64,
     pub passed: bool,
@@ -5851,7 +5851,7 @@ impl EOTF {
 }
 
 /// HDR calibration processor
-pub struct HDRCalibrator {
+pub struct HDRCalibrationSystem {
     pub target: HDRTarget,
     pub colorimeter: ColorimeterInterface,
     pub measurements: Vec<HDRMeasurement>,
@@ -5865,7 +5865,7 @@ pub struct HDRMeasurement {
     pub measured_xyz: XYZ,
 }
 
-impl HDRCalibrator {
+impl HDRCalibrationSystem {
     pub fn new(target: HDRTarget, colorimeter: ColorimeterInterface) -> Self {
         Self {
             target,
@@ -5875,17 +5875,17 @@ impl HDRCalibrator {
         }
     }
 
-    pub fn measure_peak_luminance(&mut self) -> Result<f64, CalibrationError> {
+    pub fn measure_peak_luminance(&mut self) -> Result<f64, MeasurementCalibrationError> {
         let m = self.colorimeter.measure()?;
         Ok(m.luminance)
     }
 
-    pub fn measure_min_luminance(&mut self) -> Result<f64, CalibrationError> {
+    pub fn measure_min_luminance(&mut self) -> Result<f64, MeasurementCalibrationError> {
         let m = self.colorimeter.measure()?;
         Ok(m.luminance)
     }
 
-    pub fn measure_eotf(&mut self, steps: u32) -> Result<(), CalibrationError> {
+    pub fn measure_eotf(&mut self, steps: u32) -> Result<(), MeasurementCalibrationError> {
         self.measurements.clear();
 
         for i in 0..=steps {
@@ -6162,7 +6162,7 @@ pub enum AmbientSensor {
 }
 
 /// Ambient light measurement
-pub struct AmbientMeasurement {
+pub struct CompensationAmbientMeasurement {
     pub illuminance: f64,      // lux
     pub color_temp: f64,       // Kelvin
     pub timestamp: u64,
@@ -6177,7 +6177,7 @@ pub struct AmbientCompensation {
     pub min_brightness: f64,
     pub max_brightness: f64,
     pub color_temp_adjust: bool,
-    pub history: Vec<AmbientMeasurement>,
+    pub history: Vec<CompensationAmbientMeasurement>,
 }
 
 impl AmbientCompensation {
@@ -6194,9 +6194,9 @@ impl AmbientCompensation {
         }
     }
 
-    pub fn measure(&mut self) -> AmbientMeasurement {
+    pub fn measure(&mut self) -> CompensationAmbientMeasurement {
         // Simulated measurement
-        let measurement = AmbientMeasurement {
+        let measurement = CompensationAmbientMeasurement {
             illuminance: 300.0,
             color_temp: 5500.0,
             timestamp: 0,
@@ -6210,7 +6210,7 @@ impl AmbientCompensation {
         measurement
     }
 
-    pub fn calculate_brightness(&self, ambient: &AmbientMeasurement) -> f64 {
+    pub fn calculate_brightness(&self, ambient: &CompensationAmbientMeasurement) -> f64 {
         // Brightness curve based on ambient illuminance
         let normalized = (ambient.illuminance / 1000.0).clamp(0.0, 1.0);
         let brightness = self.min_brightness +
@@ -6219,7 +6219,7 @@ impl AmbientCompensation {
         brightness.clamp(self.min_brightness, self.max_brightness)
     }
 
-    pub fn calculate_color_temp(&self, ambient: &AmbientMeasurement) -> f64 {
+    pub fn calculate_color_temp(&self, ambient: &CompensationAmbientMeasurement) -> f64 {
         if !self.color_temp_adjust {
             return 6500.0; // D65
         }
@@ -6244,7 +6244,7 @@ impl AmbientCompensation {
         let avg_lux = recent.iter().map(|m| m.illuminance).sum::<f64>() / recent.len() as f64;
         let avg_temp = recent.iter().map(|m| m.color_temp).sum::<f64>() / recent.len() as f64;
 
-        let ambient = AmbientMeasurement {
+        let ambient = CompensationAmbientMeasurement {
             illuminance: avg_lux,
             color_temp: avg_temp,
             timestamp: 0,
@@ -6265,7 +6265,7 @@ pub struct UniformityGrid {
     pub measurements: Vec<Vec<UniformityPoint>>,
 }
 
-pub struct UniformityPoint {
+pub struct CorrectionUniformityPoint {
     pub row: u32,
     pub col: u32,
     pub luminance: f64,
@@ -6284,7 +6284,7 @@ impl UniformityGrid {
     }
 
     pub fn add_measurement(&mut self, row: u32, col: u32, luminance: f64, color: Lab) {
-        let point = UniformityPoint {
+        let point = CorrectionUniformityPoint {
             row, col, luminance, color,
             delta_l: 0.0,
             delta_ab: 0.0,
@@ -6314,7 +6314,7 @@ impl UniformityGrid {
         }
     }
 
-    fn get_point(&self, row: u32, col: u32) -> Option<&UniformityPoint> {
+    fn get_point(&self, row: u32, col: u32) -> Option<&CorrectionUniformityPoint> {
         self.measurements.get(row as usize)
             .and_then(|r| r.iter().find(|p| p.col == col))
     }
@@ -6367,7 +6367,7 @@ impl UniformityGrid {
     }
 }
 
-pub struct UniformityReport {
+pub struct CorrectionUniformityReport {
     pub max_luminance_deviation: f64,
     pub avg_luminance_deviation: f64,
     pub max_color_deviation: f64,
@@ -6530,7 +6530,7 @@ impl DisplayProfiler {
         Self { colorimeter, characterization: None }
     }
 
-    pub fn profile_display(&mut self, monitor_id: &str) -> Result<DisplayCharacterization, CalibrationError> {
+    pub fn profile_display(&mut self, monitor_id: &str) -> Result<DisplayCharacterization, MeasurementCalibrationError> {
         // Measure primaries
         let red = self.measure_primary(RGB::new(1.0, 0.0, 0.0))?;
         let green = self.measure_primary(RGB::new(0.0, 1.0, 0.0))?;
@@ -6581,12 +6581,12 @@ impl DisplayProfiler {
         Ok(char)
     }
 
-    fn measure_primary(&self, _rgb: RGB) -> Result<XYZ, CalibrationError> {
+    fn measure_primary(&self, _rgb: RGB) -> Result<XYZ, MeasurementCalibrationError> {
         let m = self.colorimeter.measure()?;
         Ok(m.xyz)
     }
 
-    fn measure_gamma(&self) -> Result<f64, CalibrationError> {
+    fn measure_gamma(&self) -> Result<f64, MeasurementCalibrationError> {
         // Simplified gamma measurement
         Ok(2.2)
     }

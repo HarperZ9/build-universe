@@ -3482,7 +3482,7 @@ impl MemoryPatcher {
 pub mod presets {
     use super::*;
 
-    pub struct ENBPreset {
+    pub struct PresetsENBPreset {
         pub name: String,
         pub author: String,
         pub version: String,
@@ -3503,14 +3503,14 @@ pub mod presets {
 
     pub enum PerformanceImpact { Minimal, Light, Medium, Heavy, Extreme }
 
-    pub struct PresetManager {
-        installed_presets: HashMap<String, ENBPreset>,
+    pub struct PresetsPresetManager {
+        installed_presets: HashMap<String, PresetsENBPreset>,
         active_preset: Option<String>,
         backup_path: String,
         game_path: String,
     }
 
-    impl PresetManager {
+    impl PresetsPresetManager {
         pub fn new(game_path: &str, backup_path: &str) -> Self {
             Self {
                 installed_presets: HashMap::new(),
@@ -3522,7 +3522,7 @@ pub mod presets {
 
         pub fn import_preset(&mut self, archive_path: &str) -> Result<String, String> {
             // Extract and parse preset
-            let preset = ENBPreset {
+            let preset = PresetsENBPreset {
                 name: "Imported".to_string(), author: "Unknown".to_string(),
                 version: "1.0.0".to_string(), target_game: TargetGame::Unknown,
                 enb_version: ENBVersion::Unknown, files: Vec::new(),
@@ -3574,7 +3574,7 @@ pub mod presets {
             Ok(())
         }
 
-        pub fn list_presets(&self) -> Vec<(&String, &ENBPreset)> {
+        pub fn list_presets(&self) -> Vec<(&String, &PresetsENBPreset)> {
             self.installed_presets.iter().collect()
         }
     }
@@ -3594,7 +3594,7 @@ pub mod presets {
     pub enum DiffType { OnlyInA, OnlyInB, Different, Identical }
 
     impl PresetComparison {
-        pub fn compare(manager: &PresetManager, a: &str, b: &str) -> Result<Self, String> {
+        pub fn compare(manager: &PresetsPresetManager, a: &str, b: &str) -> Result<Self, String> {
             let preset_a = manager.installed_presets.get(a).ok_or("Preset A not found")?;
             let preset_b = manager.installed_presets.get(b).ok_or("Preset B not found")?;
 
@@ -3651,14 +3651,14 @@ pub mod weather {
     use super::*;
 
     pub struct WeatherSystem {
-        current_weather: WeatherType,
+        current_weather: WeatherModWeatherType,
         transition_progress: f32,
-        target_weather: Option<WeatherType>,
-        weather_params: HashMap<WeatherType, WeatherParams>,
+        target_weather: Option<WeatherModWeatherType>,
+        weather_params: HashMap<WeatherModWeatherType, WeatherParams>,
     }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    pub enum WeatherType {
+    pub enum WeatherModWeatherType {
         Clear, Cloudy, Overcast, Foggy, Rainy, Stormy, Snowy, Blizzard, Ash, Dust,
     }
 
@@ -3689,34 +3689,34 @@ pub mod weather {
     impl WeatherSystem {
         pub fn new() -> Self {
             let mut params = HashMap::new();
-            params.insert(WeatherType::Clear, WeatherParams::default());
-            params.insert(WeatherType::Cloudy, WeatherParams {
+            params.insert(WeatherModWeatherType::Clear, WeatherParams::default());
+            params.insert(WeatherModWeatherType::Cloudy, WeatherParams {
                 cloud_coverage: 0.6, sun_intensity: 0.8, ..Default::default()
             });
-            params.insert(WeatherType::Rainy, WeatherParams {
+            params.insert(WeatherModWeatherType::Rainy, WeatherParams {
                 cloud_coverage: 1.0, sun_intensity: 0.3, fog_density: 0.2,
                 precipitation_intensity: 0.7, ..Default::default()
             });
-            params.insert(WeatherType::Stormy, WeatherParams {
+            params.insert(WeatherModWeatherType::Stormy, WeatherParams {
                 cloud_coverage: 1.0, sun_intensity: 0.1, fog_density: 0.3,
                 precipitation_intensity: 1.0, lightning_frequency: 0.3, wind_speed: 0.8,
                 ..Default::default()
             });
-            params.insert(WeatherType::Snowy, WeatherParams {
+            params.insert(WeatherModWeatherType::Snowy, WeatherParams {
                 cloud_coverage: 0.8, sun_intensity: 0.5, fog_density: 0.1,
                 precipitation_intensity: 0.5, fog_color: (0.9, 0.9, 1.0),
                 ..Default::default()
             });
 
             Self {
-                current_weather: WeatherType::Clear,
+                current_weather: WeatherModWeatherType::Clear,
                 transition_progress: 0.0,
                 target_weather: None,
                 weather_params: params,
             }
         }
 
-        pub fn set_weather(&mut self, weather: WeatherType) {
+        pub fn set_weather(&mut self, weather: WeatherModWeatherType) {
             if weather != self.current_weather {
                 self.target_weather = Some(weather);
                 self.transition_progress = 0.0;
@@ -4518,13 +4518,13 @@ impl WaterParams {
 
 pub struct GerstnerWave { pub direction: Vec2, pub steepness: f32, pub wavelength: f32, pub speed: f32 }
 
-pub struct WaterSystem {
+pub struct RenderWaterSystem {
     pub params: WaterParams,
     pub waves: Vec<GerstnerWave>,
     pub time: f32,
 }
 
-impl WaterSystem {
+impl RenderWaterSystem {
     pub fn new(params: WaterParams) -> Self {
         let waves = vec![
             GerstnerWave { direction: Vec2::new(1.0, 0.0).normalize(), steepness: 0.5, wavelength: 60.0, speed: 1.0 },
@@ -4653,28 +4653,28 @@ impl AnamorphicFlare {
 // SUBSURFACE SCATTERING PROFILES
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub struct SSSProfile { pub name: String, pub scatter_color: Vec3, pub scatter_distance: f32, pub falloff: Vec3, pub translucency: f32 }
+pub struct ProfileSSSProfile { pub name: String, pub scatter_color: Vec3, pub scatter_distance: f32, pub falloff: Vec3, pub translucency: f32 }
 
-pub struct SSSProfileLibrary {
-    pub profiles: HashMap<String, SSSProfile>,
+pub struct ProfileSSSProfileLibrary {
+    pub profiles: HashMap<String, ProfileSSSProfile>,
 }
 
-impl SSSProfileLibrary {
+impl ProfileSSSProfileLibrary {
     pub fn new() -> Self {
         let mut lib = Self { profiles: HashMap::new() };
-        lib.add(SSSProfile { name: "Skin".into(), scatter_color: Vec3::new(1.0, 0.4, 0.25), scatter_distance: 2.7, falloff: Vec3::new(1.0, 0.37, 0.3), translucency: 0.5 });
-        lib.add(SSSProfile { name: "Marble".into(), scatter_color: Vec3::new(0.83, 0.79, 0.75), scatter_distance: 8.51, falloff: Vec3::new(1.0, 0.93, 0.88), translucency: 0.2 });
-        lib.add(SSSProfile { name: "Milk".into(), scatter_color: Vec3::new(0.98, 0.98, 0.95), scatter_distance: 2.0, falloff: Vec3::new(1.0, 0.95, 0.85), translucency: 0.8 });
-        lib.add(SSSProfile { name: "Jade".into(), scatter_color: Vec3::new(0.4, 0.8, 0.5), scatter_distance: 4.0, falloff: Vec3::new(0.8, 1.0, 0.85), translucency: 0.3 });
-        lib.add(SSSProfile { name: "Wax".into(), scatter_color: Vec3::new(1.0, 0.9, 0.7), scatter_distance: 3.0, falloff: Vec3::new(1.0, 0.85, 0.6), translucency: 0.6 });
-        lib.add(SSSProfile { name: "Leaf".into(), scatter_color: Vec3::new(0.3, 0.7, 0.2), scatter_distance: 1.5, falloff: Vec3::new(0.5, 1.0, 0.4), translucency: 0.7 });
+        lib.add(ProfileSSSProfile { name: "Skin".into(), scatter_color: Vec3::new(1.0, 0.4, 0.25), scatter_distance: 2.7, falloff: Vec3::new(1.0, 0.37, 0.3), translucency: 0.5 });
+        lib.add(ProfileSSSProfile { name: "Marble".into(), scatter_color: Vec3::new(0.83, 0.79, 0.75), scatter_distance: 8.51, falloff: Vec3::new(1.0, 0.93, 0.88), translucency: 0.2 });
+        lib.add(ProfileSSSProfile { name: "Milk".into(), scatter_color: Vec3::new(0.98, 0.98, 0.95), scatter_distance: 2.0, falloff: Vec3::new(1.0, 0.95, 0.85), translucency: 0.8 });
+        lib.add(ProfileSSSProfile { name: "Jade".into(), scatter_color: Vec3::new(0.4, 0.8, 0.5), scatter_distance: 4.0, falloff: Vec3::new(0.8, 1.0, 0.85), translucency: 0.3 });
+        lib.add(ProfileSSSProfile { name: "Wax".into(), scatter_color: Vec3::new(1.0, 0.9, 0.7), scatter_distance: 3.0, falloff: Vec3::new(1.0, 0.85, 0.6), translucency: 0.6 });
+        lib.add(ProfileSSSProfile { name: "Leaf".into(), scatter_color: Vec3::new(0.3, 0.7, 0.2), scatter_distance: 1.5, falloff: Vec3::new(0.5, 1.0, 0.4), translucency: 0.7 });
         lib
     }
 
-    pub fn add(&mut self, profile: SSSProfile) { self.profiles.insert(profile.name.clone(), profile); }
-    pub fn get(&self, name: &str) -> Option<&SSSProfile> { self.profiles.get(name) }
+    pub fn add(&mut self, profile: ProfileSSSProfile) { self.profiles.insert(profile.name.clone(), profile); }
+    pub fn get(&self, name: &str) -> Option<&ProfileSSSProfile> { self.profiles.get(name) }
 
-    pub fn gaussian_kernel(&self, profile: &SSSProfile, radius: f32, samples: usize) -> Vec<(f32, Vec3)> {
+    pub fn gaussian_kernel(&self, profile: &ProfileSSSProfile, radius: f32, samples: usize) -> Vec<(f32, Vec3)> {
         let mut kernel = Vec::with_capacity(samples);
         let step = radius / samples as f32;
         for i in 0..samples {
@@ -5150,7 +5150,7 @@ pub enum LightType { Directional, Point, Spot }
 // ENB PRESET SYSTEM
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub struct ENBPreset {
+pub struct DeferredENBPreset {
     pub name: String,
     pub author: String,
     pub version: String,
@@ -5166,7 +5166,7 @@ pub struct WeatherConfig { pub weather_id: u32, pub settings: HashMap<String, EN
 pub struct InteriorConfig { pub brightness: f32, pub contrast: f32, pub saturation: f32, pub color_filter: [f32; 3] }
 pub struct TimeOfDayConfig { pub hour: f32, pub settings: HashMap<String, ENBValue> }
 
-impl ENBPreset {
+impl DeferredENBPreset {
     pub fn new(name: &str) -> Self { Self { name: name.to_string(), author: String::new(), version: "1.0".to_string(), game: String::new(), sections: HashMap::new(), weather_configs: HashMap::new(), interior_config: None, time_of_day: Vec::new() } }
 
     pub fn set(&mut self, section: &str, key: &str, value: ENBValue) { self.sections.entry(section.to_string()).or_insert_with(HashMap::new).insert(key.to_string(), value); }
@@ -5237,7 +5237,7 @@ pub mod advanced_lighting {
     use super::*;
 
     #[derive(Debug, Clone, Copy, PartialEq)]
-    pub enum LightType { Directional, Point, Spot, Area, IES, Emissive }
+    pub enum AdvancedLightType { Directional, Point, Spot, Area, IES, Emissive }
 
     #[derive(Debug, Clone, Copy, PartialEq)]
     pub enum ShadowQuality { Off, Low, Medium, High, Ultra, RayTraced }
@@ -5247,7 +5247,7 @@ pub mod advanced_lighting {
 
     #[derive(Debug, Clone)]
     pub struct LightSource {
-        pub light_type: LightType,
+        pub light_type: AdvancedLightType,
         pub position: [f32; 3],
         pub direction: [f32; 3],
         pub color: [f32; 3],
@@ -5266,16 +5266,16 @@ pub mod advanced_lighting {
 
     impl Default for LightSource {
         fn default() -> Self {
-            Self { light_type: LightType::Point, position: [0.0; 3], direction: [0.0, -1.0, 0.0], color: [1.0; 3], intensity: 1.0, temperature: 6500.0,
+            Self { light_type: AdvancedLightType::Point, position: [0.0; 3], direction: [0.0, -1.0, 0.0], color: [1.0; 3], intensity: 1.0, temperature: 6500.0,
                 radius: 10.0, inner_angle: 30.0, outer_angle: 45.0, area_size: [1.0, 1.0], ies_profile: None, cast_shadows: true, shadow_bias: 0.001, volumetric: false, volumetric_intensity: 0.1 }
         }
     }
 
     impl LightSource {
-        pub fn directional(direction: [f32; 3], color: [f32; 3], intensity: f32) -> Self { Self { light_type: LightType::Directional, direction, color, intensity, ..Default::default() } }
-        pub fn point(position: [f32; 3], color: [f32; 3], intensity: f32, radius: f32) -> Self { Self { light_type: LightType::Point, position, color, intensity, radius, ..Default::default() } }
-        pub fn spot(position: [f32; 3], direction: [f32; 3], color: [f32; 3], intensity: f32, inner: f32, outer: f32) -> Self { Self { light_type: LightType::Spot, position, direction, color, intensity, inner_angle: inner, outer_angle: outer, ..Default::default() } }
-        pub fn area(position: [f32; 3], direction: [f32; 3], size: [f32; 2], color: [f32; 3], intensity: f32) -> Self { Self { light_type: LightType::Area, position, direction, area_size: size, color, intensity, ..Default::default() } }
+        pub fn directional(direction: [f32; 3], color: [f32; 3], intensity: f32) -> Self { Self { light_type: AdvancedLightType::Directional, direction, color, intensity, ..Default::default() } }
+        pub fn point(position: [f32; 3], color: [f32; 3], intensity: f32, radius: f32) -> Self { Self { light_type: AdvancedLightType::Point, position, color, intensity, radius, ..Default::default() } }
+        pub fn spot(position: [f32; 3], direction: [f32; 3], color: [f32; 3], intensity: f32, inner: f32, outer: f32) -> Self { Self { light_type: AdvancedLightType::Spot, position, direction, color, intensity, inner_angle: inner, outer_angle: outer, ..Default::default() } }
+        pub fn area(position: [f32; 3], direction: [f32; 3], size: [f32; 2], color: [f32; 3], intensity: f32) -> Self { Self { light_type: AdvancedLightType::Area, position, direction, area_size: size, color, intensity, ..Default::default() } }
 
         pub fn temperature_to_rgb(kelvin: f32) -> [f32; 3] {
             let temp = (kelvin / 100.0).clamp(10.0, 400.0);
@@ -5289,8 +5289,8 @@ pub mod advanced_lighting {
 
         pub fn attenuation(&self, distance: f32) -> f32 {
             match self.light_type {
-                LightType::Directional => 1.0,
-                LightType::Point | LightType::Spot | LightType::Area => {
+                AdvancedLightType::Directional => 1.0,
+                AdvancedLightType::Point | AdvancedLightType::Spot | AdvancedLightType::Area => {
                     let d = distance / self.radius;
                     let atten = 1.0 / (1.0 + d * d);
                     let falloff = (1.0 - (d * d * d * d).min(1.0)).max(0.0);
@@ -5301,7 +5301,7 @@ pub mod advanced_lighting {
         }
 
         pub fn spot_factor(&self, light_dir: [f32; 3], to_light: [f32; 3]) -> f32 {
-            if self.light_type != LightType::Spot { return 1.0; }
+            if self.light_type != AdvancedLightType::Spot { return 1.0; }
             let dot = -(light_dir[0] * to_light[0] + light_dir[1] * to_light[1] + light_dir[2] * to_light[2]);
             let inner_cos = self.inner_angle.to_radians().cos();
             let outer_cos = self.outer_angle.to_radians().cos();
@@ -5476,8 +5476,8 @@ pub mod advanced_lighting {
 #define MAX_LIGHTS 128
 #define CASCADE_COUNT 4
 
-struct Light { float3 position; float3 direction; float3 color; float intensity; float radius; float innerAngle; float outerAngle; int type; bool castShadows; };
-cbuffer LightBuffer { Light lights[MAX_LIGHTS]; int lightCount; };
+struct ShaderLight { float3 position; float3 direction; float3 color; float intensity; float radius; float innerAngle; float outerAngle; int type; bool castShadows; };
+cbuffer LightBuffer { ShaderLight lights[MAX_LIGHTS]; int lightCount; };
 
 float DistanceAttenuation(float distance, float radius) {
     float d = distance / radius;
@@ -5527,14 +5527,14 @@ pub mod weather_integration {
     use super::*;
 
     #[derive(Debug, Clone, Copy, PartialEq)]
-    pub enum WeatherType { Clear, Cloudy, Overcast, Foggy, Rainy, Stormy, Snowy, Blizzard, Dusty, Sandstorm }
+    pub enum IntegrationWeatherType { Clear, Cloudy, Overcast, Foggy, Rainy, Stormy, Snowy, Blizzard, Dusty, Sandstorm }
 
     #[derive(Debug, Clone, Copy, PartialEq)]
     pub enum CloudType { None, Cirrus, Cumulus, Stratus, Cumulonimbus, Stratocumulus, Altocumulus }
 
     #[derive(Debug, Clone)]
-    pub struct WeatherState {
-        pub weather_type: WeatherType,
+    pub struct IntegrationWeatherState {
+        pub weather_type: IntegrationWeatherType,
         pub cloud_type: CloudType,
         pub cloud_coverage: f32,
         pub cloud_density: f32,
@@ -5557,26 +5557,26 @@ pub mod weather_integration {
         pub puddle_amount: f32,
     }
 
-    impl Default for WeatherState {
+    impl Default for IntegrationWeatherState {
         fn default() -> Self {
-            Self { weather_type: WeatherType::Clear, cloud_type: CloudType::Cumulus, cloud_coverage: 0.3, cloud_density: 0.5, precipitation_intensity: 0.0,
+            Self { weather_type: IntegrationWeatherType::Clear, cloud_type: CloudType::Cumulus, cloud_coverage: 0.3, cloud_density: 0.5, precipitation_intensity: 0.0,
                 wind_speed: 1.0, wind_direction: [1.0, 0.0], fog_density: 0.0, fog_start: 100.0, fog_end: 1000.0, fog_height: 50.0, fog_height_falloff: 0.1,
                 lightning_intensity: 0.0, lightning_frequency: 0.0, sun_intensity: 1.0, ambient_intensity: 0.3, temperature: 20.0, humidity: 0.5, wetness: 0.0, snow_coverage: 0.0, puddle_amount: 0.0 }
         }
     }
 
-    impl WeatherState {
+    impl IntegrationWeatherState {
         pub fn clear() -> Self { Self::default() }
-        pub fn cloudy() -> Self { Self { weather_type: WeatherType::Cloudy, cloud_coverage: 0.6, sun_intensity: 0.8, ..Default::default() } }
-        pub fn overcast() -> Self { Self { weather_type: WeatherType::Overcast, cloud_type: CloudType::Stratus, cloud_coverage: 1.0, sun_intensity: 0.4, ambient_intensity: 0.5, ..Default::default() } }
-        pub fn foggy() -> Self { Self { weather_type: WeatherType::Foggy, fog_density: 0.5, fog_start: 10.0, fog_end: 200.0, sun_intensity: 0.3, ..Default::default() } }
-        pub fn rainy() -> Self { Self { weather_type: WeatherType::Rainy, cloud_type: CloudType::Cumulonimbus, cloud_coverage: 0.9, precipitation_intensity: 0.7, sun_intensity: 0.2, wetness: 0.8, puddle_amount: 0.5, humidity: 0.9, ..Default::default() } }
-        pub fn stormy() -> Self { Self { weather_type: WeatherType::Stormy, cloud_type: CloudType::Cumulonimbus, cloud_coverage: 1.0, precipitation_intensity: 1.0, wind_speed: 5.0, lightning_intensity: 1.0, lightning_frequency: 0.3, sun_intensity: 0.1, wetness: 1.0, puddle_amount: 0.8, ..Default::default() } }
-        pub fn snowy() -> Self { Self { weather_type: WeatherType::Snowy, cloud_coverage: 0.8, precipitation_intensity: 0.5, temperature: -5.0, snow_coverage: 0.6, sun_intensity: 0.6, ..Default::default() } }
-        pub fn blizzard() -> Self { Self { weather_type: WeatherType::Blizzard, cloud_coverage: 1.0, precipitation_intensity: 1.0, wind_speed: 8.0, fog_density: 0.7, temperature: -15.0, snow_coverage: 1.0, sun_intensity: 0.1, ..Default::default() } }
+        pub fn cloudy() -> Self { Self { weather_type: IntegrationWeatherType::Cloudy, cloud_coverage: 0.6, sun_intensity: 0.8, ..Default::default() } }
+        pub fn overcast() -> Self { Self { weather_type: IntegrationWeatherType::Overcast, cloud_type: CloudType::Stratus, cloud_coverage: 1.0, sun_intensity: 0.4, ambient_intensity: 0.5, ..Default::default() } }
+        pub fn foggy() -> Self { Self { weather_type: IntegrationWeatherType::Foggy, fog_density: 0.5, fog_start: 10.0, fog_end: 200.0, sun_intensity: 0.3, ..Default::default() } }
+        pub fn rainy() -> Self { Self { weather_type: IntegrationWeatherType::Rainy, cloud_type: CloudType::Cumulonimbus, cloud_coverage: 0.9, precipitation_intensity: 0.7, sun_intensity: 0.2, wetness: 0.8, puddle_amount: 0.5, humidity: 0.9, ..Default::default() } }
+        pub fn stormy() -> Self { Self { weather_type: IntegrationWeatherType::Stormy, cloud_type: CloudType::Cumulonimbus, cloud_coverage: 1.0, precipitation_intensity: 1.0, wind_speed: 5.0, lightning_intensity: 1.0, lightning_frequency: 0.3, sun_intensity: 0.1, wetness: 1.0, puddle_amount: 0.8, ..Default::default() } }
+        pub fn snowy() -> Self { Self { weather_type: IntegrationWeatherType::Snowy, cloud_coverage: 0.8, precipitation_intensity: 0.5, temperature: -5.0, snow_coverage: 0.6, sun_intensity: 0.6, ..Default::default() } }
+        pub fn blizzard() -> Self { Self { weather_type: IntegrationWeatherType::Blizzard, cloud_coverage: 1.0, precipitation_intensity: 1.0, wind_speed: 8.0, fog_density: 0.7, temperature: -15.0, snow_coverage: 1.0, sun_intensity: 0.1, ..Default::default() } }
 
-        pub fn lerp(&self, other: &WeatherState, t: f32) -> WeatherState {
-            WeatherState {
+        pub fn lerp(&self, other: &IntegrationWeatherState, t: f32) -> IntegrationWeatherState {
+            IntegrationWeatherState {
                 weather_type: if t < 0.5 { self.weather_type } else { other.weather_type },
                 cloud_type: if t < 0.5 { self.cloud_type } else { other.cloud_type },
                 cloud_coverage: self.cloud_coverage + (other.cloud_coverage - self.cloud_coverage) * t,
@@ -5602,9 +5602,9 @@ pub mod weather_integration {
         }
     }
 
-    pub struct WeatherSystem {
-        pub current_state: WeatherState,
-        pub target_state: WeatherState,
+    pub struct IntegrationWeatherSystem {
+        pub current_state: IntegrationWeatherState,
+        pub target_state: IntegrationWeatherState,
         pub transition_progress: f32,
         pub transition_duration: f32,
         pub time_of_day: f32,
@@ -5612,10 +5612,10 @@ pub mod weather_integration {
         pub random_seed: u32,
     }
 
-    impl WeatherSystem {
-        pub fn new() -> Self { Self { current_state: WeatherState::default(), target_state: WeatherState::default(), transition_progress: 1.0, transition_duration: 30.0, time_of_day: 12.0, day_length: 24.0, random_seed: 42 } }
+    impl IntegrationWeatherSystem {
+        pub fn new() -> Self { Self { current_state: IntegrationWeatherState::default(), target_state: IntegrationWeatherState::default(), transition_progress: 1.0, transition_duration: 30.0, time_of_day: 12.0, day_length: 24.0, random_seed: 42 } }
 
-        pub fn set_weather(&mut self, weather: WeatherState, duration: f32) {
+        pub fn set_weather(&mut self, weather: IntegrationWeatherState, duration: f32) {
             self.target_state = weather;
             self.transition_duration = duration;
             self.transition_progress = 0.0;
@@ -6118,7 +6118,7 @@ pub mod subsurface_scattering {
     pub enum SSSModel { Gaussian, Burley, RandomWalk, DipoleDiffusion, Screen }
 
     #[derive(Debug, Clone)]
-    pub struct SSSProfile {
+    pub struct SubsurfaceSSSProfile {
         pub name: String,
         pub scatter_color: [f32; 3],
         pub scatter_radius: f32,
@@ -6128,13 +6128,13 @@ pub mod subsurface_scattering {
         pub model: SSSModel,
     }
 
-    impl Default for SSSProfile {
+    impl Default for SubsurfaceSSSProfile {
         fn default() -> Self {
             Self { name: "Skin".to_string(), scatter_color: [1.0, 0.4, 0.25], scatter_radius: 1.0, subsurface_color: [0.8, 0.2, 0.1], falloff: [1.0, 0.37, 0.12], sharpness: 1.0, model: SSSModel::Burley }
         }
     }
 
-    impl SSSProfile {
+    impl SubsurfaceSSSProfile {
         pub fn skin() -> Self { Self::default() }
         pub fn marble() -> Self { Self { name: "Marble".to_string(), scatter_color: [1.0, 0.95, 0.9], scatter_radius: 0.5, subsurface_color: [0.9, 0.8, 0.7], falloff: [1.0, 0.9, 0.8], sharpness: 2.0, model: SSSModel::Gaussian } }
         pub fn wax() -> Self { Self { name: "Wax".to_string(), scatter_color: [1.0, 0.9, 0.7], scatter_radius: 2.0, subsurface_color: [0.8, 0.5, 0.2], falloff: [1.0, 0.6, 0.3], sharpness: 0.5, model: SSSModel::Burley } }
@@ -6158,7 +6158,7 @@ pub mod subsurface_scattering {
     }
 
     pub struct SSSRenderer {
-        pub profiles: Vec<SSSProfile>,
+        pub profiles: Vec<SubsurfaceSSSProfile>,
         pub sample_count: u32,
         pub blur_radius: f32,
         pub separation_scale: f32,
@@ -6169,7 +6169,7 @@ pub mod subsurface_scattering {
 
     impl SSSRenderer {
         pub fn new() -> Self {
-            Self { profiles: vec![SSSProfile::skin()], sample_count: 25, blur_radius: 0.0125, separation_scale: 1.0, follow_surface: true, transmittance_bias: 0.0, normal_influence: 0.5 }
+            Self { profiles: vec![SubsurfaceSSSProfile::skin()], sample_count: 25, blur_radius: 0.0125, separation_scale: 1.0, follow_surface: true, transmittance_bias: 0.0, normal_influence: 0.5 }
         }
 
         pub fn separable_kernel(samples: u32) -> Vec<(f32, f32)> {
@@ -6184,7 +6184,7 @@ pub mod subsurface_scattering {
             kernel
         }
 
-        pub fn transmittance(&self, thickness: f32, profile: &SSSProfile) -> [f32; 3] {
+        pub fn transmittance(&self, thickness: f32, profile: &SubsurfaceSSSProfile) -> [f32; 3] {
             profile.subsurface_color.map(|c| (-(1.0 - c) * thickness / profile.scatter_radius).exp())
         }
     }

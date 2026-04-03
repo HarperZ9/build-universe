@@ -2687,7 +2687,7 @@ enum PresenceStatus {
     Offline
 }
 
-struct DevicePresence {
+struct PresenceDevicePresence {
     device_id: str,
     status: PresenceStatus,
     status_message: str?,
@@ -2714,18 +2714,18 @@ struct AudioState {
     in_call: bool
 }
 
-struct PresenceManager {
-    local_presence: DevicePresence,
-    peer_presence: Map<str, DevicePresence>,
+struct PresenceSystemManager {
+    local_presence: PresenceDevicePresence,
+    peer_presence: Map<str, PresenceDevicePresence>,
     broadcast_interval: Duration,
     idle_threshold: Duration,
     subscribers: [PresenceSubscriber]
 }
 
-impl PresenceManager {
-    fn new(device_id: str) -> PresenceManager {
-        PresenceManager {
-            local_presence: DevicePresence {
+impl PresenceSystemManager {
+    fn new(device_id: str) -> PresenceSystemManager {
+        PresenceSystemManager {
+            local_presence: PresenceDevicePresence {
                 device_id: device_id,
                 status: PresenceStatus::Online,
                 status_message: None,
@@ -2772,7 +2772,7 @@ impl PresenceManager {
         }
     }
 
-    fn handle_presence_update(mut self, presence: DevicePresence) {
+    fn handle_presence_update(mut self, presence: PresenceDevicePresence) {
         self.peer_presence.insert(presence.device_id.clone(), presence);
     }
 

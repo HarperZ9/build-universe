@@ -1972,7 +1972,7 @@ fn bradford_adapt(xyz: (f64, f64, f64), src_wp: (f64, f64, f64), dst_wp: (f64, f
 // COLOR BLINDNESS SIMULATION
 // ═══════════════════════════════════════════════════════════════════════════════
 
-enum ColorBlindnessType {
+enum SimColorBlindnessType {
     Protanopia,      // No red cones
     Deuteranopia,    // No green cones
     Tritanopia,      // No blue cones
@@ -1984,13 +1984,13 @@ enum ColorBlindnessType {
 }
 
 struct ColorBlindnessSimulator {
-    cvd_type: ColorBlindnessType,
+    cvd_type: SimColorBlindnessType,
     severity: f64,  // 0.0-1.0 for anomalous trichromacy
     simulation_matrix: Matrix3x3
 }
 
 impl ColorBlindnessSimulator {
-    fn new(cvd_type: ColorBlindnessType) -> ColorBlindnessSimulator {
+    fn new(cvd_type: SimColorBlindnessType) -> ColorBlindnessSimulator {
         let matrix = Self::get_simulation_matrix(cvd_type, 1.0);
         ColorBlindnessSimulator {
             cvd_type: cvd_type,
@@ -1999,7 +1999,7 @@ impl ColorBlindnessSimulator {
         }
     }
 
-    fn with_severity(cvd_type: ColorBlindnessType, severity: f64) -> ColorBlindnessSimulator {
+    fn with_severity(cvd_type: SimColorBlindnessType, severity: f64) -> ColorBlindnessSimulator {
         let matrix = Self::get_simulation_matrix(cvd_type, severity);
         ColorBlindnessSimulator {
             cvd_type: cvd_type,
@@ -2008,7 +2008,7 @@ impl ColorBlindnessSimulator {
         }
     }
 
-    fn get_simulation_matrix(cvd_type: ColorBlindnessType, severity: f64) -> Matrix3x3 {
+    fn get_simulation_matrix(cvd_type: SimColorBlindnessType, severity: f64) -> Matrix3x3 {
         let base = match cvd_type {
             Protanopia => Matrix3x3::new([
                 [0.567, 0.433, 0.0],
@@ -2059,7 +2059,7 @@ impl ColorBlindnessSimulator {
 
 struct AccessibilityChecker {
     min_contrast_ratio: f64,
-    cvd_types: [ColorBlindnessType]
+    cvd_types: [SimColorBlindnessType]
 }
 
 impl AccessibilityChecker {
@@ -2856,23 +2856,23 @@ impl Illuminant {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// CAM16 color appearance model
-pub struct CAM16 {
+pub struct PerceptualCAM16 {
     pub white_point: (f64, f64, f64),
     pub adapting_luminance: f64,
     pub background_luminance: f64,
-    pub surround_type: CAM16Surround,
+    pub surround_type: PerceptualCAM16Surround,
     pub discounting: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum CAM16Surround {
+pub enum PerceptualCAM16Surround {
     Average,
     Dim,
     Dark,
 }
 
 #[derive(Debug, Clone)]
-pub struct CAM16Color {
+pub struct PerceptualCAM16Color {
     pub j: f64,
     pub c: f64,
     pub h: f64,
@@ -2881,26 +2881,26 @@ pub struct CAM16Color {
     pub s: f64,
 }
 
-impl CAM16 {
+impl PerceptualCAM16 {
     pub fn default_viewing_conditions() -> Self {
         Self {
             white_point: (95.047, 100.0, 108.883),
             adapting_luminance: 64.0,
             background_luminance: 20.0,
-            surround_type: CAM16Surround::Average,
+            surround_type: PerceptualCAM16Surround::Average,
             discounting: false,
         }
     }
 
     pub fn get_surround_params(&self) -> (f64, f64, f64) {
         match self.surround_type {
-            CAM16Surround::Average => (1.0, 0.69, 1.0),
-            CAM16Surround::Dim => (0.9, 0.59, 0.9),
-            CAM16Surround::Dark => (0.8, 0.525, 0.8),
+            PerceptualCAM16Surround::Average => (1.0, 0.69, 1.0),
+            PerceptualCAM16Surround::Dim => (0.9, 0.59, 0.9),
+            PerceptualCAM16Surround::Dark => (0.8, 0.525, 0.8),
         }
     }
 
-    pub fn forward(&self, xyz: (f64, f64, f64)) -> CAM16Color {
+    pub fn forward(&self, xyz: (f64, f64, f64)) -> PerceptualCAM16Color {
         let (c, nc, f) = self.get_surround_params();
         let k = 1.0 / (5.0 * self.adapting_luminance + 1.0);
         let k4 = k.powi(4);
@@ -2956,7 +2956,7 @@ impl CAM16 {
         let m = cc * fl.powf(0.25);
         let s = 100.0 * (m / q).sqrt();
 
-        CAM16Color { j, c: cc, h, q, m, s }
+        PerceptualCAM16Color { j, c: cc, h, q, m, s }
     }
 
     fn transform_xyz(&self, xyz: (f64, f64, f64), m: &[[f64; 3]; 3]) -> (f64, f64, f64) {
@@ -2978,9 +2978,9 @@ impl CAM16 {
 }
 
 /// Oklab perceptual color space
-pub struct Oklab;
+pub struct PerceptualOklab;
 
-impl Oklab {
+impl PerceptualOklab {
     pub fn from_linear_srgb(r: f64, g: f64, b: f64) -> (f64, f64, f64) {
         let l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
         let m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
@@ -3238,28 +3238,28 @@ impl GamutBoundary {
 }
 
 struct GamutMapping {
-    method: GamutMappingMethod,
+    method: BoundaryGamutMappingMethod,
     preserve_hue: bool,
     cusp_l: f64
 }
 
-enum GamutMappingMethod { Clip, Compress, ProjectToL, ProjectToC, MINDE }
+enum BoundaryGamutMappingMethod { Clip, Compress, ProjectToL, ProjectToC, MINDE }
 
 impl GamutMapping {
-    fn new(method: GamutMappingMethod) -> GamutMapping {
+    fn new(method: BoundaryGamutMappingMethod) -> GamutMapping {
         GamutMapping { method: method, preserve_hue: true, cusp_l: 0.5 }
     }
 
     fn map(self, l: f64, c: f64, h: f64, boundary: &GamutBoundary) -> (f64, f64, f64) {
         if boundary.is_in_gamut(l, c, h) { return (l, c, h); }
         match self.method {
-            GamutMappingMethod::Clip => boundary.clamp_to_gamut(l, c, h),
-            GamutMappingMethod::Compress => {
+            BoundaryGamutMappingMethod::Clip => boundary.clamp_to_gamut(l, c, h),
+            BoundaryGamutMappingMethod::Compress => {
                 let (_, max_c, _) = boundary.clamp_to_gamut(l, 1.0, h);
                 let compressed_c = c * max_c / (c + max_c - max_c * c / c.max(0.001));
                 (l, compressed_c, h)
             }
-            GamutMappingMethod::ProjectToL => {
+            BoundaryGamutMappingMethod::ProjectToL => {
                 let max_c = boundary.find_max_chroma(l, h);
                 if c > max_c {
                     let new_l = if l > self.cusp_l { l - (c - max_c) * 0.5 } else { l + (c - max_c) * 0.5 };
@@ -3586,18 +3586,18 @@ impl NayataniModel {
 // SPECTRAL OPERATIONS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-struct SpectralReflectance {
+struct SpectralReflectanceData {
     wavelengths: [f64],
     values: [f64],
     min_nm: f64,
     max_nm: f64
 }
 
-impl SpectralReflectance {
-    fn new(wavelengths: [f64], values: [f64]) -> SpectralReflectance {
+impl SpectralReflectanceData {
+    fn new(wavelengths: [f64], values: [f64]) -> SpectralReflectanceData {
         let min = *wavelengths.first().unwrap_or(&380.0);
         let max = *wavelengths.last().unwrap_or(&780.0);
-        SpectralReflectance { wavelengths: wavelengths, values: values, min_nm: min, max_nm: max }
+        SpectralReflectanceData { wavelengths: wavelengths, values: values, min_nm: min, max_nm: max }
     }
 
     fn sample(self, nm: f64) -> f64 {
@@ -3611,18 +3611,18 @@ impl SpectralReflectance {
         0.0
     }
 
-    fn multiply(self, other: &SpectralReflectance) -> SpectralReflectance {
+    fn multiply(self, other: &SpectralReflectanceData) -> SpectralReflectanceData {
         let new_values: Vec<f64> = self.wavelengths.iter().enumerate().map(|(i, nm)| {
             self.values[i] * other.sample(*nm)
         }).collect();
-        SpectralReflectance::new(self.wavelengths.clone(), new_values)
+        SpectralReflectanceData::new(self.wavelengths.clone(), new_values)
     }
 
-    fn add(self, other: &SpectralReflectance) -> SpectralReflectance {
+    fn add(self, other: &SpectralReflectanceData) -> SpectralReflectanceData {
         let new_values: Vec<f64> = self.wavelengths.iter().enumerate().map(|(i, nm)| {
             self.values[i] + other.sample(*nm)
         }).collect();
-        SpectralReflectance::new(self.wavelengths.clone(), new_values)
+        SpectralReflectanceData::new(self.wavelengths.clone(), new_values)
     }
 
     fn integrate(self) -> f64 {
@@ -3638,7 +3638,7 @@ impl SpectralReflectance {
 struct SpectralUpsampling;
 
 impl SpectralUpsampling {
-    fn rgb_to_spectral(r: f64, g: f64, b: f64) -> SpectralReflectance {
+    fn rgb_to_spectral(r: f64, g: f64, b: f64) -> SpectralReflectanceData {
         let wavelengths: Vec<f64> = (380..=780).step_by(5).map(|w| w as f64).collect();
         let values: Vec<f64> = wavelengths.iter().map(|nm| {
             let r_weight = Self::rgb_basis_r(*nm);
@@ -3646,7 +3646,7 @@ impl SpectralUpsampling {
             let b_weight = Self::rgb_basis_b(*nm);
             (r * r_weight + g * g_weight + b * b_weight).clamp(0.0, 1.0)
         }).collect();
-        SpectralReflectance::new(wavelengths, values)
+        SpectralReflectanceData::new(wavelengths, values)
     }
 
     fn rgb_basis_r(nm: f64) -> f64 {
@@ -3681,19 +3681,19 @@ pub mod color_appearance {
         pub white_point: XYZ,
         pub adapting_luminance: f64,
         pub background_luminance: f64,
-        pub surround: Surround,
+        pub surround: AppearanceSurround,
         pub discount_illuminant: bool,
     }
 
     #[derive(Debug, Clone, Copy, PartialEq)]
-    pub enum Surround {
+    pub enum AppearanceSurround {
         Average,
         Dim,
         Dark,
     }
 
     impl ViewingConditions {
-        pub fn new(white_point: XYZ, la: f64, yb: f64, surround: Surround) -> Self {
+        pub fn new(white_point: XYZ, la: f64, yb: f64, surround: AppearanceSurround) -> Self {
             Self {
                 white_point,
                 adapting_luminance: la,
@@ -3708,7 +3708,7 @@ pub mod color_appearance {
                 XYZ { x: 0.95047, y: 1.0, z: 1.08883 },
                 64.0,
                 20.0,
-                Surround::Average,
+                AppearanceSurround::Average,
             )
         }
 
@@ -3717,22 +3717,22 @@ pub mod color_appearance {
                 XYZ { x: 0.95047, y: 1.0, z: 1.08883 },
                 16.0,
                 20.0,
-                Surround::Dim,
+                AppearanceSurround::Dim,
             )
         }
 
         fn surround_params(&self) -> (f64, f64, f64) {
             match self.surround {
-                Surround::Average => (1.0, 0.69, 1.0),
-                Surround::Dim => (0.9, 0.59, 0.9),
-                Surround::Dark => (0.8, 0.525, 0.8),
+                AppearanceSurround::Average => (1.0, 0.69, 1.0),
+                AppearanceSurround::Dim => (0.9, 0.59, 0.9),
+                AppearanceSurround::Dark => (0.8, 0.525, 0.8),
             }
         }
     }
 
     /// CIECAM02 correlates - perceptual color attributes
     #[derive(Debug, Clone, Copy)]
-    pub struct CIECAM02 {
+    pub struct AppearanceCIECAM02 {
         pub j: f64,         // Lightness
         pub c: f64,         // Chroma
         pub h: f64,         // Hue angle (degrees)
@@ -3749,7 +3749,7 @@ pub mod color_appearance {
         pub eccentricity: f64,
     }
 
-    impl CIECAM02 {
+    impl AppearanceCIECAM02 {
         const M_CAT02: [[f64; 3]; 3] = [
             [0.7328, 0.4296, -0.1624],
             [-0.7036, 1.6975, 0.0061],
@@ -3970,7 +3970,7 @@ pub mod color_appearance {
 
     /// CAM16 - Updated color appearance model
     #[derive(Debug, Clone, Copy)]
-    pub struct CAM16 {
+    pub struct AppearanceCAM16 {
         pub j: f64,
         pub c: f64,
         pub h: f64,
@@ -3979,7 +3979,7 @@ pub mod color_appearance {
         pub m: f64,
     }
 
-    impl CAM16 {
+    impl AppearanceCAM16 {
         const M16: [[f64; 3]; 3] = [
             [0.401288, 0.650173, -0.051461],
             [-0.250268, 1.204414, 0.045854],
@@ -4145,19 +4145,19 @@ pub mod color_appearance {
         }
     }
 
-    /// Uniform Color Scales (UCS) from CAM16
+    /// Uniform Color Scales (UCS) from AppearanceCAM16
     #[derive(Debug, Clone, Copy)]
-    pub struct CAM16UCS {
+    pub struct AppearanceCAM16UCS {
         pub j_prime: f64,
         pub a_prime: f64,
         pub b_prime: f64,
     }
 
-    impl CAM16UCS {
+    impl AppearanceCAM16UCS {
         const C1: f64 = 0.007;
         const C2: f64 = 0.0228;
 
-        pub fn from_cam16(cam: &CAM16) -> Self {
+        pub fn from_cam16(cam: &AppearanceCAM16) -> Self {
             let m_prime = (1.0 / Self::C2) * (1.0 + Self::C2 * cam.m).ln();
             let j_prime = (1.0 + 100.0 * Self::C1) * cam.j / (1.0 + Self::C1 * cam.j);
             let h_rad = cam.h.to_radians();
@@ -4168,7 +4168,7 @@ pub mod color_appearance {
             }
         }
 
-        pub fn to_cam16(&self, vc: &ViewingConditions) -> CAM16 {
+        pub fn to_cam16(&self, vc: &ViewingConditions) -> AppearanceCAM16 {
             let m_prime = (self.a_prime * self.a_prime + self.b_prime * self.b_prime).sqrt();
             let m = ((Self::C2 * m_prime).exp() - 1.0) / Self::C2;
             let h = self.b_prime.atan2(self.a_prime).to_degrees();
@@ -4184,7 +4184,7 @@ pub mod color_appearance {
 
             let chroma = m / fl.powf(0.25);
             let s = 50.0 * (c_coef * m).sqrt();
-            let rgb_w = CAM16::xyz_to_m16(vc.white_point);
+            let rgb_w = AppearanceCAM16::xyz_to_m16(vc.white_point);
             let d = 1.0;
             let d_rgb = [
                 d * vc.white_point.y / rgb_w[0] + 1.0 - d,
@@ -4192,15 +4192,15 @@ pub mod color_appearance {
                 d * vc.white_point.y / rgb_w[2] + 1.0 - d,
             ];
             let rgb_wc = [rgb_w[0] * d_rgb[0], rgb_w[1] * d_rgb[1], rgb_w[2] * d_rgb[2]];
-            let rgb_aw = CAM16::adapt(rgb_wc, fl);
+            let rgb_aw = AppearanceCAM16::adapt(rgb_wc, fl);
             let nbb = 0.725 * n.powf(-0.2);
             let a_w = (2.0 * rgb_aw[0] + rgb_aw[1] + rgb_aw[2] / 20.0 - 0.305) * nbb;
             let q = 4.0 / c_coef * (j / 100.0).sqrt() * (a_w + 4.0) * fl.powf(0.25);
 
-            CAM16 { j, c: chroma, h, s, q, m }
+            AppearanceCAM16 { j, c: chroma, h, s, q, m }
         }
 
-        pub fn delta_e(&self, other: &CAM16UCS) -> f64 {
+        pub fn delta_e(&self, other: &AppearanceCAM16UCS) -> f64 {
             let dj = self.j_prime - other.j_prime;
             let da = self.a_prime - other.a_prime;
             let db = self.b_prime - other.b_prime;
@@ -4236,7 +4236,7 @@ pub mod color_appearance {
                 Self::srgb_to_linear(b),
             );
             let vc = ViewingConditions::srgb_standard();
-            let cam = CAM16::from_xyz(xyz, &vc);
+            let cam = AppearanceCAM16::from_xyz(xyz, &vc);
             let tone = Self::y_to_lstar(xyz.y);
 
             Self::new(cam.h, cam.c, tone)
@@ -4271,7 +4271,7 @@ pub mod color_appearance {
             let y = Self::lstar_to_y(self.tone);
             let vc = ViewingConditions::srgb_standard();
 
-            let cam = CAM16 {
+            let cam = AppearanceCAM16 {
                 j: self.tone,
                 c: chroma,
                 h: self.hue,
@@ -4353,13 +4353,13 @@ pub mod hdr_color {
 
     /// ICtCp color space - ITU-R BT.2100
     #[derive(Debug, Clone, Copy)]
-    pub struct ICtCp {
+    pub struct HdrICtCp {
         pub i: f64,   // Intensity
         pub ct: f64,  // Chroma tritan
         pub cp: f64,  // Chroma protan
     }
 
-    impl ICtCp {
+    impl HdrICtCp {
         const M1: [[f64; 3]; 3] = [
             [0.412109, 0.523926, 0.063965],
             [0.166748, 0.720459, 0.112793],
@@ -4444,7 +4444,7 @@ pub mod hdr_color {
             (num / den).powf(1.0 / m1)
         }
 
-        pub fn delta_e(&self, other: &ICtCp) -> f64 {
+        pub fn delta_e(&self, other: &HdrICtCp) -> f64 {
             let di = 720.0 * (self.i - other.i);
             let dct = 360.0 * (self.ct - other.ct);
             let dcp = 360.0 * (self.cp - other.cp);
@@ -4454,13 +4454,13 @@ pub mod hdr_color {
 
     /// Jzazbz color space - perceptually uniform HDR
     #[derive(Debug, Clone, Copy)]
-    pub struct Jzazbz {
+    pub struct HdrJzazbz {
         pub jz: f64,
         pub az: f64,
         pub bz: f64,
     }
 
-    impl Jzazbz {
+    impl HdrJzazbz {
         const B: f64 = 1.15;
         const G: f64 = 0.66;
         const C1: f64 = 0.8359375;
@@ -4549,7 +4549,7 @@ pub mod hdr_color {
             XYZ { x, y, z }
         }
 
-        pub fn delta_e(&self, other: &Jzazbz) -> f64 {
+        pub fn delta_e(&self, other: &HdrJzazbz) -> f64 {
             let djz = self.jz - other.jz;
             let daz = self.az - other.az;
             let dbz = self.bz - other.bz;
@@ -4564,7 +4564,7 @@ pub mod hdr_color {
         }
     }
 
-    /// Cylindrical form of Jzazbz
+    /// Cylindrical form of HdrJzazbz
     #[derive(Debug, Clone, Copy)]
     pub struct JzCzhz {
         pub jz: f64,
@@ -4573,9 +4573,9 @@ pub mod hdr_color {
     }
 
     impl JzCzhz {
-        pub fn to_jzazbz(&self) -> Jzazbz {
+        pub fn to_jzazbz(&self) -> HdrJzazbz {
             let h_rad = self.hz.to_radians();
-            Jzazbz {
+            HdrJzazbz {
                 jz: self.jz,
                 az: self.cz * h_rad.cos(),
                 bz: self.cz * h_rad.sin(),
@@ -4678,13 +4678,13 @@ pub mod hdr_color {
 
     /// Oklab color space - perceptually uniform
     #[derive(Debug, Clone, Copy)]
-    pub struct Oklab {
+    pub struct HdrOklab {
         pub l: f64,
         pub a: f64,
         pub b: f64,
     }
 
-    impl Oklab {
+    impl HdrOklab {
         const M1: [[f64; 3]; 3] = [
             [0.8189330101, 0.3618667424, -0.1288597137],
             [0.0329845436, 0.9293118715, 0.0361456387],
@@ -4748,7 +4748,7 @@ pub mod hdr_color {
             Oklch { l: self.l, c, h }
         }
 
-        pub fn delta_e(&self, other: &Oklab) -> f64 {
+        pub fn delta_e(&self, other: &HdrOklab) -> f64 {
             let dl = self.l - other.l;
             let da = self.a - other.a;
             let db = self.b - other.b;
@@ -4756,15 +4756,15 @@ pub mod hdr_color {
         }
     }
 
-    /// Oklch - cylindrical form of Oklab
+    /// Oklch - cylindrical form of HdrOklab
     #[derive(Debug, Clone, Copy)]
-    pub struct Oklch {
+    pub struct HdrOklch {
         pub l: f64,
         pub c: f64,
         pub h: f64,
     }
 
-    impl Oklch {
+    impl HdrOklch {
         pub fn to_oklab(&self) -> Oklab {
             let h_rad = self.h.to_radians();
             Oklab {
@@ -4774,7 +4774,7 @@ pub mod hdr_color {
             }
         }
 
-        pub fn lerp(&self, other: &Oklch, t: f64) -> Oklch {
+        pub fn lerp(&self, other: &HdrOklch, t: f64) -> HdrOklch {
             let h1 = self.h;
             let h2 = other.h;
             let delta = h2 - h1;
@@ -4787,7 +4787,7 @@ pub mod hdr_color {
             };
             let h = (h1 + delta * t + 360.0) % 360.0;
 
-            Oklch {
+            HdrOklch {
                 l: self.l + (other.l - self.l) * t,
                 c: self.c + (other.c - self.c) * t,
                 h,
@@ -4815,12 +4815,12 @@ pub mod color_blindness {
     }
 
     /// Color blindness simulator using Brettel model
-    pub struct ColorBlindnessSimulator {
+    pub struct CVDSimulator {
         deficiency: DeficiencyType,
         severity: f64,
     }
 
-    impl ColorBlindnessSimulator {
+    impl CVDSimulator {
         pub fn new(deficiency: DeficiencyType, severity: f64) -> Self {
             Self {
                 deficiency,
@@ -4913,7 +4913,7 @@ pub mod color_blindness {
         }
 
         pub fn correct_rgb(&self, r: f64, g: f64, b: f64) -> (f64, f64, f64) {
-            let sim = ColorBlindnessSimulator::new(self.deficiency, 1.0);
+            let sim = CVDSimulator::new(self.deficiency, 1.0);
             let (sr, sg, sb) = sim.simulate_rgb(r, g, b);
 
             let err_r = r - sr;
@@ -5007,7 +5007,7 @@ pub mod color_harmony {
     use super::*;
 
     #[derive(Debug, Clone, Copy, PartialEq)]
-    pub enum HarmonyType {
+    pub enum PaletteHarmonyType {
         Complementary,
         Analogous,
         Triadic,
@@ -5021,40 +5021,40 @@ pub mod color_harmony {
     pub struct PaletteGenerator;
 
     impl PaletteGenerator {
-        pub fn generate(base_hsl: HSL, harmony: HarmonyType) -> Vec<HSL> {
+        pub fn generate(base_hsl: HSL, harmony: PaletteHarmonyType) -> Vec<HSL> {
             match harmony {
-                HarmonyType::Complementary => vec![
+                PaletteHarmonyType::Complementary => vec![
                     base_hsl,
                     HSL { h: (base_hsl.h + 180.0) % 360.0, s: base_hsl.s, l: base_hsl.l },
                 ],
-                HarmonyType::Analogous => vec![
+                PaletteHarmonyType::Analogous => vec![
                     HSL { h: (base_hsl.h + 330.0) % 360.0, s: base_hsl.s, l: base_hsl.l },
                     base_hsl,
                     HSL { h: (base_hsl.h + 30.0) % 360.0, s: base_hsl.s, l: base_hsl.l },
                 ],
-                HarmonyType::Triadic => vec![
+                PaletteHarmonyType::Triadic => vec![
                     base_hsl,
                     HSL { h: (base_hsl.h + 120.0) % 360.0, s: base_hsl.s, l: base_hsl.l },
                     HSL { h: (base_hsl.h + 240.0) % 360.0, s: base_hsl.s, l: base_hsl.l },
                 ],
-                HarmonyType::SplitComplementary => vec![
+                PaletteHarmonyType::SplitComplementary => vec![
                     base_hsl,
                     HSL { h: (base_hsl.h + 150.0) % 360.0, s: base_hsl.s, l: base_hsl.l },
                     HSL { h: (base_hsl.h + 210.0) % 360.0, s: base_hsl.s, l: base_hsl.l },
                 ],
-                HarmonyType::Tetradic => vec![
+                PaletteHarmonyType::Tetradic => vec![
                     base_hsl,
                     HSL { h: (base_hsl.h + 60.0) % 360.0, s: base_hsl.s, l: base_hsl.l },
                     HSL { h: (base_hsl.h + 180.0) % 360.0, s: base_hsl.s, l: base_hsl.l },
                     HSL { h: (base_hsl.h + 240.0) % 360.0, s: base_hsl.s, l: base_hsl.l },
                 ],
-                HarmonyType::Square => vec![
+                PaletteHarmonyType::Square => vec![
                     base_hsl,
                     HSL { h: (base_hsl.h + 90.0) % 360.0, s: base_hsl.s, l: base_hsl.l },
                     HSL { h: (base_hsl.h + 180.0) % 360.0, s: base_hsl.s, l: base_hsl.l },
                     HSL { h: (base_hsl.h + 270.0) % 360.0, s: base_hsl.s, l: base_hsl.l },
                 ],
-                HarmonyType::Monochromatic => vec![
+                PaletteHarmonyType::Monochromatic => vec![
                     HSL { h: base_hsl.h, s: base_hsl.s, l: (base_hsl.l * 0.5).max(0.0) },
                     HSL { h: base_hsl.h, s: base_hsl.s, l: (base_hsl.l * 0.75).max(0.0) },
                     base_hsl,

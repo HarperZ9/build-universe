@@ -1,12 +1,12 @@
 # Quanta Ecosystem — Engineering Runbook
 
-Last verified: 2026-03-31. All CI green, all claims backed by evidence.
+Last verified: 2026-04-03. All CI green, all claims backed by evidence.
 
 ## Quick Reference
 
 | Repo | Tests | CI | Release |
 |------|-------|----|---------|
-| quantalang | 604 Rust | clippy + fmt + test + e2e color self-check | v1.0.0 (quantac.exe) |
+| quantalang | 604 Rust | clippy + fmt + test + e2e color self-check | v1.0.0 (quantac.exe, 16 bugs fixed) |
 | calibrate-pro | 297 Python | ruff + pytest (Ubuntu + Windows) | v1.0.0 (standalone exe) |
 | quanta-color | 457 Python | ruff + pytest | v1.0.0 |
 | quanta-universe | — | file validation | v1.0.0 |
@@ -61,15 +61,28 @@ Last verified: 2026-03-31. All CI green, all claims backed by evidence.
 
 ## Known Limitations
 
-### Compiler
-- **No module imports**: Each .quanta file must be self-contained. `use other_module::*` doesn't work.
-- **No trait dispatch**: `impl Trait for Type` compiles but trait method calls may not resolve.
+### Compiler — Active Limitations
 - **Forward references**: Methods must be defined before they're called within the same impl block.
 - **&str parameters**: Functions taking `&str` get the value by copy, not pointer. Avoid.
-- **Generic impls skipped**: `impl<T> Vec<T>` is not lowered to C (no monomorphization).
+- **DefId misresolution in large files**: In files with 1000+ types, the type checker occasionally resolves names to the wrong DefId. Root cause of 2 remaining nexus errors and many foundation cascading errors.
+- **Type variable scope leaks**: Generic type parameters (K, V) from one impl block can leak into unrelated functions in the same module.
+- **Struct literals in some contexts**: `Foo { field: value }` inside deeply nested expressions may be parsed as a block instead of a struct literal.
+
+### Compiler — RESOLVED (2026-04-03)
+- ~~No module imports~~ — `mod foo;` and `use foo::bar;` fully implemented.
+- ~~No trait dispatch~~ — Trait resolution, vtables, dynamic dispatch all work.
+- ~~Generic impls skipped~~ — Monomorphization fully implemented.
+- ~~Macro expansion bug~~ — Brace depth + synthetic span detection fixed.
+- ~~Field-tensor blocked~~ — Now compiles: 6,108 LOC → 30,882 lines C.
+- ~~Entropy blocked~~ — Now compiles: 6,681 LOC → 33,760 lines C (ML trading models).
+- ~~Unsafe blocks eating match arms~~ — Parser fixed: `unsafe`/`async` no longer treated as items.
+- ~~Cross-module type names~~ — type_module_map + DefId-keyed inherent methods.
+- ~~Array-to-slice coercion~~ — `[T; N]` ↔ `[T]` unification added.
+- ~~Ref patterns in closures~~ — `|&s|` and `|&&r|` fixed (parse_pattern_primary + AndAnd).
+- ~~Missing math builtins~~ — Added tanh, sinh, cosh, asin, acos, atan, exp2.
+- ~~UTF-8 boundary panics~~ — Added is_char_boundary checks in codegen span extraction.
 
 ### C Codegen
-- **Cross-module type names**: Types defined in child modules (e.g., `tonemap::Operator`) are referenced by bare name in parent structs. MSVC rejects the mismatch. 57 errors for spectrum.
 - **Tuple typedefs**: `(f32, f32)` emits `Tuple_f32_f32` but the typedef may appear after first use.
 - **Rectangle collision**: User type `Rectangle` collides with Windows API `wingdi.h`. Avoid this name.
 

@@ -1498,7 +1498,7 @@ module risk {
                 return var;
             }
 
-            -tail_returns.iter().sum::<f64>() / tail_returns.len() as f64
+            return -tail_returns.iter().sum::<f64>() / tail_returns.len() as f64;
         }
 
         pub fn marginal_var(&self, position_returns: &[f64], weight: f64) -> f64 {
@@ -1910,7 +1910,7 @@ pub mod vol_surface {
                 }
                 return self.linear_interp_smile(slice, strike);
             }
-            0.2 // Default vol
+            return 0.2; // Default vol
         }
 
         fn linear_interp_smile(&self, slice: &VolSmileSlice, strike: f64) -> f64 {
@@ -2321,8 +2321,8 @@ pub mod variance {
 
     /// VIX calculation (CBOE methodology)
     pub struct VIXCalculator {
-        pub near_term_options: Vec<OptionQuote>,
-        pub next_term_options: Vec<OptionQuote>,
+        pub near_term_options: Vec<VarianceOptionQuote>,
+        pub next_term_options: Vec<VarianceOptionQuote>,
         pub near_expiry: f64,
         pub next_expiry: f64,
         pub rate_near: f64,
@@ -2330,7 +2330,7 @@ pub mod variance {
     }
 
     #[derive(Debug, Clone)]
-    pub struct OptionQuote {
+    pub struct VarianceOptionQuote {
         pub strike: f64,
         pub call_bid: f64,
         pub call_ask: f64,
@@ -2371,7 +2371,7 @@ pub mod variance {
             100.0 * vix_sq.sqrt()
         }
 
-        fn term_variance(&self, options: &[OptionQuote], expiry: f64, rate: f64) -> f64 {
+        fn term_variance(&self, options: &[VarianceOptionQuote], expiry: f64, rate: f64) -> f64 {
             if options.is_empty() { return 0.04; }
 
             let forward = self.find_forward(options, expiry, rate);
@@ -2407,7 +2407,7 @@ pub mod variance {
             sigma_sq
         }
 
-        fn find_forward(&self, options: &[OptionQuote], expiry: f64, rate: f64) -> f64 {
+        fn find_forward(&self, options: &[VarianceOptionQuote], expiry: f64, rate: f64) -> f64 {
             let mut min_diff = f64::MAX;
             let mut fwd_strike = options[0].strike;
 
@@ -2429,7 +2429,7 @@ pub mod variance {
                   options.iter().find(|o| o.strike == fwd_strike).unwrap().put_ask) / 2.0)
         }
 
-        fn find_k0(&self, options: &[OptionQuote], forward: f64) -> f64 {
+        fn find_k0(&self, options: &[VarianceOptionQuote], forward: f64) -> f64 {
             for opt in options {
                 if opt.strike <= forward {
                     return opt.strike;
@@ -2818,13 +2818,13 @@ pub mod exotic_payoffs {
     #[derive(Debug, Clone)]
     pub struct BarrierSpec {
         pub level: f64,
-        pub barrier_type: BarrierType,
+        pub barrier_type: BarrierKind,
         pub monitoring: MonitoringType,
         pub rebate: f64,
     }
 
     #[derive(Debug, Clone, Copy)]
-    pub enum BarrierType {
+    pub enum BarrierKind {
         UpIn,
         UpOut,
         DownIn,
@@ -2862,7 +2862,7 @@ pub mod exotic_payoffs {
     }
 
     #[derive(Debug, Clone, Copy)]
-    pub enum LookbackType {
+    pub enum LookbackKind {
         FloatingStrike,
         FixedStrike,
         PartialStart,
@@ -2895,7 +2895,7 @@ pub mod exotic_payoffs {
             self
         }
 
-        pub fn add_barrier(&mut self, level: f64, barrier_type: BarrierType) -> &mut Self {
+        pub fn add_barrier(&mut self, level: f64, barrier_type: BarrierKind) -> &mut Self {
             self.barriers.push(BarrierSpec {
                 level,
                 barrier_type,
@@ -2931,17 +2931,17 @@ pub mod exotic_payoffs {
             // Check barriers
             for barrier in &self.barriers {
                 let triggered = match barrier.barrier_type {
-                    BarrierType::UpIn | BarrierType::UpOut =>
+                    BarrierKind::UpIn | BarrierKind::UpOut =>
                         spot_path.iter().any(|&s| s >= barrier.level),
-                    BarrierType::DownIn | BarrierType::DownOut =>
+                    BarrierKind::DownIn | BarrierKind::DownOut =>
                         spot_path.iter().any(|&s| s <= barrier.level),
                 };
 
                 match barrier.barrier_type {
-                    BarrierType::UpOut | BarrierType::DownOut if triggered => {
+                    BarrierKind::UpOut | BarrierKind::DownOut if triggered => {
                         return barrier.rebate;
                     },
-                    BarrierType::UpIn | BarrierType::DownIn if !triggered => {
+                    BarrierKind::UpIn | BarrierKind::DownIn if !triggered => {
                         return barrier.rebate;
                     },
                     _ => {}
@@ -3377,7 +3377,7 @@ pub mod analytics {
     use std::collections::HashMap;
 
     /// Options chain analysis
-    pub struct OptionsChain {
+    pub struct AnalyticsOptionsChain {
         pub underlying: String,
         pub spot_price: f64,
         pub expiries: Vec<ExpiryData>,
@@ -3387,14 +3387,14 @@ pub mod analytics {
     pub struct ExpiryData {
         pub expiry_date: String,
         pub days_to_expiry: u32,
-        pub calls: Vec<OptionQuote>,
-        pub puts: Vec<OptionQuote>,
+        pub calls: Vec<AnalyticsOptionQuote>,
+        pub puts: Vec<AnalyticsOptionQuote>,
         pub atm_iv: f64,
         pub put_call_ratio: f64,
     }
 
     #[derive(Clone)]
-    pub struct OptionQuote {
+    pub struct AnalyticsOptionQuote {
         pub strike: f64,
         pub bid: f64,
         pub ask: f64,
@@ -3408,14 +3408,14 @@ pub mod analytics {
         pub vega: f64,
     }
 
-    impl OptionsChain {
+    impl AnalyticsOptionsChain {
         pub fn new(underlying: &str, spot: f64) -> Self {
             Self { underlying: underlying.to_string(), spot_price: spot, expiries: Vec::new(), last_update: 0 }
         }
 
         pub fn add_expiry(&mut self, expiry: ExpiryData) { self.expiries.push(expiry); }
 
-        pub fn get_atm_options(&self, expiry_idx: usize) -> Option<(&OptionQuote, &OptionQuote)> {
+        pub fn get_atm_options(&self, expiry_idx: usize) -> Option<(&AnalyticsOptionQuote, &AnalyticsOptionQuote)> {
             let exp = self.expiries.get(expiry_idx)?;
             let call = exp.calls.iter().min_by(|a, b| {
                 (a.strike - self.spot_price).abs().partial_cmp(&(b.strike - self.spot_price).abs()).unwrap()
@@ -3464,14 +3464,14 @@ pub mod analytics {
     }
 
     /// Volatility smile/surface analysis
-    pub struct VolatilitySurface {
+    pub struct AnalyticsVolatilitySurface {
         pub strikes: Vec<f64>,
         pub expiries: Vec<f64>,
         pub ivs: Vec<Vec<f64>>,
         pub forward_prices: Vec<f64>,
     }
 
-    impl VolatilitySurface {
+    impl AnalyticsVolatilitySurface {
         pub fn new() -> Self {
             Self { strikes: Vec::new(), expiries: Vec::new(), ivs: Vec::new(), forward_prices: Vec::new() }
         }
@@ -3546,7 +3546,7 @@ pub mod analytics {
     }
 
     #[derive(Clone, Copy, PartialEq)]
-    pub enum OptionType { Call, Put }
+    pub enum SimpleSimpleOptionType { Call, Put }
 
     impl StrategyBuilder {
         pub fn new(underlying_price: f64) -> Self {
@@ -3556,26 +3556,26 @@ pub mod analytics {
         pub fn add_leg(&mut self, leg: StrategyLeg) -> &mut Self { self.legs.push(leg); self }
 
         pub fn long_call(&mut self, strike: f64, expiry: f64, premium: f64) -> &mut Self {
-            self.add_leg(StrategyLeg { option_type: OptionType::Call, strike, expiry, quantity: 1, premium, iv: 0.0 })
+            self.add_leg(StrategyLeg { option_type: SimpleOptionType::Call, strike, expiry, quantity: 1, premium, iv: 0.0 })
         }
 
         pub fn short_call(&mut self, strike: f64, expiry: f64, premium: f64) -> &mut Self {
-            self.add_leg(StrategyLeg { option_type: OptionType::Call, strike, expiry, quantity: -1, premium, iv: 0.0 })
+            self.add_leg(StrategyLeg { option_type: SimpleOptionType::Call, strike, expiry, quantity: -1, premium, iv: 0.0 })
         }
 
         pub fn long_put(&mut self, strike: f64, expiry: f64, premium: f64) -> &mut Self {
-            self.add_leg(StrategyLeg { option_type: OptionType::Put, strike, expiry, quantity: 1, premium, iv: 0.0 })
+            self.add_leg(StrategyLeg { option_type: SimpleOptionType::Put, strike, expiry, quantity: 1, premium, iv: 0.0 })
         }
 
         pub fn short_put(&mut self, strike: f64, expiry: f64, premium: f64) -> &mut Self {
-            self.add_leg(StrategyLeg { option_type: OptionType::Put, strike, expiry, quantity: -1, premium, iv: 0.0 })
+            self.add_leg(StrategyLeg { option_type: SimpleOptionType::Put, strike, expiry, quantity: -1, premium, iv: 0.0 })
         }
 
         pub fn payoff_at_expiry(&self, spot: f64) -> f64 {
             self.legs.iter().map(|leg| {
                 let intrinsic = match leg.option_type {
-                    OptionType::Call => (spot - leg.strike).max(0.0),
-                    OptionType::Put => (leg.strike - spot).max(0.0),
+                    SimpleOptionType::Call => (spot - leg.strike).max(0.0),
+                    SimpleOptionType::Put => (leg.strike - spot).max(0.0),
                 };
                 (intrinsic - leg.premium) * leg.quantity as f64 * 100.0
             }).sum()
@@ -3815,7 +3815,7 @@ pub mod montecarlo {
         }
 
         pub fn price_barrier(&mut self, spot: f64, strike: f64, r: f64, sigma: f64, t: f64,
-                            barrier: f64, barrier_type: BarrierType, is_call: bool) -> MonteCarloResult {
+                            barrier: f64, barrier_type: SimpleSimpleBarrierType, is_call: bool) -> MonteCarloResult {
             let dt = t / self.num_steps as f64;
             let drift = (r - 0.5 * sigma * sigma) * dt;
             let vol = sigma * dt.sqrt();
@@ -3832,14 +3832,14 @@ pub mod montecarlo {
                     s *= (drift + vol * z).exp();
 
                     match barrier_type {
-                        BarrierType::DownIn => if s <= barrier { knocked = true; },
-                        BarrierType::DownOut => if s <= barrier { knocked = true; },
-                        BarrierType::UpIn => if s >= barrier { knocked = true; },
-                        BarrierType::UpOut => if s >= barrier { knocked = true; },
+                        SimpleSimpleBarrierType::DownIn => if s <= barrier { knocked = true; },
+                        SimpleSimpleBarrierType::DownOut => if s <= barrier { knocked = true; },
+                        SimpleSimpleBarrierType::UpIn => if s >= barrier { knocked = true; },
+                        SimpleSimpleBarrierType::UpOut => if s >= barrier { knocked = true; },
                     }
                 }
 
-                let in_type = matches!(barrier_type, BarrierType::DownIn | BarrierType::UpIn);
+                let in_type = matches!(barrier_type, SimpleSimpleBarrierType::DownIn | SimpleSimpleBarrierType::UpIn);
                 let active = if in_type { knocked } else { !knocked };
 
                 let payoff = if active {
@@ -3920,10 +3920,10 @@ pub mod montecarlo {
     pub enum Averaging { Arithmetic, Geometric }
 
     #[derive(Clone, Copy)]
-    pub enum BarrierType { DownIn, DownOut, UpIn, UpOut }
+    pub enum SimpleSimpleBarrierType { DownIn, DownOut, UpIn, UpOut }
 
     #[derive(Clone, Copy)]
-    pub enum LookbackType { FixedStrike(f64), FloatingStrike }
+    pub enum SimpleSimpleLookbackType { FixedStrike(f64), FloatingStrike }
 
     /// Path-dependent American option pricer using LSM
     pub struct LongstaffSchwartz {
@@ -4086,15 +4086,15 @@ pub mod exotic {
     use std::f64::consts::PI;
 
     #[derive(Debug, Clone, PartialEq)]
-    pub enum BarrierType { UpAndOut, UpAndIn, DownAndOut, DownAndIn }
+    pub enum DirectionalDirectionalBarrierType { UpAndOut, UpAndIn, DownAndOut, DownAndIn }
 
     #[derive(Debug, Clone)]
-    pub struct BarrierOption {
+    pub struct ExoticBarrierOption {
         pub spot: f64,
         pub strike: f64,
         pub barrier: f64,
         pub rebate: f64,
-        pub barrier_type: BarrierType,
+        pub barrier_type: DirectionalBarrierType,
         pub is_call: bool,
         pub time_to_expiry: f64,
         pub rate: f64,
@@ -4102,12 +4102,12 @@ pub mod exotic {
         pub volatility: f64,
     }
 
-    impl BarrierOption {
+    impl ExoticBarrierOption {
         pub fn price(&self) -> f64 {
             let phi = if self.is_call { 1.0 } else { -1.0 };
             let eta = match self.barrier_type {
-                BarrierType::DownAndOut | BarrierType::DownAndIn => 1.0,
-                BarrierType::UpAndOut | BarrierType::UpAndIn => -1.0,
+                DirectionalBarrierType::DownAndOut | DirectionalBarrierType::DownAndIn => 1.0,
+                DirectionalBarrierType::UpAndOut | DirectionalBarrierType::UpAndIn => -1.0,
             };
             let mu = (self.rate - self.dividend - 0.5 * self.volatility.powi(2)) / self.volatility.powi(2);
             let lambda = (mu.powi(2) + 2.0 * self.rate / self.volatility.powi(2)).sqrt();
@@ -4123,10 +4123,10 @@ pub mod exotic {
             let e = self.rebate * (-self.rate * self.time_to_expiry).exp() * (norm_cdf(eta * x2 - eta * self.volatility * self.time_to_expiry.sqrt()) - (self.barrier / self.spot).powf(2.0 * mu) * norm_cdf(eta * y2 - eta * self.volatility * self.time_to_expiry.sqrt()));
             let f = self.rebate * ((self.barrier / self.spot).powf(mu + lambda) * norm_cdf(eta * z) + (self.barrier / self.spot).powf(mu - lambda) * norm_cdf(eta * z - 2.0 * eta * lambda * self.volatility * self.time_to_expiry.sqrt()));
             match self.barrier_type {
-                BarrierType::DownAndOut if self.is_call && self.strike > self.barrier => a - c + f,
-                BarrierType::DownAndIn if self.is_call && self.strike > self.barrier => c + e,
-                BarrierType::UpAndOut if self.is_call && self.strike < self.barrier => a - b + d - c + f,
-                BarrierType::UpAndIn if self.is_call && self.strike < self.barrier => b - d + c + e,
+                DirectionalBarrierType::DownAndOut if self.is_call && self.strike > self.barrier => a - c + f,
+                DirectionalBarrierType::DownAndIn if self.is_call && self.strike > self.barrier => c + e,
+                DirectionalBarrierType::UpAndOut if self.is_call && self.strike < self.barrier => a - b + d - c + f,
+                DirectionalBarrierType::UpAndIn if self.is_call && self.strike < self.barrier => b - d + c + e,
                 _ => a + e
             }
         }
@@ -4147,7 +4147,7 @@ pub mod exotic {
     }
 
     #[derive(Debug, Clone)]
-    pub struct AsianOption {
+    pub struct ExoticAsianOption {
         pub spot: f64,
         pub strike: f64,
         pub is_call: bool,
@@ -4159,7 +4159,7 @@ pub mod exotic {
         pub is_geometric: bool,
     }
 
-    impl AsianOption {
+    impl ExoticAsianOption {
         pub fn price(&self) -> f64 {
             if self.is_geometric { self.geometric_price() } else { self.arithmetic_price_approx() }
         }
@@ -4202,7 +4202,7 @@ pub mod exotic {
     }
 
     #[derive(Debug, Clone)]
-    pub struct LookbackOption {
+    pub struct ExoticLookbackOption {
         pub spot: f64,
         pub min_so_far: f64,
         pub max_so_far: f64,
@@ -4214,7 +4214,7 @@ pub mod exotic {
         pub volatility: f64,
     }
 
-    impl LookbackOption {
+    impl ExoticLookbackOption {
         pub fn price(&self) -> f64 {
             if self.is_floating_strike { self.floating_strike_price() } else { self.fixed_strike_price() }
         }
@@ -4265,7 +4265,7 @@ pub mod exotic {
     }
 
     #[derive(Debug, Clone)]
-    pub struct CompoundOption {
+    pub struct ExoticCompoundOption {
         pub spot: f64,
         pub strike_underlying: f64,
         pub strike_compound: f64,
@@ -4277,7 +4277,7 @@ pub mod exotic {
         pub is_call_on_call: bool,
     }
 
-    impl CompoundOption {
+    impl ExoticCompoundOption {
         pub fn price(&self) -> f64 {
             let s_star = self.find_critical_spot();
             let tau1 = self.first_expiry;
@@ -4416,7 +4416,7 @@ pub mod volatility_surface {
     }
 
     #[derive(Debug, Clone)]
-    pub struct VolatilitySurface {
+    pub struct VolSurfaceVolatilitySurface {
         pub underlying: String,
         pub spot: f64,
         pub points: Vec<VolatilityPoint>,
@@ -4424,7 +4424,7 @@ pub mod volatility_surface {
         pub dividend: f64,
     }
 
-    impl VolatilitySurface {
+    impl VolSurfaceVolatilitySurface {
         pub fn new(underlying: String, spot: f64, rate: f64, dividend: f64) -> Self {
             Self { underlying, spot, points: Vec::new(), rate, dividend }
         }
@@ -4464,14 +4464,14 @@ pub mod volatility_surface {
     }
 
     #[derive(Debug, Clone)]
-    pub struct SABRParams {
+    pub struct VolSurfaceSABRParams {
         pub alpha: f64,
         pub beta: f64,
         pub rho: f64,
         pub nu: f64,
     }
 
-    impl SABRParams {
+    impl VolSurfaceSABRParams {
         pub fn new(alpha: f64, beta: f64, rho: f64, nu: f64) -> Self {
             Self { alpha: alpha.max(0.001), beta: beta.clamp(0.0, 1.0), rho: rho.clamp(-0.999, 0.999), nu: nu.max(0.001) }
         }
@@ -4504,7 +4504,7 @@ pub mod volatility_surface {
         }
 
         pub fn calibrate(forward: f64, expiry: f64, strikes: &[f64], vols: &[f64], beta: f64) -> Self {
-            let mut params = SABRParams::new(vols[vols.len() / 2], beta, -0.3, 0.5);
+            let mut params = VolSurfaceSABRParams::new(vols[vols.len() / 2], beta, -0.3, 0.5);
             for _ in 0..100 {
                 let mut total_error = 0.0;
                 let mut grad_alpha = 0.0;
@@ -4515,9 +4515,9 @@ pub mod volatility_surface {
                     let error = model_vol - vols[i];
                     total_error += error * error;
                     let bump = 0.0001;
-                    let dalpha = (SABRParams::new(params.alpha + bump, params.beta, params.rho, params.nu).implied_vol(forward, k, expiry) - model_vol) / bump;
-                    let drho = (SABRParams::new(params.alpha, params.beta, params.rho + bump, params.nu).implied_vol(forward, k, expiry) - model_vol) / bump;
-                    let dnu = (SABRParams::new(params.alpha, params.beta, params.rho, params.nu + bump).implied_vol(forward, k, expiry) - model_vol) / bump;
+                    let dalpha = (VolSurfaceSABRParams::new(params.alpha + bump, params.beta, params.rho, params.nu).implied_vol(forward, k, expiry) - model_vol) / bump;
+                    let drho = (VolSurfaceSABRParams::new(params.alpha, params.beta, params.rho + bump, params.nu).implied_vol(forward, k, expiry) - model_vol) / bump;
+                    let dnu = (VolSurfaceSABRParams::new(params.alpha, params.beta, params.rho, params.nu + bump).implied_vol(forward, k, expiry) - model_vol) / bump;
                     grad_alpha += 2.0 * error * dalpha;
                     grad_rho += 2.0 * error * drho;
                     grad_nu += 2.0 * error * dnu;
@@ -4533,7 +4533,7 @@ pub mod volatility_surface {
     }
 
     #[derive(Debug, Clone)]
-    pub struct SVIParams {
+    pub struct VolSurfaceSVIParams {
         pub a: f64,
         pub b: f64,
         pub rho: f64,
@@ -4541,7 +4541,7 @@ pub mod volatility_surface {
         pub sigma: f64,
     }
 
-    impl SVIParams {
+    impl VolSurfaceSVIParams {
         pub fn new(a: f64, b: f64, rho: f64, m: f64, sigma: f64) -> Self {
             Self { a, b: b.max(0.0), rho: rho.clamp(-1.0, 1.0), m, sigma: sigma.max(0.001) }
         }
@@ -4556,7 +4556,7 @@ pub mod volatility_surface {
         }
 
         pub fn calibrate(expiry: f64, log_moneyness: &[f64], total_variances: &[f64]) -> Self {
-            let mut params = SVIParams::new(total_variances[total_variances.len() / 2], 0.1, 0.0, 0.0, 0.1);
+            let mut params = VolSurfaceSVIParams::new(total_variances[total_variances.len() / 2], 0.1, 0.0, 0.0, 0.1);
             for _ in 0..200 {
                 let mut total_error = 0.0;
                 for (i, &k) in log_moneyness.iter().enumerate() {
@@ -4585,7 +4585,7 @@ pub mod volatility_surface {
     }
 
     #[derive(Debug, Clone)]
-    pub struct LocalVolSurface {
+    pub struct VolSurfaceLocalVolSurface {
         pub spot: f64,
         pub rate: f64,
         pub dividend: f64,
@@ -4594,8 +4594,8 @@ pub mod volatility_surface {
         local_vols: Vec<Vec<f64>>,
     }
 
-    impl LocalVolSurface {
-        pub fn from_implied_vols(spot: f64, rate: f64, dividend: f64, surface: &VolatilitySurface, spot_steps: usize, time_steps: usize) -> Self {
+    impl VolSurfaceLocalVolSurface {
+        pub fn from_implied_vols(spot: f64, rate: f64, dividend: f64, surface: &VolSurfaceVolatilitySurface, spot_steps: usize, time_steps: usize) -> Self {
             let min_spot = spot * 0.5;
             let max_spot = spot * 1.5;
             let max_time = 2.0;
@@ -4611,7 +4611,7 @@ pub mod volatility_surface {
             Self { spot, rate, dividend, spot_grid, time_grid, local_vols }
         }
 
-        fn dupire_local_vol(k: f64, t: f64, iv: f64, r: f64, q: f64, surface: &VolatilitySurface) -> f64 {
+        fn dupire_local_vol(k: f64, t: f64, iv: f64, r: f64, q: f64, surface: &VolSurfaceVolatilitySurface) -> f64 {
             let eps_k = k * 0.01;
             let eps_t = t * 0.01;
             let iv_up_k = surface.interpolate(k + eps_k, t);
@@ -4878,7 +4878,7 @@ pub mod risk {
             let mean: f64 = self.returns.iter().sum::<f64>() / self.returns.len() as f64;
             let variance: f64 = self.returns.iter().map(|r| (r - mean).powi(2)).sum::<f64>() / self.returns.len() as f64;
             let std_dev = variance.sqrt();
-            let mut rng = SimpleRng::new(12345);
+            let mut rng = RiskSimpleRng::new(12345);
             let mut simulated_returns = Vec::with_capacity(num_simulations);
             for _ in 0..num_simulations {
                 let mut cum_return = 0.0;
@@ -4892,8 +4892,8 @@ pub mod risk {
         }
     }
 
-    struct SimpleRng { state: u64 }
-    impl SimpleRng {
+    struct RiskSimpleRng { state: u64 }
+    impl RiskSimpleRng {
         fn new(seed: u64) -> Self { Self { state: seed } }
         fn next(&mut self) -> u64 { self.state = self.state.wrapping_mul(6364136223846793005).wrapping_add(1); self.state }
         fn uniform(&mut self) -> f64 { self.next() as f64 / u64::MAX as f64 }
@@ -4901,7 +4901,7 @@ pub mod risk {
     }
 
     #[derive(Debug, Clone)]
-    pub struct StressScenario {
+    pub struct RiskStressScenario {
         pub name: String,
         pub spot_shock: f64,
         pub vol_shock: f64,
@@ -4909,7 +4909,7 @@ pub mod risk {
         pub correlation_shock: f64,
     }
 
-    impl StressScenario {
+    impl RiskStressScenario {
         pub fn market_crash() -> Self { Self { name: "Market Crash".into(), spot_shock: -0.20, vol_shock: 0.50, rate_shock: -0.01, correlation_shock: 0.30 } }
         pub fn flash_crash() -> Self { Self { name: "Flash Crash".into(), spot_shock: -0.10, vol_shock: 1.00, rate_shock: 0.0, correlation_shock: 0.50 } }
         pub fn rate_spike() -> Self { Self { name: "Rate Spike".into(), spot_shock: -0.05, vol_shock: 0.20, rate_shock: 0.02, correlation_shock: 0.10 } }
@@ -4927,16 +4927,16 @@ pub mod risk {
         pub theta_impact: f64,
     }
 
-    pub struct StressTester {
-        scenarios: Vec<StressScenario>,
+    pub struct RiskStressTester {
+        scenarios: Vec<RiskStressScenario>,
     }
 
-    impl StressTester {
+    impl RiskStressTester {
         pub fn new() -> Self {
-            Self { scenarios: vec![StressScenario::market_crash(), StressScenario::flash_crash(), StressScenario::rate_spike(), StressScenario::vol_explosion(), StressScenario::black_swan()] }
+            Self { scenarios: vec![RiskStressScenario::market_crash(), RiskStressScenario::flash_crash(), RiskStressScenario::rate_spike(), RiskStressScenario::vol_explosion(), RiskStressScenario::black_swan()] }
         }
 
-        pub fn add_scenario(&mut self, scenario: StressScenario) { self.scenarios.push(scenario); }
+        pub fn add_scenario(&mut self, scenario: RiskStressScenario) { self.scenarios.push(scenario); }
 
         pub fn run(&self, spot: f64, position_delta: f64, position_gamma: f64, position_vega: f64, position_theta: f64) -> Vec<StressTestResult> {
             self.scenarios.iter().map(|s| {
@@ -5268,7 +5268,7 @@ mod tests {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Volatility surface storing implied vols across strikes and expirations
-pub struct VolatilitySurface {
+pub struct DeltaVolatilitySurface {
     underlying: String,
     spot: f64,
     data: BTreeMap<(u64, i64), f64>,  // (expiration, strike_cents) -> IV
@@ -5283,9 +5283,9 @@ pub enum SurfaceInterpolator {
     SVI,
 }
 
-impl VolatilitySurface {
+impl DeltaVolatilitySurface {
     pub fn new(underlying: &str, spot: f64) -> Self {
-        VolatilitySurface {
+        DeltaVolatilitySurface {
             underlying: underlying.to_string(),
             spot,
             data: BTreeMap::new(),
@@ -5301,7 +5301,7 @@ impl VolatilitySurface {
 
     /// Build surface from options chain
     pub fn from_chain(chain: &OptionsChain, spot: f64) -> Self {
-        let mut surface = VolatilitySurface::new(&chain.underlying, spot);
+        let mut surface = DeltaVolatilitySurface::new(&chain.underlying, spot);
 
         for ((exp, strike), quote) in &chain.calls {
             if quote.implied_vol > 0.0 {
@@ -5321,10 +5321,10 @@ impl VolatilitySurface {
     /// Interpolate IV at a given strike and expiration
     pub fn get_iv(&self, expiration: u64, strike: f64) -> f64 {
         match self.interpolator {
-            SurfaceInterpolator::Linear => self.linear_interpolate(expiration, strike),
-            SurfaceInterpolator::Cubic => self.cubic_interpolate(expiration, strike),
-            SurfaceInterpolator::SABR => self.sabr_interpolate(expiration, strike),
-            SurfaceInterpolator::SVI => self.svi_interpolate(expiration, strike),
+            SurfaceInterpolator::Linear => DeltaVolatilitySurface::linear_interpolate(self, expiration, strike),
+            SurfaceInterpolator::Cubic => DeltaVolatilitySurface::cubic_interpolate(self, expiration, strike),
+            SurfaceInterpolator::SABR => DeltaVolatilitySurface::sabr_interpolate(self, expiration, strike),
+            SurfaceInterpolator::SVI => DeltaVolatilitySurface::svi_interpolate(self, expiration, strike),
         }
     }
 
@@ -5420,16 +5420,16 @@ impl VolatilitySurface {
 
 /// SABR stochastic volatility model parameters
 #[derive(Debug, Clone, Copy)]
-pub struct SABRParams {
+pub struct DeltaSABRParams {
     pub alpha: f64,  // Initial volatility
     pub beta: f64,   // CEV exponent (0-1)
     pub rho: f64,    // Correlation (-1 to 1)
     pub nu: f64,     // Vol of vol
 }
 
-impl SABRParams {
+impl DeltaSABRParams {
     pub fn new(alpha: f64, beta: f64, rho: f64, nu: f64) -> Self {
-        SABRParams { alpha, beta, rho, nu }
+        DeltaSABRParams { alpha, beta, rho, nu }
     }
 }
 
@@ -5438,7 +5438,7 @@ pub struct SABRModel;
 
 impl SABRModel {
     /// Calculate implied volatility using Hagan's formula
-    pub fn implied_vol(params: &SABRParams, forward: f64, strike: f64, t: f64) -> f64 {
+    pub fn implied_vol(params: &DeltaSABRParams, forward: f64, strike: f64, t: f64) -> f64 {
         let f = forward;
         let k = strike;
         let alpha = params.alpha;
@@ -5481,7 +5481,7 @@ impl SABRModel {
         market_vols: &[f64],
         t: f64,
         beta: f64,
-    ) -> SABRParams {
+    ) -> DeltaSABRParams {
         // Levenberg-Marquardt optimization
         let mut alpha = market_vols[strikes.len() / 2]; // ATM vol as initial guess
         let mut rho = 0.0;
@@ -5491,7 +5491,7 @@ impl SABRModel {
         const TOL: f64 = 1e-6;
 
         for _ in 0..MAX_ITER {
-            let params = SABRParams::new(alpha, beta, rho, nu);
+            let params = DeltaSABRParams::new(alpha, beta, rho, nu);
 
             let mut sse = 0.0;
             for (i, &strike) in strikes.iter().enumerate() {
@@ -5507,21 +5507,21 @@ impl SABRModel {
             let delta = 0.01;
 
             // Alpha gradient
-            let params_up = SABRParams::new(alpha + delta, beta, rho, nu);
+            let params_up = DeltaSABRParams::new(alpha + delta, beta, rho, nu);
             let sse_up: f64 = strikes.iter().enumerate()
                 .map(|(i, &k)| (Self::implied_vol(&params_up, forward, k, t) - market_vols[i]).powi(2))
                 .sum();
             let grad_alpha = (sse_up - sse) / delta;
 
             // Rho gradient
-            let params_up = SABRParams::new(alpha, beta, rho + delta, nu);
+            let params_up = DeltaSABRParams::new(alpha, beta, rho + delta, nu);
             let sse_up: f64 = strikes.iter().enumerate()
                 .map(|(i, &k)| (Self::implied_vol(&params_up, forward, k, t) - market_vols[i]).powi(2))
                 .sum();
             let grad_rho = (sse_up - sse) / delta;
 
             // Nu gradient
-            let params_up = SABRParams::new(alpha, beta, rho, nu + delta);
+            let params_up = DeltaSABRParams::new(alpha, beta, rho, nu + delta);
             let sse_up: f64 = strikes.iter().enumerate()
                 .map(|(i, &k)| (Self::implied_vol(&params_up, forward, k, t) - market_vols[i]).powi(2))
                 .sum();
@@ -5533,7 +5533,7 @@ impl SABRModel {
             nu = (nu - lr * grad_nu).max(0.01);
         }
 
-        SABRParams::new(alpha, beta, rho, nu)
+        DeltaSABRParams::new(alpha, beta, rho, nu)
     }
 }
 
@@ -5543,7 +5543,7 @@ impl SABRModel {
 
 /// SVI (Stochastic Volatility Inspired) parameters for variance smile
 #[derive(Debug, Clone, Copy)]
-pub struct SVIParams {
+pub struct DeltaSVIParams {
     pub a: f64,     // Level of variance
     pub b: f64,     // Angle between put and call wings
     pub rho: f64,   // Counter-clockwise rotation
@@ -5551,9 +5551,9 @@ pub struct SVIParams {
     pub sigma: f64, // ATM curvature
 }
 
-impl SVIParams {
+impl DeltaSVIParams {
     pub fn new(a: f64, b: f64, rho: f64, m: f64, sigma: f64) -> Self {
-        SVIParams { a, b, rho, m, sigma }
+        DeltaSVIParams { a, b, rho, m, sigma }
     }
 }
 
@@ -5562,20 +5562,20 @@ pub struct SVIModel;
 
 impl SVIModel {
     /// Raw SVI total variance
-    pub fn total_variance(params: &SVIParams, k: f64) -> f64 {
+    pub fn total_variance(params: &DeltaSVIParams, k: f64) -> f64 {
         // k is log-moneyness: ln(K/F)
         params.a + params.b * (params.rho * (k - params.m)
             + sqrt((k - params.m).powi(2) + params.sigma.powi(2)))
     }
 
     /// Implied volatility from SVI
-    pub fn implied_vol(params: &SVIParams, k: f64, t: f64) -> f64 {
+    pub fn implied_vol(params: &DeltaSVIParams, k: f64, t: f64) -> f64 {
         let w = Self::total_variance(params, k);
         sqrt(w / t)
     }
 
     /// Check arbitrage-free conditions
-    pub fn is_arbitrage_free(params: &SVIParams) -> bool {
+    pub fn is_arbitrage_free(params: &DeltaSVIParams) -> bool {
         // Butterfly arbitrage: b * (1 + |rho|) <= 4
         let butterfly = params.b * (1.0 + params.rho.abs()) <= 4.0;
 
@@ -5590,7 +5590,7 @@ impl SVIModel {
         log_strikes: &[f64],
         market_vols: &[f64],
         t: f64,
-    ) -> SVIParams {
+    ) -> DeltaSVIParams {
         // Convert to total variance
         let total_vars: Vec<f64> = market_vols.iter()
             .map(|v| v.powi(2) * t)
@@ -5612,7 +5612,7 @@ impl SVIModel {
                         / (log_strikes[log_strikes.len()-1] - log_strikes[log_strikes.len()-2]);
         let b = (left_slope.abs() + right_slope.abs()) / 2.0;
 
-        SVIParams::new(a, b, rho, m, sigma)
+        DeltaSVIParams::new(a, b, rho, m, sigma)
     }
 }
 
@@ -5622,7 +5622,7 @@ impl SVIModel {
 
 /// Barrier type for barrier options
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum BarrierType {
+pub enum BarrierDirection {
     UpAndOut,
     UpAndIn,
     DownAndOut,
@@ -5631,14 +5631,14 @@ pub enum BarrierType {
 
 /// Barrier option contract
 #[derive(Debug, Clone)]
-pub struct BarrierOption {
+pub struct DeltaBarrierOption {
     pub base: OptionContract,
     pub barrier: f64,
-    pub barrier_type: BarrierType,
+    pub barrier_type: BarrierDirection,
     pub rebate: f64,  // Paid if knocked out
 }
 
-impl BarrierOption {
+impl DeltaBarrierOption {
     /// Price using analytical formula (Rubinstein-Reiner)
     pub fn price(&self, market: &MarketData, t: f64) -> f64 {
         let s = market.spot;
@@ -5662,22 +5662,22 @@ impl BarrierOption {
         };
 
         let eta = match self.barrier_type {
-            BarrierType::DownAndOut | BarrierType::DownAndIn => 1.0,
-            BarrierType::UpAndOut | BarrierType::UpAndIn => -1.0,
+            BarrierDirection::DownAndOut | BarrierDirection::DownAndIn => 1.0,
+            BarrierDirection::UpAndOut | BarrierDirection::UpAndIn => -1.0,
         };
 
         // Standard option value
         let vanilla = BlackScholes::price(&self.base, market, t);
 
         match self.barrier_type {
-            BarrierType::DownAndOut | BarrierType::UpAndOut => {
+            BarrierDirection::DownAndOut | BarrierDirection::UpAndOut => {
                 if (eta > 0.0 && s <= h) || (eta < 0.0 && s >= h) {
                     return self.rebate;
                 }
                 // Simplified - full formula is more complex
                 vanilla * 0.8 // Placeholder
             }
-            BarrierType::DownAndIn | BarrierType::UpAndIn => {
+            BarrierDirection::DownAndIn | BarrierDirection::UpAndIn => {
                 if (eta > 0.0 && s <= h) || (eta < 0.0 && s >= h) {
                     return vanilla;
                 }
@@ -5689,20 +5689,20 @@ impl BarrierOption {
 
 /// Asian option (average price)
 #[derive(Debug, Clone)]
-pub struct AsianOption {
+pub struct DeltaAsianOption {
     pub base: OptionContract,
-    pub averaging: AveragingType,
+    pub averaging: SimpleAveragingType,
     pub observations: usize,
     pub running_average: Option<f64>,  // For pricing during life
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum AveragingType {
+pub enum SimpleAveragingType {
     Arithmetic,
     Geometric,
 }
 
-impl AsianOption {
+impl DeltaAsianOption {
     /// Price using geometric approximation for arithmetic Asian
     pub fn price_geometric(&self, market: &MarketData, t: f64) -> f64 {
         // Geometric average has closed-form solution
@@ -5741,8 +5741,8 @@ impl AsianOption {
             }
 
             let average = match self.averaging {
-                AveragingType::Arithmetic => sum / (self.observations + 1) as f64,
-                AveragingType::Geometric => pow(product, 1.0 / (self.observations + 1) as f64),
+                SimpleAveragingType::Arithmetic => sum / (self.observations + 1) as f64,
+                SimpleAveragingType::Geometric => pow(product, 1.0 / (self.observations + 1) as f64),
             };
 
             let payoff = match self.base.option_type {
@@ -5764,19 +5764,19 @@ impl AsianOption {
 
 /// Lookback option (floating or fixed strike)
 #[derive(Debug, Clone)]
-pub struct LookbackOption {
+pub struct DeltaLookbackOption {
     pub base: OptionContract,
     pub lookback_type: LookbackType,
     pub current_extremum: Option<f64>,  // For pricing during life
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum LookbackType {
+pub enum ExtExtLookbackType {
     FloatingStrike,  // Strike is min (call) or max (put) of path
     FixedStrike,     // Payoff based on max (call) or min (put) of path
 }
 
-impl LookbackOption {
+impl DeltaLookbackOption {
     /// Price floating strike lookback (Goldman-Sosin-Gatto formula)
     pub fn price(&self, market: &MarketData, t: f64) -> f64 {
         let s = market.spot;
@@ -5855,7 +5855,7 @@ impl DigitalOption {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Variance swap pricing
-pub struct VarianceSwap {
+pub struct DeltaVarianceSwap {
     pub underlying: String,
     pub strike_variance: f64,  // K_var
     pub notional: f64,
@@ -5863,9 +5863,9 @@ pub struct VarianceSwap {
     pub annualization_factor: f64,
 }
 
-impl VarianceSwap {
+impl DeltaVarianceSwap {
     pub fn new(underlying: &str, strike_vol: f64, notional: f64, expiration: u64) -> Self {
-        VarianceSwap {
+        DeltaVarianceSwap {
             underlying: underlying.to_string(),
             strike_variance: strike_vol.powi(2),
             notional,
@@ -5875,7 +5875,7 @@ impl VarianceSwap {
     }
 
     /// Fair variance from replicating portfolio
-    pub fn fair_variance(surface: &VolatilitySurface, forward: f64, r: f64, t: f64) -> f64 {
+    pub fn fair_variance(surface: &DeltaVolatilitySurface, forward: f64, r: f64, t: f64) -> f64 {
         // Replicate using log-contract (strip of puts and calls)
         // Fair variance = 2/T * [r*T - S/F + 1 + integral of OTM options]
 
@@ -5935,22 +5935,22 @@ impl VarianceSwap {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Value at Risk calculator
-pub struct VaRCalculator {
+pub struct DeltaVaRCalculator {
     confidence: f64,
     horizon_days: u32,
     method: VaRMethod,
 }
 
 #[derive(Clone, Copy)]
-pub enum VaRMethod {
+pub enum ExtExtVaRMethod {
     Historical,
     Parametric,
     MonteCarlo(usize),  // Number of simulations
 }
 
-impl VaRCalculator {
-    pub fn new(confidence: f64, horizon_days: u32, method: VaRMethod) -> Self {
-        VaRCalculator { confidence, horizon_days, method }
+impl DeltaVaRCalculator {
+    pub fn new(confidence: f64, horizon_days: u32, method: ExtVaRMethod) -> Self {
+        DeltaVaRCalculator { confidence, horizon_days, method }
     }
 
     /// Calculate VaR for a portfolio of options
@@ -5962,13 +5962,13 @@ impl VaRCalculator {
         historical_returns: Option<&[f64]>,
     ) -> f64 {
         match self.method {
-            VaRMethod::Historical => {
+            ExtVaRMethod::Historical => {
                 self.historical_var(positions, market, current_time, historical_returns.unwrap_or(&[]))
             }
-            VaRMethod::Parametric => {
+            ExtVaRMethod::Parametric => {
                 self.parametric_var(positions, market, current_time)
             }
-            VaRMethod::MonteCarlo(sims) => {
+            ExtVaRMethod::MonteCarlo(sims) => {
                 self.monte_carlo_var(positions, market, current_time, sims)
             }
         }
@@ -6204,8 +6204,8 @@ impl OptionsPortfolio {
     }
 
     /// Calculate total portfolio Greeks
-    pub fn total_greeks(&self, markets: &HashMap<String, MarketData>, current_time: u64) -> PortfolioGreeks {
-        let mut result = PortfolioGreeks::default();
+    pub fn total_greeks(&self, markets: &HashMap<String, MarketData>, current_time: u64) -> DeltaPortfolioGreeks {
+        let mut result = DeltaPortfolioGreeks::default();
 
         for leg in &self.positions {
             if let Some(market) = markets.get(&leg.contract.underlying) {
@@ -6308,7 +6308,7 @@ impl OptionsPortfolio {
 }
 
 #[derive(Debug, Clone, Copy, Default)]
-pub struct PortfolioGreeks {
+pub struct DeltaPortfolioGreeks {
     pub delta: f64,
     pub gamma: f64,
     pub theta: f64,
@@ -6744,7 +6744,7 @@ pub struct SkewAnalyzer;
 
 impl SkewAnalyzer {
     /// Calculate skew metrics for an expiration
-    pub fn analyze(surface: &VolatilitySurface, expiration: u64, forward: f64, t: f64) -> SkewMetrics {
+    pub fn analyze(surface: &DeltaVolatilitySurface, expiration: u64, forward: f64, t: f64) -> SkewMetrics {
         let atm_vol = surface.get_iv(expiration, forward);
 
         // 25-delta skew
@@ -6801,8 +6801,8 @@ pub struct TermStructureAnalyzer;
 
 impl TermStructureAnalyzer {
     /// Analyze term structure shape
-    pub fn analyze(surface: &VolatilitySurface) -> TermStructureShape {
-        let terms = surface.term_structure();
+    pub fn analyze(surface: &DeltaVolatilitySurface) -> TermStructureShape {
+        let terms = DeltaVolatilitySurface::term_structure(surface);
 
         if terms.len() < 2 {
             return TermStructureShape::Flat;
@@ -6982,7 +6982,7 @@ impl GreeksMonitor {
     pub fn check_thresholds(&self, market: &MarketData, current_time: u64) -> Vec<GreeksAlert> {
         let mut alerts = Vec::new();
 
-        let mut total = PortfolioGreeks::default();
+        let mut total = DeltaPortfolioGreeks::default();
         for leg in &self.positions {
             let t = leg.contract.time_to_expiry(current_time);
             let greeks = BlackScholes::greeks(&leg.contract, market, t);
@@ -7045,7 +7045,7 @@ impl GreeksMonitor {
 
     /// Generate summary report
     pub fn summary(&self, market: &MarketData, current_time: u64) -> GreeksSummary {
-        let mut total = PortfolioGreeks::default();
+        let mut total = DeltaPortfolioGreeks::default();
         let mut position_count = 0;
 
         for leg in &self.positions {
@@ -7075,7 +7075,7 @@ impl GreeksMonitor {
 
 #[derive(Debug, Clone)]
 pub struct GreeksSummary {
-    pub total_greeks: PortfolioGreeks,
+    pub total_greeks: DeltaPortfolioGreeks,
     pub position_count: usize,
     pub delta_dollars: f64,
     pub gamma_pct: f64,

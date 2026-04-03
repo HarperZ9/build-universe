@@ -1206,15 +1206,15 @@ impl Normalizer {
 
 /// Image for processing
 #[derive(Clone)]
-pub struct Image {
+pub struct RasterImage {
     pub width: u32,
     pub height: u32,
     pub pixels: Vec<RGB>,
 }
 
-impl Image {
+impl RasterImage {
     pub fn new(width: u32, height: u32) -> Self {
-        Image {
+        RasterImage {
             width,
             height,
             pixels: vec![RGB::new(0.0, 0.0, 0.0); (width * height) as usize],
@@ -1222,7 +1222,7 @@ impl Image {
     }
 
     pub fn from_frame(frame: &VideoFrame) -> Self {
-        Image {
+        RasterImage {
             width: frame.width,
             height: frame.height,
             pixels: frame.pixels.clone(),
@@ -1244,8 +1244,8 @@ impl Image {
     }
 
     /// Resize image using bilinear interpolation
-    pub fn resize(&self, new_width: u32, new_height: u32) -> Image {
-        let mut result = Image::new(new_width, new_height);
+    pub fn resize(&self, new_width: u32, new_height: u32) -> RasterImage {
+        let mut result = RasterImage::new(new_width, new_height);
         let x_ratio = self.width as f64 / new_width as f64;
         let y_ratio = self.height as f64 / new_height as f64;
 
@@ -1287,8 +1287,8 @@ impl Image {
     }
 
     /// Crop image
-    pub fn crop(&self, x: u32, y: u32, width: u32, height: u32) -> Image {
-        let mut result = Image::new(width, height);
+    pub fn crop(&self, x: u32, y: u32, width: u32, height: u32) -> RasterImage {
+        let mut result = RasterImage::new(width, height);
 
         for dy in 0..height {
             for dx in 0..width {
@@ -1304,10 +1304,10 @@ impl Image {
     }
 
     /// Rotate image by 90, 180, or 270 degrees
-    pub fn rotate(&self, degrees: i32) -> Image {
+    pub fn rotate(&self, degrees: i32) -> RasterImage {
         match degrees % 360 {
             90 | -270 => {
-                let mut result = Image::new(self.height, self.width);
+                let mut result = RasterImage::new(self.height, self.width);
                 for y in 0..self.height {
                     for x in 0..self.width {
                         result.set_pixel(self.height - 1 - y, x, self.get_pixel(x, y));
@@ -1316,7 +1316,7 @@ impl Image {
                 result
             }
             180 | -180 => {
-                let mut result = Image::new(self.width, self.height);
+                let mut result = RasterImage::new(self.width, self.height);
                 for y in 0..self.height {
                     for x in 0..self.width {
                         result.set_pixel(self.width - 1 - x, self.height - 1 - y, self.get_pixel(x, y));
@@ -1325,7 +1325,7 @@ impl Image {
                 result
             }
             270 | -90 => {
-                let mut result = Image::new(self.height, self.width);
+                let mut result = RasterImage::new(self.height, self.width);
                 for y in 0..self.height {
                     for x in 0..self.width {
                         result.set_pixel(y, self.width - 1 - x, self.get_pixel(x, y));
@@ -1338,8 +1338,8 @@ impl Image {
     }
 
     /// Flip image horizontally or vertically
-    pub fn flip(&self, horizontal: bool) -> Image {
-        let mut result = Image::new(self.width, self.height);
+    pub fn flip(&self, horizontal: bool) -> RasterImage {
+        let mut result = RasterImage::new(self.width, self.height);
 
         for y in 0..self.height {
             for x in 0..self.width {
@@ -1356,7 +1356,7 @@ impl Image {
     }
 
     /// Apply Gaussian blur
-    pub fn blur(&self, radius: u32) -> Image {
+    pub fn blur(&self, radius: u32) -> RasterImage {
         let kernel_size = radius * 2 + 1;
         let sigma = radius as f64 / 3.0;
 
@@ -1377,7 +1377,7 @@ impl Image {
         }
 
         // Horizontal pass
-        let mut temp = Image::new(self.width, self.height);
+        let mut temp = RasterImage::new(self.width, self.height);
         for y in 0..self.height {
             for x in 0..self.width {
                 let mut r = 0.0;
@@ -1397,7 +1397,7 @@ impl Image {
         }
 
         // Vertical pass
-        let mut result = Image::new(self.width, self.height);
+        let mut result = RasterImage::new(self.width, self.height);
         for y in 0..self.height {
             for x in 0..self.width {
                 let mut r = 0.0;
@@ -1420,8 +1420,8 @@ impl Image {
     }
 
     /// Apply sharpening
-    pub fn sharpen(&self, amount: f32) -> Image {
-        let mut result = Image::new(self.width, self.height);
+    pub fn sharpen(&self, amount: f32) -> RasterImage {
+        let mut result = RasterImage::new(self.width, self.height);
 
         // Unsharp mask: original + amount * (original - blurred)
         let blurred = self.blur(1);
@@ -1443,8 +1443,8 @@ impl Image {
     }
 
     /// Adjust brightness and contrast
-    pub fn adjust_brightness_contrast(&self, brightness: f32, contrast: f32) -> Image {
-        let mut result = Image::new(self.width, self.height);
+    pub fn adjust_brightness_contrast(&self, brightness: f32, contrast: f32) -> RasterImage {
+        let mut result = RasterImage::new(self.width, self.height);
 
         for y in 0..self.height {
             for x in 0..self.width {
@@ -1462,8 +1462,8 @@ impl Image {
     }
 
     /// Adjust hue, saturation, lightness
-    pub fn adjust_hsl(&self, hue_shift: f32, saturation: f32, lightness: f32) -> Image {
-        let mut result = Image::new(self.width, self.height);
+    pub fn adjust_hsl(&self, hue_shift: f32, saturation: f32, lightness: f32) -> RasterImage {
+        let mut result = RasterImage::new(self.width, self.height);
 
         for y in 0..self.height {
             for x in 0..self.width {
@@ -1573,12 +1573,12 @@ impl AIUpscaler {
     }
 
     /// Upscale image by given factor
-    pub fn upscale(&self, image: &Image, scale: u32) -> Image {
+    pub fn upscale(&self, image: &RasterImage, scale: u32) -> RasterImage {
         let new_width = image.width * scale;
         let new_height = image.height * scale;
 
         match self.algorithm {
-            UpscaleAlgorithm::Bilinear => image.resize(new_width, new_height),
+            UpscaleAlgorithm::Bilinear => RasterImage::resize(image, new_width, new_height),
             UpscaleAlgorithm::Bicubic => self.bicubic_upscale(image, new_width, new_height),
             UpscaleAlgorithm::Lanczos => self.lanczos_upscale(image, new_width, new_height, 3),
             UpscaleAlgorithm::ESRGAN | UpscaleAlgorithm::RealESRGAN => {
@@ -1589,8 +1589,8 @@ impl AIUpscaler {
         }
     }
 
-    fn bicubic_upscale(&self, image: &Image, new_width: u32, new_height: u32) -> Image {
-        let mut result = Image::new(new_width, new_height);
+    fn bicubic_upscale(&self, image: &RasterImage, new_width: u32, new_height: u32) -> RasterImage {
+        let mut result = RasterImage::new(new_width, new_height);
         let x_ratio = image.width as f64 / new_width as f64;
         let y_ratio = image.height as f64 / new_height as f64;
 
@@ -1612,7 +1612,7 @@ impl AIUpscaler {
                     for i in -1..=2 {
                         let px = (x0 + i).max(0).min(image.width as i32 - 1) as u32;
                         let py = (y0 + j).max(0).min(image.height as i32 - 1) as u32;
-                        let pixel = image.get_pixel(px, py);
+                        let pixel = RasterImage::get_pixel(image, px, py);
 
                         let weight = Self::cubic_weight(i as f64 - dx) * Self::cubic_weight(j as f64 - dy);
                         r += pixel.r as f64 * weight;
@@ -1643,8 +1643,8 @@ impl AIUpscaler {
         }
     }
 
-    fn lanczos_upscale(&self, image: &Image, new_width: u32, new_height: u32, a: i32) -> Image {
-        let mut result = Image::new(new_width, new_height);
+    fn lanczos_upscale(&self, image: &RasterImage, new_width: u32, new_height: u32, a: i32) -> RasterImage {
+        let mut result = RasterImage::new(new_width, new_height);
         let x_ratio = image.width as f64 / new_width as f64;
         let y_ratio = image.height as f64 / new_height as f64;
 
@@ -1665,7 +1665,7 @@ impl AIUpscaler {
                     for i in -a+1..=a {
                         let px = (x0 + i).max(0).min(image.width as i32 - 1) as u32;
                         let py = (y0 + j).max(0).min(image.height as i32 - 1) as u32;
-                        let pixel = image.get_pixel(px, py);
+                        let pixel = RasterImage::get_pixel(image, px, py);
 
                         let dx = src_x - (x0 + i) as f64;
                         let dy = src_y - (y0 + j) as f64;
@@ -1706,23 +1706,23 @@ impl AIUpscaler {
         }
     }
 
-    fn enhance_edges(&self, image: &Image) -> Image {
+    fn enhance_edges(&self, image: &RasterImage) -> RasterImage {
         // Simple edge enhancement for AI upscaling simulation
-        let sharpened = image.sharpen(0.5 * (1.0 - self.denoise_strength));
+        let sharpened = RasterImage::sharpen(image, 0.5 * (1.0 - self.denoise_strength));
 
         // Add subtle detail enhancement
-        let mut result = Image::new(image.width, image.height);
+        let mut result = RasterImage::new(image.width, image.height);
 
         for y in 1..image.height - 1 {
             for x in 1..image.width - 1 {
-                let sharp = sharpened.get_pixel(x, y);
-                let orig = image.get_pixel(x, y);
+                let sharp = RasterImage::get_pixel(&sharpened, x, y);
+                let orig = RasterImage::get_pixel(image, x, y);
 
                 // Detect edges using Sobel-like operator
-                let left = image.get_pixel(x - 1, y);
-                let right = image.get_pixel(x + 1, y);
-                let up = image.get_pixel(x, y - 1);
-                let down = image.get_pixel(x, y + 1);
+                let left = RasterImage::get_pixel(image, x - 1, y);
+                let right = RasterImage::get_pixel(image, x + 1, y);
+                let up = RasterImage::get_pixel(image, x, y - 1);
+                let down = RasterImage::get_pixel(image, x, y + 1);
 
                 let edge_h = ((right.r - left.r).abs() + (right.g - left.g).abs() + (right.b - left.b).abs()) / 3.0;
                 let edge_v = ((down.r - up.r).abs() + (down.g - up.g).abs() + (down.b - up.b).abs()) / 3.0;
@@ -2008,7 +2008,7 @@ impl QuantaMediaSuite {
 
     /// Upscale video frame
     pub fn upscale_frame(&self, frame: &VideoFrame, scale: u32) -> VideoFrame {
-        let image = Image::from_frame(frame);
+        let image = RasterImage::from_frame(frame);
         let upscaled = self.upscaler.upscale(&image, scale);
 
         VideoFrame {
@@ -3997,7 +3997,7 @@ impl PixelShuffle {
 }
 
 /// AI Upscaler with neural network inference
-pub struct AIUpscaler {
+pub struct NeuralAIUpscaler {
     config: UpscaleConfig,
     feature_extractor: Vec<ConvBlock>,
     residual_blocks: Vec<ResidualDenseBlock>,
@@ -4005,7 +4005,7 @@ pub struct AIUpscaler {
     reconstruction: ConvBlock,
 }
 
-impl AIUpscaler {
+impl NeuralAIUpscaler {
     pub fn new(config: UpscaleConfig) -> Self {
         let base_channels = 64;
         let feature_extractor = vec![
@@ -4743,7 +4743,7 @@ impl SpectralNoiseGate {
 
 /// Video codec types
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum VideoCodec {
+pub enum CodecVideoCodec {
     H264,
     H265,   // HEVC
     VP9,
@@ -4755,7 +4755,7 @@ pub enum VideoCodec {
 
 /// Encoding preset
 #[derive(Debug, Clone, Copy)]
-pub enum EncodingPreset {
+pub enum CodecEncodingPreset {
     UltraFast,
     SuperFast,
     VeryFast,
@@ -4781,11 +4781,11 @@ pub enum RateControl {
 /// Video encoding configuration
 #[derive(Debug, Clone)]
 pub struct VideoEncoderConfig {
-    pub codec: VideoCodec,
+    pub codec: CodecVideoCodec,
     pub width: u32,
     pub height: u32,
     pub frame_rate: f64,
-    pub preset: EncodingPreset,
+    pub preset: CodecEncodingPreset,
     pub rate_control: RateControl,
     pub pixel_format: PixelFormat,
     pub color_space: ColorSpace,
@@ -4819,11 +4819,11 @@ pub enum ColorSpace {
 impl VideoEncoderConfig {
     pub fn h264_web(width: u32, height: u32, fps: f64) -> Self {
         Self {
-            codec: VideoCodec::H264,
+            codec: CodecVideoCodec::H264,
             width,
             height,
             frame_rate: fps,
-            preset: EncodingPreset::Medium,
+            preset: CodecEncodingPreset::Medium,
             rate_control: RateControl::CRF(23),
             pixel_format: PixelFormat::YUV420P,
             color_space: ColorSpace::BT709,
@@ -4838,11 +4838,11 @@ impl VideoEncoderConfig {
 
     pub fn h265_hdr(width: u32, height: u32, fps: f64) -> Self {
         Self {
-            codec: VideoCodec::H265,
+            codec: CodecVideoCodec::H265,
             width,
             height,
             frame_rate: fps,
-            preset: EncodingPreset::Slow,
+            preset: CodecEncodingPreset::Slow,
             rate_control: RateControl::CRF(20),
             pixel_format: PixelFormat::YUV420P10LE,
             color_space: ColorSpace::BT2020,
@@ -4857,11 +4857,11 @@ impl VideoEncoderConfig {
 
     pub fn prores_proxy(width: u32, height: u32, fps: f64) -> Self {
         Self {
-            codec: VideoCodec::ProRes,
+            codec: CodecVideoCodec::ProRes,
             width,
             height,
             frame_rate: fps,
-            preset: EncodingPreset::Medium,
+            preset: CodecEncodingPreset::Medium,
             rate_control: RateControl::VBR { target: 45000, max: 60000 },
             pixel_format: PixelFormat::YUV422P10LE,
             color_space: ColorSpace::BT709,
@@ -4876,11 +4876,11 @@ impl VideoEncoderConfig {
 
     pub fn av1_streaming(width: u32, height: u32, fps: f64) -> Self {
         Self {
-            codec: VideoCodec::AV1,
+            codec: CodecVideoCodec::AV1,
             width,
             height,
             frame_rate: fps,
-            preset: EncodingPreset::Medium,
+            preset: CodecEncodingPreset::Medium,
             rate_control: RateControl::CRF(30),
             pixel_format: PixelFormat::YUV420P,
             color_space: ColorSpace::BT709,
@@ -4897,27 +4897,27 @@ impl VideoEncoderConfig {
         let mut args = Vec::new();
 
         let codec_str = match self.codec {
-            VideoCodec::H264 => "libx264",
-            VideoCodec::H265 => "libx265",
-            VideoCodec::VP9 => "libvpx-vp9",
-            VideoCodec::AV1 => "libaom-av1",
-            VideoCodec::ProRes => "prores_ks",
-            VideoCodec::DNxHD => "dnxhd",
-            VideoCodec::FFV1 => "ffv1",
+            CodecVideoCodec::H264 => "libx264",
+            CodecVideoCodec::H265 => "libx265",
+            CodecVideoCodec::VP9 => "libvpx-vp9",
+            CodecVideoCodec::AV1 => "libaom-av1",
+            CodecVideoCodec::ProRes => "prores_ks",
+            CodecVideoCodec::DNxHD => "dnxhd",
+            CodecVideoCodec::FFV1 => "ffv1",
         };
         args.extend(["-c:v".to_string(), codec_str.to_string()]);
 
         let preset_str = match self.preset {
-            EncodingPreset::UltraFast => "ultrafast",
-            EncodingPreset::SuperFast => "superfast",
-            EncodingPreset::VeryFast => "veryfast",
-            EncodingPreset::Faster => "faster",
-            EncodingPreset::Fast => "fast",
-            EncodingPreset::Medium => "medium",
-            EncodingPreset::Slow => "slow",
-            EncodingPreset::Slower => "slower",
-            EncodingPreset::VerySlow => "veryslow",
-            EncodingPreset::Placebo => "placebo",
+            CodecEncodingPreset::UltraFast => "ultrafast",
+            CodecEncodingPreset::SuperFast => "superfast",
+            CodecEncodingPreset::VeryFast => "veryfast",
+            CodecEncodingPreset::Faster => "faster",
+            CodecEncodingPreset::Fast => "fast",
+            CodecEncodingPreset::Medium => "medium",
+            CodecEncodingPreset::Slow => "slow",
+            CodecEncodingPreset::Slower => "slower",
+            CodecEncodingPreset::VerySlow => "veryslow",
+            CodecEncodingPreset::Placebo => "placebo",
         };
         args.extend(["-preset".to_string(), preset_str.to_string()]);
 
@@ -4955,7 +4955,7 @@ impl VideoEncoderConfig {
 
 /// Audio codec types
 #[derive(Debug, Clone, Copy)]
-pub enum AudioCodec {
+pub enum CodecAudioCodec {
     AAC,
     MP3,
     Opus,
@@ -4969,8 +4969,8 @@ pub enum AudioCodec {
 
 /// Audio encoder configuration
 #[derive(Debug, Clone)]
-pub struct AudioEncoderConfig {
-    pub codec: AudioCodec,
+pub struct CodecAudioEncoderConfig {
+    pub codec: CodecAudioCodec,
     pub sample_rate: u32,
     pub channels: u8,
     pub bitrate: Option<u32>,
@@ -4978,10 +4978,10 @@ pub struct AudioEncoderConfig {
     pub bit_depth: u8,
 }
 
-impl AudioEncoderConfig {
+impl CodecAudioEncoderConfig {
     pub fn aac_stereo(bitrate: u32) -> Self {
         Self {
-            codec: AudioCodec::AAC,
+            codec: CodecAudioCodec::AAC,
             sample_rate: 48000,
             channels: 2,
             bitrate: Some(bitrate),
@@ -4992,7 +4992,7 @@ impl AudioEncoderConfig {
 
     pub fn flac_lossless() -> Self {
         Self {
-            codec: AudioCodec::FLAC,
+            codec: CodecAudioCodec::FLAC,
             sample_rate: 96000,
             channels: 2,
             bitrate: None,
@@ -5003,7 +5003,7 @@ impl AudioEncoderConfig {
 
     pub fn opus_voice() -> Self {
         Self {
-            codec: AudioCodec::Opus,
+            codec: CodecAudioCodec::Opus,
             sample_rate: 48000,
             channels: 1,
             bitrate: Some(64),
@@ -5019,7 +5019,7 @@ impl AudioEncoderConfig {
 
 /// Motion vector for stabilization
 #[derive(Debug, Clone, Copy)]
-pub struct MotionVector {
+pub struct StabMotionVector {
     pub dx: f32,
     pub dy: f32,
     pub rotation: f32,
@@ -5027,7 +5027,7 @@ pub struct MotionVector {
     pub confidence: f32,
 }
 
-impl MotionVector {
+impl StabMotionVector {
     pub fn identity() -> Self {
         Self { dx: 0.0, dy: 0.0, rotation: 0.0, scale: 1.0, confidence: 1.0 }
     }
@@ -5278,7 +5278,7 @@ impl LKTracker {
 }
 
 /// Video stabilizer with trajectory smoothing
-pub struct VideoStabilizer {
+pub struct StabVideoStabilizer {
     pub smoothing_radius: u32,
     pub crop_ratio: f32,
     pub border_mode: BorderMode,
@@ -5294,7 +5294,7 @@ pub enum BorderMode {
     Blur,
 }
 
-impl VideoStabilizer {
+impl StabVideoStabilizer {
     pub fn new() -> Self {
         Self {
             smoothing_radius: 30,
@@ -5305,7 +5305,7 @@ impl VideoStabilizer {
         }
     }
 
-    pub fn analyze(&self, frames: &[VideoFrame]) -> Vec<MotionVector> {
+    pub fn analyze(&self, frames: &[VideoFrame]) -> Vec<StabMotionVector> {
         if frames.len() < 2 { return Vec::new(); }
 
         let mut motions = Vec::with_capacity(frames.len() - 1);
@@ -5320,12 +5320,12 @@ impl VideoStabilizer {
         motions
     }
 
-    fn estimate_motion(&self, prev: &[FeaturePoint], tracked: &[(FeaturePoint, bool)]) -> MotionVector {
+    fn estimate_motion(&self, prev: &[FeaturePoint], tracked: &[(FeaturePoint, bool)]) -> StabMotionVector {
         let valid: Vec<_> = prev.iter().zip(tracked.iter())
             .filter(|(_, (_, ok))| *ok)
             .collect();
 
-        if valid.len() < 4 { return MotionVector::identity(); }
+        if valid.len() < 4 { return StabMotionVector::identity(); }
 
         let mut dx_sum = 0.0;
         let mut dy_sum = 0.0;
@@ -5336,7 +5336,7 @@ impl VideoStabilizer {
         }
 
         let n = valid.len() as f32;
-        MotionVector {
+        StabMotionVector {
             dx: dx_sum / n,
             dy: dy_sum / n,
             rotation: 0.0,
@@ -5345,17 +5345,17 @@ impl VideoStabilizer {
         }
     }
 
-    pub fn smooth_trajectory(&self, motions: &[MotionVector]) -> Vec<MotionVector> {
+    pub fn smooth_trajectory(&self, motions: &[StabMotionVector]) -> Vec<StabMotionVector> {
         let n = motions.len();
         if n == 0 { return Vec::new(); }
 
-        let mut trajectory = vec![MotionVector::identity(); n + 1];
+        let mut trajectory = vec![StabMotionVector::identity(); n + 1];
         for i in 0..n {
             trajectory[i + 1].dx = trajectory[i].dx + motions[i].dx;
             trajectory[i + 1].dy = trajectory[i].dy + motions[i].dy;
         }
 
-        let mut smoothed = vec![MotionVector::identity(); n + 1];
+        let mut smoothed = vec![StabMotionVector::identity(); n + 1];
         let r = self.smoothing_radius as usize;
 
         for i in 0..=n {
@@ -5374,7 +5374,7 @@ impl VideoStabilizer {
             smoothed[i].dy = sum_y / count;
         }
 
-        let mut corrections = vec![MotionVector::identity(); n];
+        let mut corrections = vec![StabMotionVector::identity(); n];
         for i in 0..n {
             corrections[i].dx = smoothed[i + 1].dx - trajectory[i + 1].dx;
             corrections[i].dy = smoothed[i + 1].dy - trajectory[i + 1].dy;
@@ -5383,13 +5383,13 @@ impl VideoStabilizer {
         corrections
     }
 
-    pub fn stabilize(&self, frames: &[VideoFrame], corrections: &[MotionVector]) -> Vec<VideoFrame> {
+    pub fn stabilize(&self, frames: &[VideoFrame], corrections: &[StabMotionVector]) -> Vec<VideoFrame> {
         frames.iter().zip(corrections.iter())
             .map(|(frame, correction)| self.apply_correction(frame, correction))
             .collect()
     }
 
-    fn apply_correction(&self, frame: &VideoFrame, correction: &MotionVector) -> VideoFrame {
+    fn apply_correction(&self, frame: &VideoFrame, correction: &StabMotionVector) -> VideoFrame {
         let mut result = VideoFrame::new(frame.width, frame.height);
 
         for y in 0..frame.height {
@@ -5688,7 +5688,7 @@ pub struct SpatialReverb {
     pub dry_level: f32,
     pub early_reflections: Vec<(f32, f32)>,
     pub comb_filters: Vec<CombFilter>,
-    pub allpass_filters: Vec<AllpassFilter>,
+    pub allpass_filters: Vec<SpatialAllpassFilter>,
 }
 
 struct CombFilter {
@@ -5699,7 +5699,7 @@ struct CombFilter {
     damp_prev: f32,
 }
 
-struct AllpassFilter {
+struct SpatialAllpassFilter {
     buffer: Vec<f32>,
     index: usize,
     feedback: f32,
@@ -5725,7 +5725,7 @@ impl SpatialReverb {
                 damp: damping,
                 damp_prev: 0.0,
             }).collect(),
-            allpass_filters: allpass_delays.iter().map(|&d| AllpassFilter {
+            allpass_filters: allpass_delays.iter().map(|&d| SpatialAllpassFilter {
                 buffer: vec![0.0; d],
                 index: 0,
                 feedback: 0.5,
@@ -6533,15 +6533,15 @@ impl Complex {
 }
 
 /// Fast Fourier Transform
-pub struct FFT {
+pub struct DSPFFT {
     size: usize,
     twiddles: Vec<Complex>,
     inverse_twiddles: Vec<Complex>,
 }
 
-impl FFT {
+impl DSPFFT {
     pub fn new(size: usize) -> Self {
-        assert!(size.is_power_of_two(), "FFT size must be power of 2");
+        assert!(size.is_power_of_two(), "DSPFFT size must be power of 2");
         let mut twiddles = Vec::with_capacity(size / 2);
         let mut inverse_twiddles = Vec::with_capacity(size / 2);
 
@@ -6600,11 +6600,11 @@ impl FFT {
 }
 
 /// Audio filter types
-pub enum FilterType { LowPass, HighPass, BandPass, BandStop, AllPass }
+pub enum DSPFilterType { LowPass, HighPass, BandPass, BandStop, AllPass }
 
 /// Biquad filter implementation
-pub struct BiquadFilter {
-    filter_type: FilterType,
+pub struct DSPBiquadFilter {
+    filter_type: DSPFilterType,
     sample_rate: f32,
     frequency: f32,
     q: f32,
@@ -6615,8 +6615,8 @@ pub struct BiquadFilter {
     y1: f64, y2: f64,
 }
 
-impl BiquadFilter {
-    pub fn new(filter_type: FilterType, sample_rate: f32, frequency: f32, q: f32, gain_db: f32) -> Self {
+impl DSPBiquadFilter {
+    pub fn new(filter_type: DSPFilterType, sample_rate: f32, frequency: f32, q: f32, gain_db: f32) -> Self {
         let mut filter = Self {
             filter_type, sample_rate, frequency, q, gain_db,
             b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0,
@@ -6633,7 +6633,7 @@ impl BiquadFilter {
         let alpha = sin_w0 / (2.0 * self.q as f64);
 
         match self.filter_type {
-            FilterType::LowPass => {
+            DSPFilterType::LowPass => {
                 let b1_norm = 1.0 - cos_w0;
                 self.b0 = b1_norm / 2.0;
                 self.b1 = b1_norm;
@@ -6641,7 +6641,7 @@ impl BiquadFilter {
                 self.a1 = -2.0 * cos_w0;
                 self.a2 = 1.0 - alpha;
             },
-            FilterType::HighPass => {
+            DSPFilterType::HighPass => {
                 let b1_norm = 1.0 + cos_w0;
                 self.b0 = b1_norm / 2.0;
                 self.b1 = -b1_norm;
@@ -6649,21 +6649,21 @@ impl BiquadFilter {
                 self.a1 = -2.0 * cos_w0;
                 self.a2 = 1.0 - alpha;
             },
-            FilterType::BandPass => {
+            DSPFilterType::BandPass => {
                 self.b0 = alpha;
                 self.b1 = 0.0;
                 self.b2 = -alpha;
                 self.a1 = -2.0 * cos_w0;
                 self.a2 = 1.0 - alpha;
             },
-            FilterType::BandStop => {
+            DSPFilterType::BandStop => {
                 self.b0 = 1.0;
                 self.b1 = -2.0 * cos_w0;
                 self.b2 = 1.0;
                 self.a1 = -2.0 * cos_w0;
                 self.a2 = 1.0 - alpha;
             },
-            FilterType::AllPass => {
+            DSPFilterType::AllPass => {
                 self.b0 = 1.0 - alpha;
                 self.b1 = -2.0 * cos_w0;
                 self.b2 = 1.0 + alpha;
@@ -6695,7 +6695,7 @@ impl BiquadFilter {
 /// Audio convolution engine for impulse responses
 pub struct ConvolutionEngine {
     impulse_response: Vec<f64>,
-    fft: FFT,
+    fft: DSPFFT,
     ir_spectrum: Vec<Complex>,
     overlap_buffer: Vec<f64>,
     block_size: usize,
@@ -6704,7 +6704,7 @@ pub struct ConvolutionEngine {
 impl ConvolutionEngine {
     pub fn new(impulse_response: Vec<f64>, block_size: usize) -> Self {
         let fft_size = (block_size + impulse_response.len() - 1).next_power_of_two();
-        let fft = FFT::new(fft_size);
+        let fft = DSPFFT::new(fft_size);
         let ir_spectrum = fft.forward(&impulse_response);
 
         Self {
@@ -6743,13 +6743,13 @@ impl ConvolutionEngine {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Delay line for audio effects
-pub struct DelayLine {
+pub struct FXDelayLine {
     buffer: Vec<f64>,
     write_pos: usize,
     delay_samples: usize,
 }
 
-impl DelayLine {
+impl FXDelayLine {
     pub fn new(max_delay_samples: usize) -> Self {
         Self { buffer: vec![0.0; max_delay_samples], write_pos: 0, delay_samples: max_delay_samples / 2 }
     }
@@ -6767,8 +6767,8 @@ impl DelayLine {
 
 /// Reverb effect using Schroeder algorithm
 pub struct SchroederReverb {
-    comb_filters: Vec<(DelayLine, f64)>,
-    allpass_filters: Vec<(DelayLine, f64)>,
+    comb_filters: Vec<(FXDelayLine, f64)>,
+    allpass_filters: Vec<(FXDelayLine, f64)>,
     wet_mix: f64,
     dry_mix: f64,
 }
@@ -6784,14 +6784,14 @@ impl SchroederReverb {
         let comb_filters: Vec<_> = base_delays.iter()
             .map(|&d| {
                 let samples = (d as f32 * scale) as usize;
-                (DelayLine::new(samples + 1), feedback as f64 * (1.0 - damping as f64 * 0.4))
+                (FXDelayLine::new(samples + 1), feedback as f64 * (1.0 - damping as f64 * 0.4))
             })
             .collect();
 
         let allpass_filters: Vec<_> = allpass_delays.iter()
             .map(|&d| {
                 let samples = (d as f32 * scale) as usize;
-                (DelayLine::new(samples + 1), 0.5)
+                (FXDelayLine::new(samples + 1), 0.5)
             })
             .collect();
 
@@ -6817,7 +6817,7 @@ impl SchroederReverb {
 }
 
 /// Dynamic range compressor
-pub struct Compressor {
+pub struct FXCompressor {
     threshold_db: f64,
     ratio: f64,
     attack_ms: f64,
@@ -6827,7 +6827,7 @@ pub struct Compressor {
     envelope: f64,
 }
 
-impl Compressor {
+impl FXCompressor {
     pub fn new(sample_rate: f64, threshold_db: f64, ratio: f64, attack_ms: f64, release_ms: f64) -> Self {
         Self { threshold_db, ratio, attack_ms, release_ms, makeup_gain_db: 0.0, sample_rate, envelope: 0.0 }
     }
@@ -6850,14 +6850,14 @@ impl Compressor {
 }
 
 /// Parametric equalizer with multiple bands
-pub struct ParametricEQ {
+pub struct FXParametricEQ {
     bands: Vec<BiquadFilter>,
 }
 
-impl ParametricEQ {
+impl FXParametricEQ {
     pub fn new(sample_rate: f32) -> Self { Self { bands: Vec::new() } }
 
-    pub fn add_band(&mut self, filter_type: FilterType, frequency: f32, q: f32, gain_db: f32, sample_rate: f32) {
+    pub fn add_band(&mut self, filter_type: DSPFilterType, frequency: f32, q: f32, gain_db: f32, sample_rate: f32) {
         self.bands.push(BiquadFilter::new(filter_type, sample_rate, frequency, q, gain_db));
     }
 
@@ -6873,13 +6873,13 @@ impl ParametricEQ {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Pixel format enumeration
-pub enum PixelFormat { RGB24, RGBA32, YUV420P, YUV422P, YUV444P, NV12, BGR24, GRAY8 }
+pub enum VideoPixelFormat { RGB24, RGBA32, YUV420P, YUV422P, YUV444P, NV12, BGR24, GRAY8 }
 
 /// Video frame buffer
-pub struct VideoFrame {
+pub struct PipelineVideoFrame {
     width: u32,
     height: u32,
-    format: PixelFormat,
+    format: VideoPixelFormat,
     data: Vec<u8>,
     stride: Vec<usize>,
     pts: i64,
@@ -6887,34 +6887,34 @@ pub struct VideoFrame {
     duration: i64,
 }
 
-impl VideoFrame {
-    pub fn new(width: u32, height: u32, format: PixelFormat) -> Self {
+impl PipelineVideoFrame {
+    pub fn new(width: u32, height: u32, format: VideoPixelFormat) -> Self {
         let (data, stride) = match &format {
-            PixelFormat::RGB24 | PixelFormat::BGR24 => {
+            VideoPixelFormat::RGB24 | VideoPixelFormat::BGR24 => {
                 (vec![0u8; width as usize * height as usize * 3], vec![width as usize * 3])
             },
-            PixelFormat::RGBA32 => {
+            VideoPixelFormat::RGBA32 => {
                 (vec![0u8; width as usize * height as usize * 4], vec![width as usize * 4])
             },
-            PixelFormat::YUV420P => {
+            VideoPixelFormat::YUV420P => {
                 let y_size = width as usize * height as usize;
                 let uv_size = y_size / 4;
                 (vec![0u8; y_size + uv_size * 2], vec![width as usize, width as usize / 2, width as usize / 2])
             },
-            PixelFormat::YUV422P => {
+            VideoPixelFormat::YUV422P => {
                 let y_size = width as usize * height as usize;
                 let uv_size = y_size / 2;
                 (vec![0u8; y_size + uv_size * 2], vec![width as usize, width as usize / 2, width as usize / 2])
             },
-            PixelFormat::YUV444P => {
+            VideoPixelFormat::YUV444P => {
                 let plane_size = width as usize * height as usize;
                 (vec![0u8; plane_size * 3], vec![width as usize; 3])
             },
-            PixelFormat::NV12 => {
+            VideoPixelFormat::NV12 => {
                 let y_size = width as usize * height as usize;
                 (vec![0u8; y_size * 3 / 2], vec![width as usize, width as usize])
             },
-            PixelFormat::GRAY8 => {
+            VideoPixelFormat::GRAY8 => {
                 (vec![0u8; width as usize * height as usize], vec![width as usize])
             },
         };
@@ -6923,11 +6923,11 @@ impl VideoFrame {
 
     pub fn get_pixel(&self, x: u32, y: u32) -> (u8, u8, u8) {
         match self.format {
-            PixelFormat::RGB24 => {
+            VideoPixelFormat::RGB24 => {
                 let idx = (y as usize * self.stride[0] + x as usize * 3);
                 (self.data[idx], self.data[idx + 1], self.data[idx + 2])
             },
-            PixelFormat::YUV420P => {
+            VideoPixelFormat::YUV420P => {
                 let y_idx = y as usize * self.stride[0] + x as usize;
                 let uv_x = x as usize / 2;
                 let uv_y = y as usize / 2;
@@ -6963,8 +6963,8 @@ impl ColorConverter {
         (y, u, v)
     }
 
-    pub fn convert(frame: &VideoFrame, target_format: PixelFormat) -> VideoFrame {
-        let mut output = VideoFrame::new(frame.width, frame.height, target_format);
+    pub fn convert(frame: &PipelineVideoFrame, target_format: VideoPixelFormat) -> PipelineVideoFrame {
+        let mut output = PipelineVideoFrame::new(frame.width, frame.height, target_format);
         // Conversion logic based on source and target formats
         output
     }
@@ -6980,8 +6980,8 @@ pub enum ScaleAlgorithm { NearestNeighbor, Bilinear, Bicubic, Lanczos }
 impl VideoScaler {
     pub fn new(algorithm: ScaleAlgorithm) -> Self { Self { algorithm } }
 
-    pub fn scale(&self, input: &VideoFrame, width: u32, height: u32) -> VideoFrame {
-        let mut output = VideoFrame::new(width, height, PixelFormat::RGB24);
+    pub fn scale(&self, input: &PipelineVideoFrame, width: u32, height: u32) -> PipelineVideoFrame {
+        let mut output = PipelineVideoFrame::new(width, height, VideoPixelFormat::RGB24);
         let x_ratio = input.width as f64 / width as f64;
         let y_ratio = input.height as f64 / height as f64;
 
@@ -7017,7 +7017,7 @@ impl VideoScaler {
         output
     }
 
-    fn bilinear_sample(&self, frame: &VideoFrame, x: f64, y: f64) -> (u8, u8, u8) {
+    fn bilinear_sample(&self, frame: &PipelineVideoFrame, x: f64, y: f64) -> (u8, u8, u8) {
         let x0 = x.floor() as u32;
         let y0 = y.floor() as u32;
         let x1 = (x0 + 1).min(frame.width - 1);
@@ -7042,16 +7042,16 @@ impl VideoScaler {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Subtitle cue
-pub struct SubtitleCue {
+pub struct ProcSubtitleCue {
     id: u32,
     start_time: i64,
     end_time: i64,
     text: String,
-    style: SubtitleStyle,
+    style: ProcSubtitleStyle,
     position: Option<(f32, f32)>,
 }
 
-pub struct SubtitleStyle {
+pub struct ProcSubtitleStyle {
     font_family: String,
     font_size: f32,
     color: (u8, u8, u8, u8),
@@ -7063,7 +7063,7 @@ pub struct SubtitleStyle {
     outline_color: (u8, u8, u8),
 }
 
-impl SubtitleStyle {
+impl ProcSubtitleStyle {
     pub fn default_style() -> Self {
         Self {
             font_family: "Arial".to_string(),
@@ -7081,7 +7081,7 @@ impl SubtitleStyle {
 pub struct SRTParser;
 
 impl SRTParser {
-    pub fn parse(content: &str) -> Vec<SubtitleCue> {
+    pub fn parse(content: &str) -> Vec<ProcSubtitleCue> {
         let mut cues = Vec::new();
         let blocks: Vec<_> = content.split("\n\n").filter(|b| !b.trim().is_empty()).collect();
 
@@ -7091,9 +7091,9 @@ impl SRTParser {
                 if let Ok(id) = lines[0].trim().parse::<u32>() {
                     if let Some((start, end)) = Self::parse_timing(lines[1]) {
                         let text = lines[2..].join("\n");
-                        cues.push(SubtitleCue {
+                        cues.push(ProcSubtitleCue {
                             id, start_time: start, end_time: end, text,
-                            style: SubtitleStyle::default_style(),
+                            style: ProcSubtitleStyle::default_style(),
                             position: None,
                         });
                     }
@@ -7130,7 +7130,7 @@ impl SRTParser {
 pub struct VTTParser;
 
 impl VTTParser {
-    pub fn parse(content: &str) -> Vec<SubtitleCue> {
+    pub fn parse(content: &str) -> Vec<ProcSubtitleCue> {
         let mut cues = Vec::new();
         let mut id = 0u32;
 
@@ -7142,9 +7142,9 @@ impl VTTParser {
                         if let Some((start, end)) = Self::parse_timing(line) {
                             let text = lines[i + 1..].join("\n");
                             id += 1;
-                            cues.push(SubtitleCue {
+                            cues.push(ProcSubtitleCue {
                                 id, start_time: start, end_time: end, text,
-                                style: SubtitleStyle::default_style(),
+                                style: ProcSubtitleStyle::default_style(),
                                 position: None,
                             });
                         }
@@ -7405,7 +7405,7 @@ pub mod pipeline {
         pub fn video(pixels: Vec<u8>, width: u32, height: u32) -> Self {
             Self {
                 data: pixels,
-                format: MediaFormat::Video { width, height, pixel_format: PixelFormat::RGBA },
+                format: MediaFormat::Video { width, height, pixel_format: PipelinePixelFormat::RGBA },
                 timestamp: 0.0,
                 duration: 1.0 / 30.0,
                 metadata: HashMap::new(),
@@ -7417,14 +7417,14 @@ pub mod pipeline {
     #[derive(Clone, Debug)]
     pub enum MediaFormat {
         Audio { sample_rate: u32, channels: u32, bit_depth: u32 },
-        Video { width: u32, height: u32, pixel_format: PixelFormat },
+        Video { width: u32, height: u32, pixel_format: PipelinePixelFormat },
         Subtitle { encoding: String },
         Data,
     }
 
     /// Pixel format
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    pub enum PixelFormat {
+    pub enum PipelinePixelFormat {
         RGB,
         RGBA,
         YUV420,
@@ -7531,28 +7531,28 @@ pub mod pipeline {
     }
 
     /// Video scaler stage
-    pub struct VideoScaler {
+    pub struct PipelineVideoScaler {
         pub target_width: u32,
         pub target_height: u32,
-        pub algorithm: ScaleAlgorithm,
+        pub algorithm: PipelineScaleAlgorithm,
     }
 
     #[derive(Clone, Copy)]
-    pub enum ScaleAlgorithm {
+    pub enum PipelineScaleAlgorithm {
         NearestNeighbor,
         Bilinear,
         Bicubic,
         Lanczos,
     }
 
-    impl VideoScaler {
-        pub fn new(width: u32, height: u32, algo: ScaleAlgorithm) -> Self {
+    impl PipelineVideoScaler {
+        pub fn new(width: u32, height: u32, algo: PipelineScaleAlgorithm) -> Self {
             Self { target_width: width, target_height: height, algorithm: algo }
         }
     }
 
-    impl PipelineStage for VideoScaler {
-        fn name(&self) -> &str { "VideoScaler" }
+    impl PipelineStage for PipelineVideoScaler {
+        fn name(&self) -> &str { "PipelineVideoScaler" }
 
         fn process(&self, input: MediaBuffer) -> Result<MediaBuffer, PipelineError> {
             if let MediaFormat::Video { width, height, pixel_format } = input.format {
@@ -7560,8 +7560,8 @@ pub mod pipeline {
                     return Ok(input);
                 }
                 let channels = match pixel_format {
-                    PixelFormat::RGB | PixelFormat::BGR => 3,
-                    PixelFormat::RGBA | PixelFormat::BGRA => 4,
+                    PipelinePixelFormat::RGB | PipelinePixelFormat::BGR => 3,
+                    PipelinePixelFormat::RGBA | PipelinePixelFormat::BGRA => 4,
                     _ => return Err(PipelineError { stage: self.name().into(), message: "Unsupported format".into() }),
                 };
                 let mut output = vec![0u8; (self.target_width * self.target_height * channels) as usize];
@@ -7900,14 +7900,14 @@ pub mod loudness {
 
 pub mod imaging {
     /// Image buffer
-    pub struct Image {
+    pub struct ImageBuffer {
         pub width: u32,
         pub height: u32,
         pub channels: u32,
         pub data: Vec<f32>,
     }
 
-    impl Image {
+    impl ImageBuffer {
         pub fn new(width: u32, height: u32, channels: u32) -> Self {
             Self {
                 width, height, channels,
@@ -7942,7 +7942,7 @@ pub mod imaging {
     }
 
     /// Gaussian blur
-    pub fn gaussian_blur(img: &Image, sigma: f32) -> Image {
+    pub fn gaussian_blur(img: &Image, sigma: f32) -> ImageBuffer {
         let kernel_size = (sigma * 6.0).ceil() as usize | 1;
         let half = kernel_size / 2;
         let mut kernel = vec![0.0f32; kernel_size];
@@ -7954,8 +7954,8 @@ pub mod imaging {
         }
         for k in &mut kernel { *k /= sum; }
 
-        let mut temp = Image::new(img.width, img.height, img.channels);
-        let mut result = Image::new(img.width, img.height, img.channels);
+        let mut temp = ImageBuffer::new(img.width, img.height, img.channels);
+        let mut result = ImageBuffer::new(img.width, img.height, img.channels);
 
         // Horizontal pass
         for y in 0..img.height {
@@ -7990,9 +7990,9 @@ pub mod imaging {
     }
 
     /// Unsharp mask sharpening
-    pub fn unsharp_mask(img: &Image, sigma: f32, amount: f32, threshold: f32) -> Image {
+    pub fn unsharp_mask(img: &Image, sigma: f32, amount: f32, threshold: f32) -> ImageBuffer {
         let blurred = gaussian_blur(img, sigma);
-        let mut result = Image::new(img.width, img.height, img.channels);
+        let mut result = ImageBuffer::new(img.width, img.height, img.channels);
 
         for y in 0..img.height {
             for x in 0..img.width {
@@ -8014,8 +8014,8 @@ pub mod imaging {
     }
 
     /// Histogram equalization
-    pub fn histogram_equalize(img: &Image) -> Image {
-        let mut result = Image::new(img.width, img.height, img.channels);
+    pub fn histogram_equalize(img: &Image) -> ImageBuffer {
+        let mut result = ImageBuffer::new(img.width, img.height, img.channels);
         let num_pixels = (img.width * img.height) as usize;
 
         for c in 0..img.channels as usize {
@@ -8046,9 +8046,9 @@ pub mod imaging {
     }
 
     /// Morphological operations
-    pub fn erode(img: &Image, kernel_size: usize) -> Image {
+    pub fn erode(img: &Image, kernel_size: usize) -> ImageBuffer {
         let half = kernel_size / 2;
-        let mut result = Image::new(img.width, img.height, img.channels);
+        let mut result = ImageBuffer::new(img.width, img.height, img.channels);
 
         for y in 0..img.height {
             for x in 0..img.width {
@@ -8069,9 +8069,9 @@ pub mod imaging {
         result
     }
 
-    pub fn dilate(img: &Image, kernel_size: usize) -> Image {
+    pub fn dilate(img: &Image, kernel_size: usize) -> ImageBuffer {
         let half = kernel_size / 2;
-        let mut result = Image::new(img.width, img.height, img.channels);
+        let mut result = ImageBuffer::new(img.width, img.height, img.channels);
 
         for y in 0..img.height {
             for x in 0..img.width {
@@ -8093,9 +8093,9 @@ pub mod imaging {
     }
 
     /// Edge-preserving filter (bilateral-like)
-    pub fn edge_preserve_smooth(img: &Image, sigma_space: f32, sigma_color: f32) -> Image {
+    pub fn edge_preserve_smooth(img: &Image, sigma_space: f32, sigma_color: f32) -> ImageBuffer {
         let kernel_size = (sigma_space * 3.0).ceil() as i32;
-        let mut result = Image::new(img.width, img.height, img.channels);
+        let mut result = ImageBuffer::new(img.width, img.height, img.channels);
 
         for y in 0..img.height {
             for x in 0..img.width {
@@ -8338,9 +8338,9 @@ pub mod advanced_audio {
         }
     }
 
-    // Phaser
-    pub struct Phaser { pub rate: f32, pub depth: f32, pub feedback: f32, pub stages: usize, lfo_phase: f32, allpass_states: Vec<[f32; 2]>, feedback_sample: f32 }
-    impl Phaser {
+    // AdvPhaser
+    pub struct AdvPhaser { pub rate: f32, pub depth: f32, pub feedback: f32, pub stages: usize, lfo_phase: f32, allpass_states: Vec<[f32; 2]>, feedback_sample: f32 }
+    impl AdvPhaser {
         pub fn new(stages: usize) -> Self { Self { rate: 0.5, depth: 0.7, feedback: 0.5, stages, lfo_phase: 0.0, allpass_states: vec![[0.0; 2]; stages], feedback_sample: 0.0 } }
         pub fn process(&mut self, input: f32, sample_rate: f32) -> f32 {
             let lfo = (self.lfo_phase * 2.0 * std::f32::consts::PI).sin() * 0.5 + 0.5;
@@ -8363,9 +8363,9 @@ pub mod advanced_audio {
         }
     }
 
-    // Flanger
-    pub struct Flanger { pub rate: f32, pub depth: f32, pub feedback: f32, pub delay_ms: f32, buffer: Vec<f32>, write_pos: usize, lfo_phase: f32 }
-    impl Flanger {
+    // AdvFlanger
+    pub struct AdvFlanger { pub rate: f32, pub depth: f32, pub feedback: f32, pub delay_ms: f32, buffer: Vec<f32>, write_pos: usize, lfo_phase: f32 }
+    impl AdvFlanger {
         pub fn new(sample_rate: f32) -> Self {
             let max_delay = (20.0 * 0.001 * sample_rate) as usize + 1;
             Self { rate: 0.3, depth: 0.5, feedback: 0.5, delay_ms: 5.0, buffer: vec![0.0; max_delay], write_pos: 0, lfo_phase: 0.0 }
@@ -8386,9 +8386,9 @@ pub mod advanced_audio {
         }
     }
 
-    // Chorus
-    pub struct Chorus { pub rate: f32, pub depth: f32, pub voices: usize, pub delay_ms: f32, buffers: Vec<Vec<f32>>, write_pos: usize, lfo_phases: Vec<f32> }
-    impl Chorus {
+    // AdvChorus
+    pub struct AdvChorus { pub rate: f32, pub depth: f32, pub voices: usize, pub delay_ms: f32, buffers: Vec<Vec<f32>>, write_pos: usize, lfo_phases: Vec<f32> }
+    impl AdvChorus {
         pub fn new(sample_rate: f32, voices: usize) -> Self {
             let max_delay = (50.0 * 0.001 * sample_rate) as usize + 1;
             let mut lfo_phases = Vec::new();
@@ -8588,8 +8588,8 @@ pub mod video_effects {
     }
 
     // Video Denoiser (Temporal)
-    pub struct TemporalDenoiser { pub strength: f32, pub motion_threshold: f32, history: Option<Vec<f32>> }
-    impl TemporalDenoiser {
+    pub struct VFXTemporalDenoiser { pub strength: f32, pub motion_threshold: f32, history: Option<Vec<f32>> }
+    impl VFXTemporalDenoiser {
         pub fn new(strength: f32) -> Self { Self { strength, motion_threshold: 0.1, history: None } }
         pub fn process(&mut self, frame: &[f32]) -> Vec<f32> {
             match &self.history {
@@ -8785,7 +8785,7 @@ mod tests {
     
     #[test]
     fn test_quanta_media_suite() {
-        let suite = QuantaMediaSuite::new(24.0, (1920, 1080));
+        let suite = QuantaMediaSuite::new(24.0, (1920, 1080), 44100);
         assert_eq!(suite.cut.timeline.frame_rate, 24.0);
     }
 }

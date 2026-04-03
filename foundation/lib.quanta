@@ -357,151 +357,24 @@ pub mod string {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod collections {
-    /// Dynamic array
-    pub struct Vec<T> {
-        data: *mut T,
-        len: usize,
-        capacity: usize,
+    // Vec<T> and HashMap<K,V> are provided as compiler built-in types.
+    // They support: .push(), .pop(), .len(), .is_empty(), .get(), indexing.
+    // Do NOT redefine them here — the compiler maps them to C runtime functions.
+
+    // Additional collection types built on top of the built-in Vec:
+
+    pub fn vec_with_capacity<T>(cap: usize) -> Vec<T> {
+        // Built-in Vec doesn't support with_capacity; return empty vec
+        return Vec::new();
     }
-    
-    impl<T> Vec<T> {
-        pub fn new() -> Self {
-            Vec { data: std::ptr::null_mut(), len: 0, capacity: 0 }
-        }
-        
-        pub fn with_capacity(cap: usize) -> Self {
-            let data = alloc::alloc_array::<T>(cap);
-            Vec { data, len: 0, capacity: cap }
-        }
-        
-        pub fn push(&mut self, value: T) {
-            if self.len == self.capacity {
-                self.grow();
-            }
-            unsafe {
-                std::ptr::write(self.data.add(self.len), value);
-            }
-            self.len += 1;
-        }
-        
-        pub fn pop(&mut self) -> Option<T> {
-            if self.len == 0 { return None; }
-            self.len -= 1;
-            unsafe { Some(std::ptr::read(self.data.add(self.len))) }
-        }
-        
-        pub fn get(&self, index: usize) -> Option<&T> {
-            if index >= self.len { return None; }
-            unsafe { Some(&*self.data.add(index)) }
-        }
-        
-        pub fn len(&self) -> usize { self.len }
-        pub fn is_empty(&self) -> bool { self.len == 0 }
-        pub fn capacity(&self) -> usize { self.capacity }
-        
-        fn grow(&mut self) {
-            let new_cap = if self.capacity == 0 { 4 } else { self.capacity * 2 };
-            let new_data = alloc::alloc_array::<T>(new_cap);
-            
-            unsafe {
-                std::ptr::copy_nonoverlapping(self.data, new_data, self.len);
-            }
-            
-            if !self.data.is_null() {
-                alloc::dealloc_array(self.data, self.capacity);
-            }
-            
-            self.data = new_data;
-            self.capacity = new_cap;
-        }
-    }
-    
-    /// Hash map
-    pub struct HashMap<K, V> {
-        buckets: Vec<Vec<(K, V)>>,
-        len: usize,
-    }
-    
-    impl<K: Hash + Eq, V> HashMap<K, V> {
-        pub fn new() -> Self {
-            let mut buckets = Vec::with_capacity(16);
-            for _ in 0..16 { buckets.push(Vec::new()); }
-            HashMap { buckets, len: 0 }
-        }
-        
-        pub fn insert(&mut self, key: K, value: V) -> Option<V> {
-            let bucket_idx = self.bucket_index(&key);
-            
-            // Check for existing key
-            for (k, v) in &mut self.buckets[bucket_idx] {
-                if k == &key {
-                    let old = std::mem::replace(v, value);
-                    return Some(old);
-                }
-            }
-            
-            // Insert new
-            self.buckets[bucket_idx].push((key, value));
-            self.len += 1;
-            
-            // Resize if needed
-            if self.len > self.buckets.len() * 3 / 4 {
-                self.resize();
-            }
-            
-            None
-        }
-        
-        pub fn get(&self, key: &K) -> Option<&V> {
-            let bucket_idx = self.bucket_index(key);
-            for (k, v) in &self.buckets[bucket_idx] {
-                if k == key { return Some(v); }
-            }
-            None
-        }
-        
-        pub fn remove(&mut self, key: &K) -> Option<V> {
-            let bucket_idx = self.bucket_index(key);
-            let bucket = &mut self.buckets[bucket_idx];
-            
-            for i in 0..bucket.len() {
-                if &bucket[i].0 == key {
-                    let (_, v) = bucket.remove(i);
-                    self.len -= 1;
-                    return Some(v);
-                }
-            }
-            None
-        }
-        
-        pub fn contains_key(&self, key: &K) -> bool {
-            self.get(key).is_some()
-        }
-        
-        pub fn len(&self) -> usize { self.len }
-        pub fn is_empty(&self) -> bool { self.len == 0 }
-        
-        fn bucket_index(&self, key: &K) -> usize {
-            let hash = key.hash();
-            hash as usize % self.buckets.len()
-        }
-        
-        fn resize(&mut self) {
-            let new_size = self.buckets.len() * 2;
-            let mut new_buckets = Vec::with_capacity(new_size);
-            for _ in 0..new_size { new_buckets.push(Vec::new()); }
-            
-            for bucket in self.buckets.drain(..) {
-                for (k, v) in bucket {
-                    let idx = k.hash() as usize % new_size;
-                    new_buckets[idx].push((k, v));
-                }
-            }
-            
-            self.buckets = new_buckets;
-        }
-    }
-    
+
+    // --- REMOVED: custom Vec<T> and HashMap<K,V> using raw pointers ---
+    // (Original code used *mut T, alloc::alloc_array, std::ptr::read,
+    //  std::ptr::copy_nonoverlapping — none supported by the compiler.)
+    //
+    // The compiler's built-in Vec and HashMap provide the same API
+    // through runtime builtins (quanta_hvec_*, quanta_hashmap_*).
+
     /// Double-ended queue
     pub struct VecDeque<T> {
         buffer: Vec<Option<T>>,

@@ -3915,13 +3915,13 @@ pub mod shader_debug {
     }
 
     /// Shader profiler
-    pub struct ShaderProfiler {
+    pub struct DebugShaderProfiler {
         pub effect_times: HashMap<String, f64>,
         pub frame_count: u64,
         pub total_time_ms: f64,
     }
 
-    impl ShaderProfiler {
+    impl DebugShaderProfiler {
         pub fn new() -> Self {
             Self { effect_times: HashMap::new(), frame_count: 0, total_time_ms: 0.0 }
         }
@@ -4802,8 +4802,8 @@ impl FrameBuffer {
     }
 }
 
-pub enum TextureFormat { R8, RG8, RGB8, RGBA8, R16F, RG16F, RGB16F, RGBA16F, R32F, RG32F, RGB32F, RGBA32F, Depth24, Depth32F, Depth24Stencil8 }
-impl TextureFormat {
+pub enum ExtTextureFormat { R8, RG8, RGB8, RGBA8, R16F, RG16F, RGB16F, RGBA16F, R32F, RG32F, RGB32F, RGBA32F, Depth24, Depth32F, Depth24Stencil8 }
+impl ExtTextureFormat {
     pub fn channels(&self) -> u8 { match self { Self::R8 | Self::R16F | Self::R32F | Self::Depth24 | Self::Depth32F => 1, Self::RG8 | Self::RG16F | Self::RG32F | Self::Depth24Stencil8 => 2, Self::RGB8 | Self::RGB16F | Self::RGB32F => 3, Self::RGBA8 | Self::RGBA16F | Self::RGBA32F => 4 } }
     pub fn bytes_per_pixel(&self) -> u8 { match self { Self::R8 => 1, Self::RG8 => 2, Self::RGB8 => 3, Self::RGBA8 => 4, Self::R16F => 2, Self::RG16F => 4, Self::RGB16F => 6, Self::RGBA16F => 8, Self::R32F => 4, Self::RG32F => 8, Self::RGB32F => 12, Self::RGBA32F => 16, Self::Depth24 => 3, Self::Depth32F => 4, Self::Depth24Stencil8 => 4 } }
 }
@@ -4910,10 +4910,10 @@ impl ShaderEffect for BloomEffect {
     fn order(&self) -> i32 { 100 }
 }
 
-pub struct ChromaticAberration { enabled: bool, intensity: f32, radial: bool, center: [f32; 2] }
-impl ChromaticAberration { pub fn new() -> Self { Self { enabled: true, intensity: 0.01, radial: true, center: [0.5, 0.5] } } }
-impl ShaderEffect for ChromaticAberration {
-    fn name(&self) -> &str { "ChromaticAberration" }
+pub struct BuiltinChromaticAberration { enabled: bool, intensity: f32, radial: bool, center: [f32; 2] }
+impl BuiltinChromaticAberration { pub fn new() -> Self { Self { enabled: true, intensity: 0.01, radial: true, center: [0.5, 0.5] } } }
+impl ShaderEffect for BuiltinChromaticAberration {
+    fn name(&self) -> &str { "BuiltinChromaticAberration" }
     fn category(&self) -> &str { "Distortion" }
     fn parameters(&self) -> &[EffectParameter] { &[] }
     fn set_parameter(&mut self, name: &str, value: ParameterValue) -> bool { if name == "intensity" { if let ParameterValue::Float(v) = value { self.intensity = v; return true; } } false }
@@ -4934,10 +4934,10 @@ impl ShaderEffect for ChromaticAberration {
     fn order(&self) -> i32 { 200 }
 }
 
-pub struct Vignette { enabled: bool, intensity: f32, roundness: f32, smoothness: f32, color: [f32; 3] }
-impl Vignette { pub fn new() -> Self { Self { enabled: true, intensity: 0.3, roundness: 1.0, smoothness: 0.5, color: [0.0, 0.0, 0.0] } } }
-impl ShaderEffect for Vignette {
-    fn name(&self) -> &str { "Vignette" }
+pub struct BuiltinVignette { enabled: bool, intensity: f32, roundness: f32, smoothness: f32, color: [f32; 3] }
+impl BuiltinVignette { pub fn new() -> Self { Self { enabled: true, intensity: 0.3, roundness: 1.0, smoothness: 0.5, color: [0.0, 0.0, 0.0] } } }
+impl ShaderEffect for BuiltinVignette {
+    fn name(&self) -> &str { "BuiltinVignette" }
     fn category(&self) -> &str { "Color Grading" }
     fn parameters(&self) -> &[EffectParameter] { &[] }
     fn set_parameter(&mut self, _: &str, _: ParameterValue) -> bool { false }
@@ -4956,10 +4956,10 @@ impl ShaderEffect for Vignette {
     fn order(&self) -> i32 { 300 }
 }
 
-pub struct FilmGrain { enabled: bool, intensity: f32, response: f32, colored: bool }
-impl FilmGrain { pub fn new() -> Self { Self { enabled: true, intensity: 0.2, response: 0.8, colored: false } } }
-impl ShaderEffect for FilmGrain {
-    fn name(&self) -> &str { "FilmGrain" }
+pub struct BuiltinFilmGrain { enabled: bool, intensity: f32, response: f32, colored: bool }
+impl BuiltinFilmGrain { pub fn new() -> Self { Self { enabled: true, intensity: 0.2, response: 0.8, colored: false } } }
+impl ShaderEffect for BuiltinFilmGrain {
+    fn name(&self) -> &str { "BuiltinFilmGrain" }
     fn category(&self) -> &str { "Effects" }
     fn parameters(&self) -> &[EffectParameter] { &[] }
     fn set_parameter(&mut self, _: &str, _: ParameterValue) -> bool { false }
@@ -4988,10 +4988,10 @@ impl ShaderEffect for FilmGrain {
     fn order(&self) -> i32 { 400 }
 }
 
-pub struct FXAA { enabled: bool, subpixel_quality: f32, edge_threshold: f32, edge_threshold_min: f32 }
-impl FXAA { pub fn new() -> Self { Self { enabled: true, subpixel_quality: 0.75, edge_threshold: 0.166, edge_threshold_min: 0.0833 } } }
-impl ShaderEffect for FXAA {
-    fn name(&self) -> &str { "FXAA" }
+pub struct BuiltinFXAA { enabled: bool, subpixel_quality: f32, edge_threshold: f32, edge_threshold_min: f32 }
+impl BuiltinFXAA { pub fn new() -> Self { Self { enabled: true, subpixel_quality: 0.75, edge_threshold: 0.166, edge_threshold_min: 0.0833 } } }
+impl ShaderEffect for BuiltinFXAA {
+    fn name(&self) -> &str { "BuiltinFXAA" }
     fn category(&self) -> &str { "Anti-Aliasing" }
     fn parameters(&self) -> &[EffectParameter] { &[] }
     fn set_parameter(&mut self, _: &str, _: ParameterValue) -> bool { false }
@@ -5065,10 +5065,10 @@ impl ShaderEffect for DepthOfField {
     fn requires_depth(&self) -> bool { true }
 }
 
-pub struct MotionBlur { enabled: bool, intensity: f32, samples: u32, velocity_scale: f32 }
-impl MotionBlur { pub fn new() -> Self { Self { enabled: true, intensity: 1.0, samples: 16, velocity_scale: 1.0 } } }
-impl ShaderEffect for MotionBlur {
-    fn name(&self) -> &str { "MotionBlur" }
+pub struct BuiltinMotionBlur { enabled: bool, intensity: f32, samples: u32, velocity_scale: f32 }
+impl BuiltinMotionBlur { pub fn new() -> Self { Self { enabled: true, intensity: 1.0, samples: 16, velocity_scale: 1.0 } } }
+impl ShaderEffect for BuiltinMotionBlur {
+    fn name(&self) -> &str { "BuiltinMotionBlur" }
     fn category(&self) -> &str { "Camera" }
     fn parameters(&self) -> &[EffectParameter] { &[] }
     fn set_parameter(&mut self, _: &str, _: ParameterValue) -> bool { false }
@@ -5185,13 +5185,13 @@ impl TonemapOperator {
 // SHADER CACHE & HOT RELOAD
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub struct ShaderCache { cache: HashMap<u64, CompiledShader>, max_size: usize, access_order: VecDeque<u64>, file_watchers: HashMap<String, u64>, reload_callback: Option<Box<dyn Fn(&str) + Send + Sync>> }
-pub struct CompiledShader { pub bytecode: ShaderBytecode, pub uniforms: Vec<String>, pub source_hash: u64, pub compile_time_ns: u64, pub last_access: u64 }
+pub struct ShaderCache { cache: HashMap<u64, CachedCompiledShader>, max_size: usize, access_order: VecDeque<u64>, file_watchers: HashMap<String, u64>, reload_callback: Option<Box<dyn Fn(&str) + Send + Sync>> }
+pub struct CachedCompiledShader { pub bytecode: ShaderBytecode, pub uniforms: Vec<String>, pub source_hash: u64, pub compile_time_ns: u64, pub last_access: u64 }
 
 impl ShaderCache {
     pub fn new(max_size: usize) -> Self { Self { cache: HashMap::new(), max_size, access_order: VecDeque::new(), file_watchers: HashMap::new(), reload_callback: None } }
-    pub fn get(&mut self, hash: u64) -> Option<&CompiledShader> { if self.cache.contains_key(&hash) { self.access_order.retain(|&h| h != hash); self.access_order.push_back(hash); } self.cache.get(&hash) }
-    pub fn insert(&mut self, hash: u64, shader: CompiledShader) { if self.cache.len() >= self.max_size { if let Some(oldest) = self.access_order.pop_front() { self.cache.remove(&oldest); } } self.cache.insert(hash, shader); self.access_order.push_back(hash); }
+    pub fn get(&mut self, hash: u64) -> Option<&CachedCompiledShader> { if self.cache.contains_key(&hash) { self.access_order.retain(|&h| h != hash); self.access_order.push_back(hash); } self.cache.get(&hash) }
+    pub fn insert(&mut self, hash: u64, shader: CachedCompiledShader) { if self.cache.len() >= self.max_size { if let Some(oldest) = self.access_order.pop_front() { self.cache.remove(&oldest); } } self.cache.insert(hash, shader); self.access_order.push_back(hash); }
     pub fn invalidate(&mut self, hash: u64) { self.cache.remove(&hash); self.access_order.retain(|&h| h != hash); }
     pub fn clear(&mut self) { self.cache.clear(); self.access_order.clear(); }
     pub fn watch_file(&mut self, path: &str, hash: u64) { self.file_watchers.insert(path.to_string(), hash); }
@@ -5213,12 +5213,12 @@ pub mod depth_of_field {
     use super::*;
 
     #[derive(Debug, Clone, Copy, PartialEq)]
-    pub enum BokehShape { Circle, Hexagon, Octagon, Pentagon, Heart, Star, Diamond, Anamorphic, Custom }
+    pub enum DepthOfFieldBokehShape { Circle, Hexagon, Octagon, Pentagon, Heart, Star, Diamond, Anamorphic, Custom }
 
     #[derive(Debug, Clone, Copy, PartialEq)]
-    pub enum DOFQuality { Low, Medium, High, Ultra, Cinematic }
+    pub enum DepthOfFieldDOFQuality { Low, Medium, High, Ultra, Cinematic }
 
-    impl DOFQuality {
+    impl DepthOfFieldDOFQuality {
         pub fn sample_count(&self) -> u32 { match self { Self::Low => 8, Self::Medium => 24, Self::High => 48, Self::Ultra => 96, Self::Cinematic => 192 } }
         pub fn ring_count(&self) -> u32 { match self { Self::Low => 2, Self::Medium => 4, Self::High => 6, Self::Ultra => 8, Self::Cinematic => 12 } }
     }
@@ -5275,8 +5275,8 @@ pub mod depth_of_field {
 
     pub struct DOFProcessor {
         pub lens: LensParameters,
-        pub quality: DOFQuality,
-        pub bokeh_shape: BokehShape,
+        pub quality: DepthOfFieldDOFQuality,
+        pub bokeh_shape: DepthOfFieldBokehShape,
         pub focus_mode: FocusMode,
         pub bokeh_brightness_threshold: f32,
         pub bokeh_brightness_gain: f32,
@@ -5294,9 +5294,9 @@ pub mod depth_of_field {
     }
 
     impl DOFProcessor {
-        pub fn new(lens: LensParameters, quality: DOFQuality) -> Self {
+        pub fn new(lens: LensParameters, quality: DepthOfFieldDOFQuality) -> Self {
             let mut proc = Self {
-                lens, quality, bokeh_shape: BokehShape::Circle, focus_mode: FocusMode::Manual, bokeh_brightness_threshold: 0.8, bokeh_brightness_gain: 1.5,
+                lens, quality, bokeh_shape: DepthOfFieldBokehShape::Circle, focus_mode: FocusMode::Manual, bokeh_brightness_threshold: 0.8, bokeh_brightness_gain: 1.5,
                 bokeh_fringe_intensity: 0.2, highlight_clamp: 10.0, near_blur_scale: 1.0, far_blur_scale: 1.0, max_blur_radius: 32.0,
                 focus_transition_speed: 3.0, tilt_shift_angle: 0.0, tilt_shift_focus_width: 0.3, kernel_cache: Vec::new(), shape_lut: Vec::new(), current_focus: 5.0,
             };
@@ -5325,15 +5325,15 @@ pub mod depth_of_field {
                     let dx = (x as f32 - center) / center;
                     let dy = (y as f32 - center) / center;
                     let v = match self.bokeh_shape {
-                        BokehShape::Circle => if dx*dx + dy*dy <= 1.0 { 1.0 } else { 0.0 },
-                        BokehShape::Hexagon => { let ax = dx.abs(); let ay = dy.abs(); if ax < 0.866 && ay < 1.0 - ax * 0.577 { 1.0 } else { 0.0 } }
-                        BokehShape::Octagon => { let ax = dx.abs(); let ay = dy.abs(); if ax + ay < 1.414 && ax < 1.0 && ay < 1.0 { 1.0 } else { 0.0 } }
-                        BokehShape::Pentagon => { let angle = dy.atan2(dx); let r = (dx*dx + dy*dy).sqrt(); let a5 = std::f32::consts::PI / 2.5; let edge = 0.809 / ((angle / a5).floor() * a5 + a5 / 2.0 - angle).cos(); if r < edge { 1.0 } else { 0.0 } }
-                        BokehShape::Heart => { let ax = dx.abs(); let h = if ax < 0.5 { (1.0 - (ax * 2.0 - 1.0).powi(2)).sqrt() - dy } else { 0.0 }; if h > 0.0 && h < 1.5 { 1.0 } else { 0.0 } }
-                        BokehShape::Star => { let angle = dy.atan2(dx); let r = (dx*dx + dy*dy).sqrt(); let star = 0.5 + 0.5 * (angle * 5.0).cos(); if r < star { 1.0 } else { 0.0 } }
-                        BokehShape::Diamond => { if dx.abs() + dy.abs() < 1.0 { 1.0 } else { 0.0 } }
-                        BokehShape::Anamorphic => { let stretch = 2.0; if dx*dx*stretch*stretch + dy*dy <= 1.0 { 1.0 } else { 0.0 } }
-                        BokehShape::Custom => 1.0,
+                        DepthOfFieldBokehShape::Circle => if dx*dx + dy*dy <= 1.0 { 1.0 } else { 0.0 },
+                        DepthOfFieldBokehShape::Hexagon => { let ax = dx.abs(); let ay = dy.abs(); if ax < 0.866 && ay < 1.0 - ax * 0.577 { 1.0 } else { 0.0 } }
+                        DepthOfFieldBokehShape::Octagon => { let ax = dx.abs(); let ay = dy.abs(); if ax + ay < 1.414 && ax < 1.0 && ay < 1.0 { 1.0 } else { 0.0 } }
+                        DepthOfFieldBokehShape::Pentagon => { let angle = dy.atan2(dx); let r = (dx*dx + dy*dy).sqrt(); let a5 = std::f32::consts::PI / 2.5; let edge = 0.809 / ((angle / a5).floor() * a5 + a5 / 2.0 - angle).cos(); if r < edge { 1.0 } else { 0.0 } }
+                        DepthOfFieldBokehShape::Heart => { let ax = dx.abs(); let h = if ax < 0.5 { (1.0 - (ax * 2.0 - 1.0).powi(2)).sqrt() - dy } else { 0.0 }; if h > 0.0 && h < 1.5 { 1.0 } else { 0.0 } }
+                        DepthOfFieldBokehShape::Star => { let angle = dy.atan2(dx); let r = (dx*dx + dy*dy).sqrt(); let star = 0.5 + 0.5 * (angle * 5.0).cos(); if r < star { 1.0 } else { 0.0 } }
+                        DepthOfFieldBokehShape::Diamond => { if dx.abs() + dy.abs() < 1.0 { 1.0 } else { 0.0 } }
+                        DepthOfFieldBokehShape::Anamorphic => { let stretch = 2.0; if dx*dx*stretch*stretch + dy*dy <= 1.0 { 1.0 } else { 0.0 } }
+                        DepthOfFieldBokehShape::Custom => 1.0,
                     };
                     self.shape_lut[y * 256 + x] = v;
                 }
@@ -5468,7 +5468,7 @@ pub mod motion_blur {
     use super::*;
 
     #[derive(Debug, Clone, Copy, PartialEq)]
-    pub enum MotionBlurType { CameraBased, PerObject, Hybrid, Radial, Rotational, Directional, Velocity }
+    pub enum MotionBlurMotionBlurType { CameraBased, PerObject, Hybrid, Radial, Rotational, Directional, Velocity }
 
     #[derive(Debug, Clone, Copy, PartialEq)]
     pub enum MotionBlurQuality { Low, Medium, High, Ultra }
@@ -5479,7 +5479,7 @@ pub mod motion_blur {
 
     #[derive(Debug, Clone)]
     pub struct MotionBlurSettings {
-        pub blur_type: MotionBlurType,
+        pub blur_type: MotionBlurMotionBlurType,
         pub quality: MotionBlurQuality,
         pub intensity: f32,
         pub max_blur_pixels: f32,
@@ -5497,7 +5497,7 @@ pub mod motion_blur {
 
     impl Default for MotionBlurSettings {
         fn default() -> Self {
-            Self { blur_type: MotionBlurType::CameraBased, quality: MotionBlurQuality::Medium, intensity: 1.0, max_blur_pixels: 32.0, velocity_scale: 1.0,
+            Self { blur_type: MotionBlurMotionBlurType::CameraBased, quality: MotionBlurQuality::Medium, intensity: 1.0, max_blur_pixels: 32.0, velocity_scale: 1.0,
                 shutter_angle: 180.0, center_x: 0.5, center_y: 0.5, radial_strength: 0.5, rotation_angle: 0.0, direction_angle: 0.0,
                 depth_aware: true, depth_threshold: 0.01, tile_size: 16 }
         }
@@ -6569,21 +6569,21 @@ pub mod pipeline {
     }
 
     #[derive(Debug, Clone)]
-    pub struct RenderTarget {
+    pub struct PipelineRenderTarget {
         pub name: String,
         pub width: u32,
         pub height: u32,
-        pub format: TextureFormat,
+        pub format: PipelineTextureFormat,
         pub mip_levels: u32,
         pub is_persistent: bool,
     }
 
     #[derive(Debug, Clone, Copy, PartialEq)]
-    pub enum TextureFormat { RGBA8, RGBA16F, RGBA32F, R8, R16F, R32F, RG8, RG16F, Depth24, Depth32F }
+    pub enum PipelineTextureFormat { RGBA8, RGBA16F, RGBA32F, R8, R16F, R32F, RG8, RG16F, Depth24, Depth32F }
 
     pub struct RenderPipeline {
         passes: Vec<RenderPass>,
-        targets: HashMap<String, RenderTarget>,
+        targets: HashMap<String, PipelineRenderTarget>,
         execution_order: Vec<usize>,
         dirty: bool,
     }
@@ -6597,7 +6597,7 @@ pub mod pipeline {
 
         pub fn get_pass_mut(&mut self, name: &str) -> Option<&mut RenderPass> { self.passes.iter_mut().find(|p| p.name == name) }
 
-        pub fn add_target(&mut self, target: RenderTarget) { self.targets.insert(target.name.clone(), target); }
+        pub fn add_target(&mut self, target: PipelineRenderTarget) { self.targets.insert(target.name.clone(), target); }
 
         pub fn build_execution_order(&mut self) {
             if !self.dirty { return; }
