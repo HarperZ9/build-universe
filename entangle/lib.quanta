@@ -65,6 +65,40 @@ pub enum ConnectionStatus {
     Error,
 }
 
+/// AI model provider
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum AIProvider {
+    Claude,
+    GPT4,
+    GPT35,
+    OllamaLlama,
+    LMStudio,
+    Local,
+}
+
+/// Messaging platform
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum MessagePlatform {
+    SMS,
+    Slack,
+    Teams,
+    Discord,
+    Email,
+    Internal,
+}
+
+/// File transfer status
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum TransferStatus {
+    Pending,
+    Preparing,
+    Transferring,
+    Paused,
+    Completed,
+    Failed,
+    Cancelled,
+}
+
 /// Device capability flags
 #[derive(Debug, Clone)]
 pub struct DeviceCapabilities {
