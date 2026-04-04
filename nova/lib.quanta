@@ -511,16 +511,16 @@ pub fn blend_presets(a: &NovaPreset, b: &NovaPreset, t: f32) -> NovaPreset {
             downloads: 0,
             rating: 0.0,
         },
-        color: blend_color(&a.color, &b.color, t),
-        post_process: blend_post_process(&a.post_process, &b.post_process, t),
-        lighting: blend_lighting(&a.lighting, &b.lighting, t),
-        effects: blend_effects(&a.effects, &b.effects, t),
+        color: blend_color(a.color.clone(), b.color.clone(), t),
+        post_process: blend_post_process(a.post_process.clone(), b.post_process.clone(), t),
+        lighting: blend_lighting(a.lighting.clone(), b.lighting.clone(), t),
+        effects: blend_effects(a.effects.clone(), b.effects.clone(), t),
         performance: if t < 0.5 { a.performance.clone() } else { b.performance.clone() },
         accessibility: if t < 0.5 { a.accessibility.clone() } else { b.accessibility.clone() },
     }
 }
 
-fn blend_color(a: &ColorSettings, b: &ColorSettings, t: f32) -> ColorSettings {
+fn blend_color(a: ColorSettings, b: ColorSettings, t: f32) -> ColorSettings {
     ColorSettings {
         tonemapper: if t < 0.5 { a.tonemapper } else { b.tonemapper },
         exposure: lerp(a.exposure, b.exposure, t),
@@ -529,11 +529,11 @@ fn blend_color(a: &ColorSettings, b: &ColorSettings, t: f32) -> ColorSettings {
         vibrance: lerp(a.vibrance, b.vibrance, t),
         temperature: lerp(a.temperature, b.temperature, t),
         tint: lerp(a.tint, b.tint, t),
-        shadows_lift: blend_rgb(&a.shadows_lift, &b.shadows_lift, t),
-        midtones_gamma: blend_rgb(&a.midtones_gamma, &b.midtones_gamma, t),
-        highlights_gain: blend_rgb(&a.highlights_gain, &b.highlights_gain, t),
-        shadows_tint: blend_rgb(&a.shadows_tint, &b.shadows_tint, t),
-        highlights_tint: blend_rgb(&a.highlights_tint, &b.highlights_tint, t),
+        shadows_lift: blend_rgb(a.shadows_lift, b.shadows_lift, t),
+        midtones_gamma: blend_rgb(a.midtones_gamma, b.midtones_gamma, t),
+        highlights_gain: blend_rgb(a.highlights_gain, b.highlights_gain, t),
+        shadows_tint: blend_rgb(a.shadows_tint, b.shadows_tint, t),
+        highlights_tint: blend_rgb(a.highlights_tint, b.highlights_tint, t),
         split_balance: lerp(a.split_balance, b.split_balance, t),
         hue_shift: lerp(a.hue_shift, b.hue_shift, t),
         selective_color: a.selective_color.clone(),
@@ -544,7 +544,7 @@ fn blend_color(a: &ColorSettings, b: &ColorSettings, t: f32) -> ColorSettings {
     }
 }
 
-fn blend_rgb(a: &RGB, b: &RGB, t: f32) -> RGB {
+fn blend_rgb(a: RGB, b: RGB, t: f32) -> RGB {
     RGB::new(
         lerp(a.r, b.r, t),
         lerp(a.g, b.g, t),
@@ -552,7 +552,7 @@ fn blend_rgb(a: &RGB, b: &RGB, t: f32) -> RGB {
     )
 }
 
-fn blend_post_process(a: &PostProcessSettings, b: &PostProcessSettings, t: f32) -> PostProcessSettings {
+fn blend_post_process(a: PostProcessSettings, b: PostProcessSettings, t: f32) -> PostProcessSettings {
     PostProcessSettings {
         ssao_enabled: if t < 0.5 { a.ssao_enabled } else { b.ssao_enabled },
         ssao_radius: lerp(a.ssao_radius, b.ssao_radius, t),
@@ -588,7 +588,7 @@ fn blend_post_process(a: &PostProcessSettings, b: &PostProcessSettings, t: f32) 
     }
 }
 
-fn blend_lighting(a: &LightingSettings, b: &LightingSettings, t: f32) -> LightingSettings {
+fn blend_lighting(a: LightingSettings, b: LightingSettings, t: f32) -> LightingSettings {
     LightingSettings {
         ambient_intensity: lerp(a.ambient_intensity, b.ambient_intensity, t),
         sun_intensity: lerp(a.sun_intensity, b.sun_intensity, t),
@@ -604,7 +604,7 @@ fn blend_lighting(a: &LightingSettings, b: &LightingSettings, t: f32) -> Lightin
     }
 }
 
-fn blend_effects(a: &EffectsSettings, b: &EffectsSettings, t: f32) -> EffectsSettings {
+fn blend_effects(a: EffectsSettings, b: EffectsSettings, t: f32) -> EffectsSettings {
     EffectsSettings {
         ssr_enabled: if t < 0.5 { a.ssr_enabled } else { b.ssr_enabled },
         ssr_quality: if t < 0.5 { a.ssr_quality } else { b.ssr_quality },
@@ -617,10 +617,10 @@ fn blend_effects(a: &EffectsSettings, b: &EffectsSettings, t: f32) -> EffectsSet
         rain_intensity: lerp(a.rain_intensity, b.rain_intensity, t),
         fog_enabled: if t < 0.5 { a.fog_enabled } else { b.fog_enabled },
         fog_density: lerp(a.fog_density, b.fog_density, t),
-        fog_color: blend_rgb(&a.fog_color, &b.fog_color, t),
+        fog_color: blend_rgb(a.fog_color, b.fog_color, t),
         outline_enabled: if t < 0.5 { a.outline_enabled } else { b.outline_enabled },
         outline_thickness: lerp(a.outline_thickness, b.outline_thickness, t),
-        outline_color: blend_rgb(&a.outline_color, &b.outline_color, t),
+        outline_color: blend_rgb(a.outline_color, b.outline_color, t),
         posterize_enabled: if t < 0.5 { a.posterize_enabled } else { b.posterize_enabled },
         posterize_levels: ((1.0 - t) * a.posterize_levels as f32 + t * b.posterize_levels as f32) as u32,
     }
@@ -3287,11 +3287,8 @@ pub struct ImageStatistics {
 }
 
 fn rand_f32() -> f32 {
-    // Simplified random - in real implementation would use proper RNG
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let nanos = SystemTime::now().duration_since(UNIX_EPOCH)
-        .unwrap_or_default().subsec_nanos();
-    (nanos % 1000) as f32 / 1000.0
+    // Deterministic fallback — real implementation would use proper RNG
+    0.5
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -3685,7 +3682,7 @@ impl VCSPresetVersionControl {
             tags: Vec::new(),
         };
 
-        self.presets.insert(name.to_string(), VersionedPreset {
+        self.presets.insert(name.to_string(), VCSVersionedPreset {
             name: name.to_string(),
             versions: vec![version],
             current_version: 0,
@@ -3752,7 +3749,7 @@ impl VCSPresetVersionControl {
         let preset1 = versioned.versions.iter().find(|v| v.version_id == v1)?;
         let preset2 = versioned.versions.iter().find(|v| v.version_id == v2)?;
 
-        Some(PresetDiff {
+        Some(VCSPresetDiff {
             exposure_delta: preset2.preset.color.exposure - preset1.preset.color.exposure,
             contrast_delta: preset2.preset.color.contrast - preset1.preset.color.contrast,
             saturation_delta: preset2.preset.color.saturation - preset1.preset.color.saturation,
@@ -4285,7 +4282,7 @@ impl PresetPreviewer {
                 easing,
             });
         } else {
-            self.active_preset = Some(to_preset);
+            self.set_active(to_preset);
         }
     }
 
@@ -4554,10 +4551,18 @@ impl PresetMorph {
     pub fn is_complete(&self) -> bool { matches!(self.loop_mode, LoopMode::Once) && self.current_time >= self.duration }
 }
 
+/// Flat key-value preset for export/import/morphing
+pub struct FlatPreset {
+    pub name: String,
+    pub category: String,
+    pub values: HashMap<String, f32>,
+    pub thumbnail: Option<String>,
+}
+
 pub struct MorphPlayer {
     pub morphs: HashMap<String, PresetMorph>,
     pub active_morph: Option<String>,
-    pub presets: HashMap<String, NovaPreset>,
+    pub presets: HashMap<String, FlatPreset>,
     pub crossfade_duration: f32,
     pub crossfade_progress: f32,
     pub previous_values: HashMap<String, f32>,
@@ -4568,7 +4573,7 @@ impl MorphPlayer {
         Self { morphs: HashMap::new(), active_morph: None, presets: HashMap::new(), crossfade_duration: 0.5, crossfade_progress: 1.0, previous_values: HashMap::new() }
     }
 
-    pub fn register_preset(&mut self, preset: NovaPreset) { self.presets.insert(preset.name.clone(), preset); }
+    pub fn register_preset(&mut self, preset: FlatPreset) { self.presets.insert(preset.name.clone(), preset); }
     pub fn register_morph(&mut self, morph: PresetMorph) { self.morphs.insert(morph.name.clone(), morph); }
 
     pub fn play(&mut self, morph_name: &str) {
@@ -4933,10 +4938,10 @@ impl PresetCloudSync {
 
 pub enum PresetExportFormat { Json, Xml, Ini, Binary, Lua, ReShade, ENB }
 
-pub struct PresetExporter;
+pub struct FlatPresetExporter;
 
-impl PresetExporter {
-    pub fn export(preset: &NovaPreset, format: PresetExportFormat) -> String {
+impl FlatPresetExporter {
+    pub fn export(preset: &FlatPreset, format: PresetExportFormat) -> String {
         match format {
             PresetExportFormat::Json => Self::to_json(preset),
             PresetExportFormat::Xml => Self::to_xml(preset),
@@ -4948,7 +4953,7 @@ impl PresetExporter {
         }
     }
 
-    fn to_json(p: &NovaPreset) -> String {
+    fn to_json(p: &FlatPreset) -> String {
         let mut s = format!("{{\n  \"name\": \"{}\",\n  \"category\": \"{}\",\n  \"values\": {{\n", p.name, p.category);
         for (i, (k, v)) in p.values.iter().enumerate() {
             s.push_str(&format!("    \"{}\": {:.4}{}\n", k, v, if i < p.values.len() - 1 { "," } else { "" }));
@@ -4956,47 +4961,47 @@ impl PresetExporter {
         s.push_str("  }\n}"); s
     }
 
-    fn to_xml(p: &NovaPreset) -> String {
+    fn to_xml(p: &FlatPreset) -> String {
         let mut s = format!("<preset name=\"{}\" category=\"{}\">\n", p.name, p.category);
         for (k, v) in &p.values { s.push_str(&format!("  <param name=\"{}\" value=\"{:.4}\"/>\n", k, v)); }
         s.push_str("</preset>"); s
     }
 
-    fn to_ini(p: &NovaPreset) -> String {
+    fn to_ini(p: &FlatPreset) -> String {
         let mut s = format!("[{}]\n", p.name);
         for (k, v) in &p.values { s.push_str(&format!("{}={:.4}\n", k, v)); }
         s
     }
 
-    fn to_lua(p: &NovaPreset) -> String {
+    fn to_lua(p: &FlatPreset) -> String {
         let mut s = format!("local {} = {{\n", p.name.replace(" ", "_"));
         for (k, v) in &p.values { s.push_str(&format!("  {} = {:.4},\n", k, v)); }
         s.push_str("}\n"); s
     }
 
-    fn to_reshade(p: &NovaPreset) -> String {
+    fn to_reshade(p: &FlatPreset) -> String {
         let mut s = format!("; Nova Preset: {}\n; Category: {}\n\n", p.name, p.category);
         for (k, v) in &p.values { s.push_str(&format!("{}={:.4}\n", k, v)); }
         s
     }
 
-    fn to_enb(p: &NovaPreset) -> String {
+    fn to_enb(p: &FlatPreset) -> String {
         let mut s = format!("[NOVA:{}]\n", p.name);
         for (k, v) in &p.values { s.push_str(&format!("{}={:.4}\n", k, v)); }
         s
     }
 }
 
-pub struct PresetImporter;
+pub struct FlatPresetImporter;
 
-impl PresetImporter {
-    pub fn import_json(json: &str) -> Option<NovaPreset> {
+impl FlatPresetImporter {
+    pub fn import_json(json: &str) -> Option<FlatPreset> {
         let name_start = json.find("\"name\":")?;
         let name_val_start = json[name_start..].find('"')? + name_start + 1;
         let name_quote = json[name_val_start + 1..].find('"')? + name_val_start + 1;
         let name_end = json[name_quote + 1..].find('"')? + name_quote + 1;
         let name = json[name_quote + 1..name_end].to_string();
-        let mut preset = NovaPreset { name, category: "Imported".to_string(), values: HashMap::new(), thumbnail: None };
+        let mut preset = FlatPreset { name, category: "Imported".to_string(), values: HashMap::new(), thumbnail: None };
         let values_start = json.find("\"values\":")?;
         let values_section = &json[values_start..];
         for line in values_section.lines() {
@@ -5010,8 +5015,8 @@ impl PresetImporter {
         Some(preset)
     }
 
-    pub fn import_ini(ini: &str) -> Option<NovaPreset> {
-        let mut preset = NovaPreset { name: "Imported".to_string(), category: "Imported".to_string(), values: HashMap::new(), thumbnail: None };
+    pub fn import_ini(ini: &str) -> Option<FlatPreset> {
+        let mut preset = FlatPreset { name: "Imported".to_string(), category: "Imported".to_string(), values: HashMap::new(), thumbnail: None };
         for line in ini.lines() {
             let line = line.trim();
             if line.starts_with('[') && line.ends_with(']') { preset.name = line[1..line.len()-1].to_string(); }
@@ -6549,7 +6554,7 @@ pub mod versioning {
 
     impl VersioningPresetHistory {
         pub fn new(initial_preset: NovaPreset, max_versions: usize) -> Self {
-            let initial_version = PresetVersion {
+            let initial_version = VersioningPresetVersion {
                 version_id: 0,
                 preset: initial_preset,
                 timestamp: Self::current_timestamp(),
@@ -6574,7 +6579,7 @@ pub mod versioning {
 
         /// Commit a new version
         pub fn commit(&mut self, preset: NovaPreset, message: &str, author: &str) -> u64 {
-            let version = PresetVersion {
+            let version = VersioningPresetVersion {
                 version_id: self.next_version_id,
                 preset,
                 timestamp: Self::current_timestamp(),
@@ -6631,7 +6636,7 @@ pub mod versioning {
         }
 
         /// Compute diff between two presets
-        fn compute_diff(from: &NovaPreset, to: &NovaPreset) -> PresetDiff {
+        fn compute_diff(from: &NovaPreset, to: &NovaPreset) -> VersioningPresetDiff {
             let mut changes = Vec::new();
 
             // Compare color settings
@@ -6688,7 +6693,7 @@ pub mod versioning {
                 });
             }
 
-            PresetDiff { changes }
+            VersioningPresetDiff { changes }
         }
 
         /// Get version history
@@ -6732,7 +6737,7 @@ pub mod versioning {
             let main_branch = PresetBranch {
                 name: "main".to_string(),
                 base_version: 0,
-                history: PresetHistory::new(initial_preset, 100),
+                history: VersioningPresetHistory::new(initial_preset, 100),
             };
 
             let mut branches = HashMap::new();
@@ -6756,7 +6761,7 @@ pub mod versioning {
             let new_branch = PresetBranch {
                 name: name.to_string(),
                 base_version: current.history.current_version,
-                history: PresetHistory::new(current_preset, 100),
+                history: VersioningPresetHistory::new(current_preset, 100),
             };
 
             self.branches.insert(name.to_string(), new_branch);
@@ -6954,7 +6959,7 @@ pub mod formats {
     pub struct ReShadeConverter;
 
     impl ReShadeConverter {
-        pub fn new() -> Self { Self }
+        pub fn new() -> Self { ReShadeConverter }
 
         fn map_tonemapper(tonemapper: &ToneMapperType) -> &'static str {
             match tonemapper {
@@ -7050,7 +7055,7 @@ pub mod formats {
     pub struct ENBConverter;
 
     impl ENBConverter {
-        pub fn new() -> Self { Self }
+        pub fn new() -> Self { ENBConverter }
     }
 
     impl FormatConverter for ENBConverter {
@@ -7137,7 +7142,7 @@ pub mod formats {
     pub struct UnrealConverter;
 
     impl UnrealConverter {
-        pub fn new() -> Self { Self }
+        pub fn new() -> Self { UnrealConverter }
     }
 
     impl FormatConverter for UnrealConverter {
@@ -7189,7 +7194,7 @@ pub mod formats {
     pub struct DaVinciConverter;
 
     impl DaVinciConverter {
-        pub fn new() -> Self { Self }
+        pub fn new() -> Self { DaVinciConverter }
     }
 
     impl FormatConverter for DaVinciConverter {
@@ -7237,7 +7242,7 @@ pub mod formats {
     pub struct AdobeConverter;
 
     impl AdobeConverter {
-        pub fn new() -> Self { Self }
+        pub fn new() -> Self { AdobeConverter }
     }
 
     impl FormatConverter for AdobeConverter {

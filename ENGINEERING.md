@@ -1,6 +1,6 @@
 # Quanta Ecosystem — Engineering Runbook
 
-Last verified: 2026-04-03. All CI green, all claims backed by evidence.
+Last verified: 2026-04-03. 8/16 ecosystem modules compile. Compiler 604 tests green.
 
 ## Quick Reference
 
@@ -64,9 +64,12 @@ Last verified: 2026-04-03. All CI green, all claims backed by evidence.
 ### Compiler — Active Limitations
 - **Forward references**: Methods must be defined before they're called within the same impl block.
 - **&str parameters**: Functions taking `&str` get the value by copy, not pointer. Avoid.
-- **DefId misresolution in large files**: In files with 1000+ types, the type checker occasionally resolves names to the wrong DefId. Root cause of 2 remaining nexus errors and many foundation cascading errors.
+- **DefId misresolution in large files**: In files with 1000+ types, the type checker occasionally resolves names to the wrong DefId. Root cause of many foundation cascading errors.
 - **Type variable scope leaks**: Generic type parameters (K, V) from one impl block can leak into unrelated functions in the same module.
 - **Struct literals in some contexts**: `Foo { field: value }` inside deeply nested expressions may be parsed as a block instead of a struct literal.
+- **Infinite type false positive**: Functions taking `&StructType` and returning a struct literal of the same type trigger an incorrect occurs-check. Workaround: pass by value instead of reference.
+- **Self as unit struct constructor**: `pub fn new() -> Self { Self }` doesn't compile for unit structs. Use the struct name directly.
+- **Trait method dispatch on self**: `self.method()` within a trait impl block may not find the trait's methods. Inline the value instead.
 
 ### Compiler — RESOLVED (2026-04-03)
 - ~~No module imports~~ — `mod foo;` and `use foo::bar;` fully implemented.
@@ -81,6 +84,12 @@ Last verified: 2026-04-03. All CI green, all claims backed by evidence.
 - ~~Ref patterns in closures~~ — `|&s|` and `|&&r|` fixed (parse_pattern_primary + AndAnd).
 - ~~Missing math builtins~~ — Added tanh, sinh, cosh, asin, acos, atan, exp2.
 - ~~UTF-8 boundary panics~~ — Added is_char_boundary checks in codegen span extraction.
+- ~~Nexus blocked~~ — Now compiles: 6,025 LOC → 23,893 lines C.
+- ~~Delta blocked~~ — Now compiles: 7,084 LOC → 32,746 lines C (options pricing).
+- ~~Wavelength blocked~~ — Now compiles: 8,791 LOC → 38,811 lines C (audio/video).
+- ~~Chromatic blocked~~ — Now compiles: 5,948 LOC → 32,119 lines C (color science).
+- ~~Nova blocked~~ — Now compiles: 8,007 LOC → 32,724 lines C (preset engine).
+- ~~Occurs-check false positive~~ — Apply substitution before check in unifier bind().
 
 ### C Codegen
 - **Tuple typedefs**: `(f32, f32)` emits `Tuple_f32_f32` but the typedef may appear after first use.

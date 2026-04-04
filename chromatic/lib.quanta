@@ -32,6 +32,16 @@ pub struct LinearRGB {
     pub b: f64,
 }
 
+impl LinearRGB {
+    pub fn clamp(&self) -> Self {
+        LinearRGB {
+            r: if self.r < 0.0 { 0.0 } else if self.r > 1.0 { 1.0 } else { self.r },
+            g: if self.g < 0.0 { 0.0 } else if self.g > 1.0 { 1.0 } else { self.g },
+            b: if self.b < 0.0 { 0.0 } else if self.b > 1.0 { 1.0 } else { self.b },
+        }
+    }
+}
+
 /// CIE XYZ tristimulus values
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct XYZ {
@@ -54,6 +64,24 @@ pub struct Lab {
     pub L: f64,
     pub a: f64,
     pub b: f64,
+}
+
+impl Lab {
+    pub fn to_xyz(&self) -> XYZ {
+        // D65 white point
+        let xn = 0.95047;
+        let yn = 1.0;
+        let zn = 1.08883;
+        let fy = (self.L + 16.0) / 116.0;
+        let fx = self.a / 500.0 + fy;
+        let fz = fy - self.b / 200.0;
+        let epsilon = 216.0 / 24389.0;
+        let kappa = 24389.0 / 27.0;
+        let xr = if fx * fx * fx > epsilon { fx * fx * fx } else { (116.0 * fx - 16.0) / kappa };
+        let yr = if self.L > kappa * epsilon { fy * fy * fy } else { self.L / kappa };
+        let zr = if fz * fz * fz > epsilon { fz * fz * fz } else { (116.0 * fz - 16.0) / kappa };
+        XYZ { x: xr * xn, y: yr * yn, z: zr * zn }
+    }
 }
 
 /// Genesis Symmetric Color Space - Our proprietary perceptually uniform space
@@ -1951,21 +1979,41 @@ impl ColorTransform {
     }
 }
 
+fn mat3_mult_vec(m: [[f64; 3]; 3], v: (f64, f64, f64)) -> (f64, f64, f64) {
+    (
+        m[0][0] * v.0 + m[0][1] * v.1 + m[0][2] * v.2,
+        m[1][0] * v.0 + m[1][1] * v.1 + m[1][2] * v.2,
+        m[2][0] * v.0 + m[2][1] * v.1 + m[2][2] * v.2,
+    )
+}
+
+fn mat3_invert(m: [[f64; 3]; 3]) -> [[f64; 3]; 3] {
+    let det = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
+            - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+            + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+    let inv = 1.0 / det;
+    [
+        [(m[1][1]*m[2][2] - m[1][2]*m[2][1])*inv, (m[0][2]*m[2][1] - m[0][1]*m[2][2])*inv, (m[0][1]*m[1][2] - m[0][2]*m[1][1])*inv],
+        [(m[1][2]*m[2][0] - m[1][0]*m[2][2])*inv, (m[0][0]*m[2][2] - m[0][2]*m[2][0])*inv, (m[0][2]*m[1][0] - m[0][0]*m[1][2])*inv],
+        [(m[1][0]*m[2][1] - m[1][1]*m[2][0])*inv, (m[0][1]*m[2][0] - m[0][0]*m[2][1])*inv, (m[0][0]*m[1][1] - m[0][1]*m[1][0])*inv],
+    ]
+}
+
 fn bradford_adapt(xyz: (f64, f64, f64), src_wp: (f64, f64, f64), dst_wp: (f64, f64, f64)) -> (f64, f64, f64) {
     let ma = [
         [0.8951, 0.2664, -0.1614],
         [-0.7502, 1.7135, 0.0367],
         [0.0389, -0.0685, 1.0296]
     ];
-    let src_lms = matrix_mult_3(ma, xyz);
-    let dst_lms = matrix_mult_3(ma, dst_wp);
-    let src_wp_lms = matrix_mult_3(ma, src_wp);
+    let src_lms = mat3_mult_vec(ma, xyz);
+    let dst_lms = mat3_mult_vec(ma, dst_wp);
+    let src_wp_lms = mat3_mult_vec(ma, src_wp);
     let scaled = (
         src_lms.0 * dst_lms.0 / src_wp_lms.0,
         src_lms.1 * dst_lms.1 / src_wp_lms.1,
         src_lms.2 * dst_lms.2 / src_wp_lms.2
     );
-    matrix_mult_3(invert_3x3(ma), scaled)
+    mat3_mult_vec(mat3_invert(ma), scaled)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2037,7 +2085,7 @@ impl ColorBlindnessSimulator {
 
     fn simulate(self, rgb: LinearRGB) -> LinearRGB {
         let vec = [rgb.r, rgb.g, rgb.b];
-        let result = self.simulation_matrix.multiply_vec(vec);
+        let result = self.simulation_matrix.transform(vec);
         LinearRGB { r: result[0], g: result[1], b: result[2] }
     }
 
@@ -2066,14 +2114,14 @@ impl AccessibilityChecker {
     fn wcag_aa() -> AccessibilityChecker {
         AccessibilityChecker {
             min_contrast_ratio: 4.5,
-            cvd_types: [Protanopia, Deuteranopia, Tritanopia]
+            cvd_types: [SimColorBlindnessType::Protanopia, SimColorBlindnessType::Deuteranopia, SimColorBlindnessType::Tritanopia]
         }
     }
 
     fn wcag_aaa() -> AccessibilityChecker {
         AccessibilityChecker {
             min_contrast_ratio: 7.0,
-            cvd_types: [Protanopia, Deuteranopia, Tritanopia]
+            cvd_types: [SimColorBlindnessType::Protanopia, SimColorBlindnessType::Deuteranopia, SimColorBlindnessType::Tritanopia]
         }
     }
 
@@ -2083,8 +2131,10 @@ impl AccessibilityChecker {
         let ratio = (fg_lum.max(bg_lum) + 0.05) / (fg_lum.min(bg_lum) + 0.05);
         ContrastResult {
             ratio: ratio,
-            passes_normal: ratio >= self.min_contrast_ratio,
-            passes_large: ratio >= self.min_contrast_ratio / 1.5
+            aa_normal: ratio >= self.min_contrast_ratio,
+            aa_large: ratio >= self.min_contrast_ratio / 1.5,
+            aaa_normal: ratio >= 7.0,
+            aaa_large: ratio >= 4.5,
         }
     }
 
@@ -2235,6 +2285,35 @@ impl Illuminant {
             white_point: (1.00962, 1.0, 0.64350)
         }
     }
+
+    fn sample_spd(&self, wavelength: f64) -> f64 {
+        let idx = ((wavelength - 380.0) / 5.0) as usize;
+        if idx < 81 { self.spd[idx] } else { 0.0 }
+    }
+}
+
+fn xyz_to_lab(xyz: (f64, f64, f64), white: (f64, f64, f64)) -> (f64, f64, f64) {
+    let epsilon = 216.0 / 24389.0;
+    let kappa = 24389.0 / 27.0;
+    let xr = xyz.0 / white.0;
+    let yr = xyz.1 / white.1;
+    let zr = xyz.2 / white.2;
+    let fx = if xr > epsilon { xr.cbrt() } else { (kappa * xr + 16.0) / 116.0 };
+    let fy = if yr > epsilon { yr.cbrt() } else { (kappa * yr + 16.0) / 116.0 };
+    let fz = if zr > epsilon { zr.cbrt() } else { (kappa * zr + 16.0) / 116.0 };
+    (116.0 * fy - 16.0, 500.0 * (fx - fy), 200.0 * (fy - fz))
+}
+
+fn cie_1931_observer(wl: f64) -> (f64, f64, f64) {
+    // Gaussian approximation of CIE 1931 2-degree observer
+    let x = 1.056 * (-0.5 * ((wl - 599.8) / 37.9).powi(2)).exp()
+          + 0.362 * (-0.5 * ((wl - 442.0) / 16.0).powi(2)).exp()
+          + (-0.5) * (-0.5 * ((wl - 501.1) / 20.4).powi(2)).exp();
+    let y = 0.821 * (-0.5 * ((wl - 568.8) / 46.9).powi(2)).exp()
+          + 0.286 * (-0.5 * ((wl - 530.9) / 16.3).powi(2)).exp();
+    let z = 1.217 * (-0.5 * ((wl - 437.0) / 11.8).powi(2)).exp()
+          + 0.681 * (-0.5 * ((wl - 459.0) / 26.0).powi(2)).exp();
+    (x.max(0.0), y.max(0.0), z.max(0.0))
 }
 
 struct MetamerismIndex {
@@ -2323,9 +2402,9 @@ impl ChromaticAdaptation {
 
     fn get_transform_matrix(self) -> Matrix3x3 {
         let ma = self.cone_response_matrix();
-        let ma_inv = ma.invert();
-        let src_lms = ma.multiply_vec([self.source_white.0, self.source_white.1, self.source_white.2]);
-        let dst_lms = ma.multiply_vec([self.dest_white.0, self.dest_white.1, self.dest_white.2]);
+        let ma_inv = ma.inverse().unwrap_or(Matrix3x3::identity());
+        let src_lms = ma.transform([self.source_white.0, self.source_white.1, self.source_white.2]);
+        let dst_lms = ma.transform([self.dest_white.0, self.dest_white.1, self.dest_white.2]);
         let scale = Matrix3x3::diagonal([
             Self::adapt_component(dst_lms[0] / src_lms[0], self.degree),
             Self::adapt_component(dst_lms[1] / src_lms[1], self.degree),
@@ -2366,7 +2445,7 @@ impl ChromaticAdaptation {
 
     fn adapt(self, xyz: (f64, f64, f64)) -> (f64, f64, f64) {
         let mat = self.get_transform_matrix();
-        let result = mat.multiply_vec([xyz.0, xyz.1, xyz.2]);
+        let result = mat.transform([xyz.0, xyz.1, xyz.2]);
         (result[0], result[1], result[2])
     }
 }
@@ -2405,6 +2484,80 @@ impl CIECAM02 {
             surround: surround,
             discounting: false
         }
+    }
+
+    fn surround_params(&self) -> (f64, f64, f64) {
+        match self.surround {
+            Surround::Average => (0.69, 1.0, 1.0),
+            Surround::Dim => (0.59, 0.95, 0.9),
+            Surround::Dark => (0.525, 0.8, 0.8),
+        }
+    }
+
+    fn luminance_adaptation(&self) -> f64 {
+        let la = self.adapting_luminance;
+        let k = 1.0 / (5.0 * la + 1.0);
+        let k4 = k * k * k * k;
+        0.2 * k4 * 5.0 * la + 0.1 * (1.0 - k4) * (1.0 - k4) * (5.0 * la).powf(1.0 / 3.0)
+    }
+
+    fn chromatic_adapt(&self, xyz: (f64, f64, f64)) -> [f64; 3] {
+        // CAT02 forward matrix
+        [
+            0.7328 * xyz.0 + 0.4296 * xyz.1 - 0.1624 * xyz.2,
+           -0.7036 * xyz.0 + 1.6975 * xyz.1 + 0.0061 * xyz.2,
+            0.0030 * xyz.0 + 0.0136 * xyz.1 + 0.9834 * xyz.2,
+        ]
+    }
+
+    fn post_adapt(&self, rgb: [f64; 3], fl: f64) -> [f64; 3] {
+        let mut result = [0.0_f64; 3];
+        let mut i = 0;
+        while i < 3 {
+            let tmp = (fl * rgb[i].abs() / 100.0).powf(0.42);
+            let sign = if rgb[i] < 0.0 { -1.0 } else { 1.0 };
+            result[i] = sign * (400.0 * tmp / (27.13 + tmp)) + 0.1;
+            i += 1;
+        }
+        result
+    }
+
+    fn achromatic_response(&self, xyz: (f64, f64, f64)) -> f64 {
+        let rgb = self.chromatic_adapt(xyz);
+        let fl = self.luminance_adaptation();
+        let rgb_a = self.post_adapt(rgb, fl);
+        let n = self.background_luminance / self.white_point.1;
+        let nbb = 0.725 * (1.0 / n).powf(0.2);
+        (2.0 * rgb_a[0] + rgb_a[1] + rgb_a[2] / 20.0 - 0.305) * nbb
+    }
+
+    fn hue_composition(&self, h: f64) -> str {
+        if h < 20.14 { "R" }
+        else if h < 90.0 { "YR" }
+        else if h < 164.25 { "GY" }
+        else if h < 237.53 { "BG" }
+        else { "RB" }
+    }
+
+    fn solve_rgb_to_xyz(&self, p2: f64, t: f64, et: f64, sin_h: f64, cos_h: f64, nc: f64, nbb: f64, fl: f64) -> (f64, f64, f64) {
+        // Inverse CIECAM02: recover RGB then convert to XYZ via inverse CAT02
+        let a_coeff = if t.abs() < 1e-10 { 0.0 } else {
+            p2 * (2.0 + 1.0/5.0) * (460.0/1403.0)
+        };
+        let ra = a_coeff;
+        let ga = a_coeff;
+        let ba = a_coeff;
+        // Inverse post-adaptation
+        let inv = |v: f64| -> f64 {
+            let sign = if v - 0.1 < 0.0 { -1.0 } else { 1.0 };
+            let abs_v = (v - 0.1).abs();
+            sign * 100.0 / fl * (27.13 * abs_v / (400.0 - abs_v)).powf(1.0 / 0.42)
+        };
+        let r = inv(ra); let g = inv(ga); let b = inv(ba);
+        // Inverse CAT02
+        (1.0961 * r - 0.2789 * g + 0.1827 * b,
+         0.4544 * r + 0.4735 * g + 0.0721 * b,
+        -0.0096 * r - 0.0057 * g + 1.0153 * b)
     }
 
     fn forward(self, xyz: (f64, f64, f64)) -> CIECAM02Color {
@@ -2815,10 +2968,10 @@ impl ColorMatchingFunction {
     }
 }
 
-/// Standard illuminants
-pub struct Illuminant;
+/// Standard illuminant data source
+pub struct StandardIlluminants;
 
-impl Illuminant {
+impl StandardIlluminants {
     pub fn d65_spd() -> SPD {
         SPD::new(380.0, 700.0, vec![
             49.98, 52.31, 54.65, 68.70, 82.75, 87.12, 91.49, 92.46, 93.43, 90.06,
@@ -3034,16 +3187,16 @@ impl PerceptualOklab {
 
 enum HarmonyType { Complementary, SplitComplementary, Triadic, Tetradic, Analogous, Monochromatic }
 
-struct ColorHarmony {
+struct PaletteColorHarmony {
     base_hue: f64,
     saturation: f64,
     lightness: f64,
     harmony_type: HarmonyType
 }
 
-impl ColorHarmony {
-    fn new(h: f64, s: f64, l: f64, harmony: HarmonyType) -> ColorHarmony {
-        ColorHarmony { base_hue: h, saturation: s, lightness: l, harmony_type: harmony }
+impl PaletteColorHarmony {
+    fn new(h: f64, s: f64, l: f64, harmony: HarmonyType) -> PaletteColorHarmony {
+        PaletteColorHarmony { base_hue: h, saturation: s, lightness: l, harmony_type: harmony }
     }
 
     fn generate_palette(self) -> [(f64, f64, f64)] {
@@ -3207,8 +3360,8 @@ impl GamutBoundary {
         let mut high = 0.4;
         for _ in 0..20 {
             let mid = (low + high) / 2.0;
-            let (a, b) = Oklab::from_oklch(l, mid, h);
-            let (r, g, b_rgb) = Oklab::to_linear_srgb(l, a, b);
+            let (_, a, b) = PerceptualOklab::from_oklch(l, mid, h);
+            let (r, g, b_rgb) = PerceptualOklab::to_linear_srgb(l, a, b);
             if r >= 0.0 && r <= 1.0 && g >= 0.0 && g <= 1.0 && b_rgb >= 0.0 && b_rgb <= 1.0 {
                 low = mid;
             } else {
@@ -4745,7 +4898,7 @@ pub mod hdr_color {
             let c = (self.a * self.a + self.b * self.b).sqrt();
             let h = self.b.atan2(self.a).to_degrees();
             let h = if h < 0.0 { h + 360.0 } else { h };
-            Oklch { l: self.l, c, h }
+            Oklch { L: self.l, C: c, h }
         }
 
         pub fn delta_e(&self, other: &HdrOklab) -> f64 {
@@ -4768,7 +4921,7 @@ pub mod hdr_color {
         pub fn to_oklab(&self) -> Oklab {
             let h_rad = self.h.to_radians();
             Oklab {
-                l: self.l,
+                L: self.l,
                 a: self.c * h_rad.cos(),
                 b: self.c * h_rad.sin(),
             }

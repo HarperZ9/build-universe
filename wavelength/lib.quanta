@@ -6851,14 +6851,14 @@ impl FXCompressor {
 
 /// Parametric equalizer with multiple bands
 pub struct FXParametricEQ {
-    bands: Vec<BiquadFilter>,
+    bands: Vec<DSPBiquadFilter>,
 }
 
 impl FXParametricEQ {
     pub fn new(sample_rate: f32) -> Self { Self { bands: Vec::new() } }
 
     pub fn add_band(&mut self, filter_type: DSPFilterType, frequency: f32, q: f32, gain_db: f32, sample_rate: f32) {
-        self.bands.push(BiquadFilter::new(filter_type, sample_rate, frequency, q, gain_db));
+        self.bands.push(DSPBiquadFilter::new(filter_type, sample_rate, frequency, q, gain_db));
     }
 
     pub fn process(&mut self, input: f64) -> f64 {
@@ -7270,7 +7270,7 @@ impl ContainerMuxer {
 
 /// Audio visualizer
 pub struct AudioVisualizer {
-    fft: FFT,
+    fft: DSPFFT,
     window: Vec<f64>,
     smoothing: f64,
     previous_magnitudes: Vec<f64>,
@@ -7282,7 +7282,7 @@ impl AudioVisualizer {
             .map(|i| 0.5 * (1.0 - (2.0 * std::f64::consts::PI * i as f64 / fft_size as f64).cos()))
             .collect();
 
-        Self { fft: FFT::new(fft_size), window, smoothing, previous_magnitudes: vec![0.0; fft_size / 2] }
+        Self { fft: DSPFFT::new(fft_size), window, smoothing, previous_magnitudes: vec![0.0; fft_size / 2] }
     }
 
     pub fn get_spectrum(&mut self, samples: &[f64]) -> Vec<f64> {
@@ -7519,7 +7519,7 @@ pub mod pipeline {
 
                 Ok(MediaBuffer::audio(output_samples, self.target_rate, channels))
             } else {
-                Err(PipelineError { stage: self.name().into(), message: "Not audio".into() })
+                Err(PipelineError { stage: "Resampler".to_string(), message: "Not audio".to_string() })
             }
         }
 
@@ -7562,7 +7562,7 @@ pub mod pipeline {
                 let channels = match pixel_format {
                     PipelinePixelFormat::RGB | PipelinePixelFormat::BGR => 3,
                     PipelinePixelFormat::RGBA | PipelinePixelFormat::BGRA => 4,
-                    _ => return Err(PipelineError { stage: self.name().into(), message: "Unsupported format".into() }),
+                    _ => return Err(PipelineError { stage: "PipelineVideoScaler".to_string(), message: "Unsupported format".to_string() }),
                 };
                 let mut output = vec![0u8; (self.target_width * self.target_height * channels) as usize];
                 let x_ratio = width as f64 / self.target_width as f64;
@@ -7590,7 +7590,7 @@ pub mod pipeline {
                     ..input
                 })
             } else {
-                Err(PipelineError { stage: self.name().into(), message: "Not video".into() })
+                Err(PipelineError { stage: "PipelineVideoScaler".to_string(), message: "Not video".to_string() })
             }
         }
 
