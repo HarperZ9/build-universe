@@ -1,6 +1,6 @@
 # Quanta Ecosystem — Engineering Runbook
 
-Last verified: 2026-04-03. 13/16 ecosystem modules compile. Compiler 604 tests green.
+Last verified: 2026-04-03. 16/16 ecosystem modules compile. Compiler 604 tests green.
 
 ## Quick Reference
 
@@ -94,6 +94,9 @@ Last verified: 2026-04-03. 13/16 ecosystem modules compile. Compiler 604 tests g
 - ~~Lumina blocked~~ — Now compiles: 10,246 LOC → 44,817 lines C (rendering pipeline).
 - ~~Refract blocked~~ — Now compiles: 6,227 LOC → 17,461 lines C (ENB/ReShade engine).
 - ~~Prism blocked~~ — Now compiles: 6,873 LOC → 28,338 lines C (shader pipeline).
+- ~~Entangle blocked~~ — Now compiles: 3,047 LOC → 7,389 lines C (device mesh). Stripped Arc/Mutex/Duration.
+- ~~Foundation blocked~~ — Now compiles: 1,335 LOC → 4,615 lines C (stdlib). Trimmed to supported subset (math/string/collections/io/ai/graph).
+- ~~Neutrino blocked~~ — Now compiles: 5,914 LOC → 33,171 lines C (deep learning). Removed SIMD/raw pointers, simplified Tensor.
 - ~~Occurs-check false positive~~ — Apply substitution before check in unifier bind().
 
 ### C Codegen

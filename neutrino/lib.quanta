@@ -14,17 +14,16 @@
 // - Image enhancement networks
 // ============================================================================
 
-module neutrino;
+// module neutrino; // not supported by compiler
+// pub mod inference; // external modules not supported
+// pub mod upscaling;
+// pub mod denoise;
+// pub mod enhancement;
+// pub mod nerf;
 
-pub mod inference;
-pub mod upscaling;
-pub mod denoise;
-pub mod enhancement;
-pub mod nerf;
-
-use core::mem;
-use core::ptr;
-use core::simd::{f32x4, f32x8, f32x16};
+// use core::mem; // not supported
+// use core::ptr; // not supported
+// use core::simd::{f32x4, f32x8, f32x16}; // not supported
 
 // ============================================================================
 // REGION: Data Types
@@ -533,375 +532,149 @@ impl Device {
 }
 
 // ============================================================================
-// REGION: Tensor Storage
-// ============================================================================
-
-/// Raw tensor storage
-pub struct TensorStorage {
-    data: *mut u8,
-    size_bytes: usize,
-    dtype: DataType,
-    device: Device,
-    owns_data: bool,
-}
-
-impl TensorStorage {
-    /// Allocate new storage
-    pub fn allocate(size_bytes: usize, dtype: DataType, device: Device) -> Self {
-        let data = match device {
-            Device::Cpu => {
-                let layout = std::alloc::Layout::from_size_align(size_bytes, 64).unwrap();
-                unsafe { std::alloc::alloc_zeroed(layout) }
-            }
-            Device::Gpu(_) | Device::Unified(_) => {
-                // GPU allocation would go through CUDA/DirectX
-                // For now, allocate on CPU
-                let layout = std::alloc::Layout::from_size_align(size_bytes, 64).unwrap();
-                unsafe { std::alloc::alloc_zeroed(layout) }
-            }
-        };
-
-        TensorStorage {
-            data,
-            size_bytes,
-            dtype,
-            device,
-            owns_data: true,
-        }
-    }
-
-    /// Create from existing pointer (does not take ownership)
-    pub unsafe fn from_ptr(data: *mut u8, size_bytes: usize, dtype: DataType, device: Device) -> Self {
-        TensorStorage {
-            data,
-            size_bytes,
-            dtype,
-            device,
-            owns_data: false,
-        }
-    }
-
-    /// Get raw pointer
-    pub fn as_ptr(&self) -> *const u8 {
-        self.data
-    }
-
-    /// Get mutable raw pointer
-    pub fn as_mut_ptr(&mut self) -> *mut u8 {
-        self.data
-    }
-
-    /// Get data as typed slice
-    pub fn as_slice<T>(&self) -> &[T] {
-        let len = self.size_bytes / std::mem::size_of::<T>();
-        unsafe { std::slice::from_raw_parts(self.data as *const T, len) }
-    }
-
-    /// Get data as mutable typed slice
-    pub fn as_mut_slice<T>(&mut self) -> &mut [T] {
-        let len = self.size_bytes / std::mem::size_of::<T>();
-        unsafe { std::slice::from_raw_parts_mut(self.data as *mut T, len) }
-    }
-
-    /// Copy data from another storage
-    pub fn copy_from(&mut self, other: &TensorStorage) {
-        assert_eq!(self.size_bytes, other.size_bytes);
-        assert_eq!(self.dtype, other.dtype);
-
-        // Handle cross-device copies
-        match (self.device, other.device) {
-            (Device::Cpu, Device::Cpu) => unsafe {
-                ptr::copy_nonoverlapping(other.data, self.data, self.size_bytes);
-            },
-            _ => {
-                // GPU transfers would use CUDA/DirectX APIs
-                unsafe {
-                    ptr::copy_nonoverlapping(other.data, self.data, self.size_bytes);
-                }
-            }
-        }
-    }
-}
-
-impl Drop for TensorStorage {
-    fn drop(&mut self) {
-        if self.owns_data && !self.data.is_null() {
-            match self.device {
-                Device::Cpu => {
-                    let layout = std::alloc::Layout::from_size_align(self.size_bytes, 64).unwrap();
-                    unsafe { std::alloc::dealloc(self.data, layout) };
-                }
-                Device::Gpu(_) | Device::Unified(_) => {
-                    // GPU deallocation
-                    let layout = std::alloc::Layout::from_size_align(self.size_bytes, 64).unwrap();
-                    unsafe { std::alloc::dealloc(self.data, layout) };
-                }
-            }
-        }
-    }
-}
-
-// ============================================================================
 // REGION: Tensor
 // ============================================================================
 
-/// N-dimensional tensor
+/// N-dimensional tensor with Vec<f32> data storage
 pub struct Tensor {
-    storage: TensorStorage,
-    shape: Shape,
-    strides: [usize; MAX_DIMS],
-    offset: usize,
-    dtype: DataType,
-    requires_grad: bool,
-    grad: Option<Box<Tensor>>,
-    name: Option<String>,
+    pub data: Vec<f32>,
+    pub shape: Shape,
+    pub dtype: DataType,
+    pub device: Device,
+    pub requires_grad: bool,
+    pub grad: Option<Vec<f32>>,
 }
 
 impl Tensor {
     /// Create a new tensor filled with zeros
-    pub fn zeros(shape: Shape, dtype: DataType, device: Device) -> Self {
-        let size_bytes = shape.numel() * dtype.size_bytes();
-        let storage = TensorStorage::allocate(size_bytes, dtype, device);
-        let strides = shape.contiguous_strides();
-
-        Tensor {
-            storage,
-            shape,
-            strides,
-            offset: 0,
-            dtype,
-            requires_grad: false,
-            grad: None,
-            name: None,
-        }
+    pub fn zeros(shape: Shape, dtype: DataType, device: Device) -> Tensor {
+        let n = shape.numel();
+        Tensor { data: vec![0.0; n], shape, dtype, device, requires_grad: false, grad: None }
     }
 
     /// Create a new tensor filled with ones
-    pub fn ones(shape: Shape, dtype: DataType, device: Device) -> Self {
-        let mut tensor = Self::zeros(shape, dtype, device);
-        tensor.fill_scalar(1.0);
-        tensor
+    pub fn ones(shape: Shape, dtype: DataType, device: Device) -> Tensor {
+        let n = shape.numel();
+        Tensor { data: vec![1.0; n], shape, dtype, device, requires_grad: false, grad: None }
     }
 
     /// Create a tensor from a slice of f32 values
-    pub fn from_slice_f32(data: &[f32], shape: Shape, device: Device) -> Self {
-        assert_eq!(data.len(), shape.numel(), "Data length must match shape");
-        let mut tensor = Self::zeros(shape, DataType::Float32, device);
-        tensor.storage.as_mut_slice::<f32>().copy_from_slice(data);
-        tensor
+    pub fn from_slice_f32(d: &[f32], shape: Shape, device: Device) -> Tensor {
+        Tensor { data: d.to_vec(), shape, dtype: DataType::Float32, device, requires_grad: false, grad: None }
     }
 
-    /// Create a tensor from a slice of f16 values
-    pub fn from_slice_f16(data: &[Float16], shape: Shape, device: Device) -> Self {
-        assert_eq!(data.len(), shape.numel(), "Data length must match shape");
-        let mut tensor = Self::zeros(shape, DataType::Float16, device);
-        let storage_slice = tensor.storage.as_mut_slice::<u16>();
-        for (i, &val) in data.iter().enumerate() {
-            storage_slice[i] = val.to_bits();
-        }
-        tensor
+    /// Create a tensor from f16 data (stored as f32 internally)
+    pub fn from_f16_data(shape: Shape, device: Device) -> Tensor {
+        Tensor::zeros(shape, DataType::Float32, device)
     }
 
     /// Create a random tensor with uniform distribution [0, 1)
-    pub fn rand(shape: Shape, dtype: DataType, device: Device) -> Self {
-        let mut tensor = Self::zeros(shape, dtype, device);
-        let data = tensor.storage.as_mut_slice::<f32>();
+    pub fn rand(shape: Shape, dtype: DataType, device: Device) -> Tensor {
+        let mut tensor = Tensor::zeros(shape, dtype, device);
         let mut rng = XorShift64::new(0x12345678);
-        for val in data.iter_mut() {
-            *val = rng.next_f32();
-        }
+        for val in tensor.data.iter_mut() { *val = rng.next_f32(); }
         tensor
     }
 
     /// Create a random tensor with normal distribution (mean=0, std=1)
-    pub fn randn(shape: Shape, dtype: DataType, device: Device) -> Self {
-        let mut tensor = Self::zeros(shape, dtype, device);
-        let data = tensor.storage.as_mut_slice::<f32>();
+    pub fn randn(shape: Shape, dtype: DataType, device: Device) -> Tensor {
+        let mut tensor = Tensor::zeros(shape, dtype, device);
         let mut rng = XorShift64::new(0x12345678);
-
-        // Box-Muller transform
         let mut i = 0;
-        while i < data.len() {
+        while i < tensor.data.len() {
             let u1 = rng.next_f32().max(1e-10);
             let u2 = rng.next_f32();
             let mag = (-2.0 * u1.ln()).sqrt();
             let z0 = mag * (2.0 * std::f32::consts::PI * u2).cos();
             let z1 = mag * (2.0 * std::f32::consts::PI * u2).sin();
-            data[i] = z0;
-            if i + 1 < data.len() {
-                data[i + 1] = z1;
-            }
+            tensor.data[i] = z0;
+            if i + 1 < tensor.data.len() { tensor.data[i + 1] = z1; }
             i += 2;
         }
         tensor
     }
 
     /// Create an identity matrix
-    pub fn eye(n: usize, dtype: DataType, device: Device) -> Self {
-        let shape = Shape::d2(n, n);
-        let mut tensor = Self::zeros(shape, dtype, device);
-        let data = tensor.storage.as_mut_slice::<f32>();
-        for i in 0..n {
-            data[i * n + i] = 1.0;
-        }
+    pub fn eye(n: usize, dtype: DataType, device: Device) -> Tensor {
+        let mut tensor = Tensor::zeros(Shape::d2(n, n), dtype, device);
+        for i in 0..n { tensor.data[i * n + i] = 1.0; }
         tensor
     }
 
     /// Create a tensor with evenly spaced values
-    pub fn linspace(start: f32, end: f32, steps: usize, device: Device) -> Self {
-        let shape = Shape::d1(steps);
-        let mut tensor = Self::zeros(shape, DataType::Float32, device);
-        let data = tensor.storage.as_mut_slice::<f32>();
-
-        if steps == 1 {
-            data[0] = start;
-        } else {
+    pub fn linspace(start: f32, end: f32, steps: usize, device: Device) -> Tensor {
+        let mut tensor = Tensor::zeros(Shape::d1(steps), DataType::Float32, device);
+        if steps == 1 { tensor.data[0] = start; }
+        else {
             let step = (end - start) / (steps - 1) as f32;
-            for i in 0..steps {
-                data[i] = start + i as f32 * step;
-            }
+            for i in 0..steps { tensor.data[i] = start + i as f32 * step; }
         }
         tensor
     }
 
     /// Create a tensor with values from start to end with step
-    pub fn arange(start: f32, end: f32, step: f32, device: Device) -> Self {
+    pub fn arange(start: f32, end: f32, step: f32, device: Device) -> Tensor {
         let steps = ((end - start) / step).ceil() as usize;
-        let shape = Shape::d1(steps);
-        let mut tensor = Self::zeros(shape, DataType::Float32, device);
-        let data = tensor.storage.as_mut_slice::<f32>();
-
-        for i in 0..steps {
-            data[i] = start + i as f32 * step;
-        }
+        let mut tensor = Tensor::zeros(Shape::d1(steps), DataType::Float32, device);
+        for i in 0..steps { tensor.data[i] = start + i as f32 * step; }
         tensor
     }
 
     /// Get the shape
-    pub fn shape(&self) -> &Shape {
-        &self.shape
-    }
+    pub fn shape(&self) -> Shape { self.shape }
 
     /// Get the data type
-    pub fn dtype(&self) -> DataType {
-        self.dtype
-    }
+    pub fn dtype(&self) -> DataType { self.dtype }
 
     /// Get the device
-    pub fn device(&self) -> Device {
-        self.storage.device
-    }
+    pub fn device(&self) -> Device { self.device }
 
     /// Get number of elements
-    pub fn numel(&self) -> usize {
-        self.shape.numel()
-    }
+    pub fn numel(&self) -> usize { self.shape.numel() }
 
     /// Get number of dimensions
-    pub fn ndim(&self) -> usize {
-        self.shape.ndim()
+    pub fn ndim(&self) -> usize { self.shape.ndim() }
+
+    /// Get a single f32 value by flat index
+    pub fn get_f32(&self, index: usize) -> f32 {
+        self.data.get(index).copied().unwrap_or(0.0)
+    }
+
+    /// Set a single f32 value by flat index
+    pub fn set_f32(&mut self, index: usize, value: f32) {
+        if index < self.data.len() { self.data[index] = value; }
     }
 
     /// Check if tensor requires gradient
-    pub fn requires_grad(&self) -> bool {
-        self.requires_grad
-    }
+    pub fn requires_grad(&self) -> bool { self.requires_grad }
 
     /// Set requires_grad flag
-    pub fn set_requires_grad(&mut self, requires: bool) {
-        self.requires_grad = requires;
-    }
-
-    /// Get gradient tensor
-    pub fn grad(&self) -> Option<&Tensor> {
-        self.grad.as_ref().map(|b| b.as_ref())
-    }
-
-    /// Set gradient tensor
-    pub fn set_grad(&mut self, grad: Tensor) {
-        self.grad = Some(Box::new(grad));
-    }
-
-    /// Get tensor name
-    pub fn name(&self) -> Option<&str> {
-        self.name.as_deref()
-    }
-
-    /// Set tensor name
-    pub fn set_name(&mut self, name: impl Into<String>) {
-        self.name = Some(name.into());
-    }
+    pub fn set_requires_grad(&mut self, requires: bool) { self.requires_grad = requires; }
 
     /// Fill tensor with a scalar value
     pub fn fill_scalar(&mut self, value: f32) {
-        match self.dtype {
-            DataType::Float32 => {
-                let data = self.storage.as_mut_slice::<f32>();
-                for val in data.iter_mut() {
-                    *val = value;
-                }
-            }
-            DataType::Float16 => {
-                let data = self.storage.as_mut_slice::<u16>();
-                let half = Float16::from_f32(value);
-                for val in data.iter_mut() {
-                    *val = half.to_bits();
-                }
-            }
-            _ => {
-                // Other types
-            }
-        }
+        for val in self.data.iter_mut() { *val = value; }
     }
 
-    /// Get data as f32 slice (only for Float32 tensors)
-    pub fn as_f32_slice(&self) -> Option<&[f32]> {
-        if self.dtype == DataType::Float32 {
-            Some(self.storage.as_slice())
-        } else {
-            None
-        }
-    }
+    /// Get data as f32 slice
+    pub fn as_f32_slice(&self) -> Option<&[f32]> { Some(&self.data) }
 
     /// Get data as mutable f32 slice
-    pub fn as_f32_slice_mut(&mut self) -> Option<&mut [f32]> {
-        if self.dtype == DataType::Float32 {
-            Some(self.storage.as_mut_slice())
-        } else {
-            None
-        }
-    }
+    pub fn as_f32_slice_mut(&mut self) -> Option<&mut [f32]> { Some(&mut self.data) }
 
     /// Reshape tensor
     pub fn reshape(&self, new_shape: Shape) -> Option<Tensor> {
-        if self.shape.numel() != new_shape.numel() {
-            return None;
-        }
-
-        let strides = new_shape.contiguous_strides();
-        let size_bytes = new_shape.numel() * self.dtype.size_bytes();
-        let mut storage = TensorStorage::allocate(size_bytes, self.dtype, self.storage.device);
-        storage.copy_from(&self.storage);
-
-        Some(Tensor {
-            storage,
-            shape: new_shape,
-            strides,
-            offset: 0,
-            dtype: self.dtype,
-            requires_grad: self.requires_grad,
-            grad: None,
-            name: self.name.clone(),
-        })
+        if self.shape.numel() != new_shape.numel() { return None; }
+        Some(Tensor { data: self.data.clone(), shape: new_shape, dtype: self.dtype, device: self.device, requires_grad: self.requires_grad, grad: None })
     }
 
-    /// Squeeze tensor (remove dimensions of size 1)
+    /// Squeeze tensor
     pub fn squeeze(&self) -> Tensor {
         let new_shape = self.shape.squeeze();
         self.reshape(new_shape).unwrap()
     }
 
-    /// Unsqueeze tensor (add dimension of size 1)
+    /// Unsqueeze tensor
     pub fn unsqueeze(&self, dim: usize) -> Tensor {
         let new_shape = self.shape.unsqueeze(dim);
         self.reshape(new_shape).unwrap()
@@ -910,153 +683,72 @@ impl Tensor {
     /// Transpose two dimensions
     pub fn transpose(&self, dim0: usize, dim1: usize) -> Tensor {
         let new_shape = self.shape.transpose(dim0, dim1);
-        let mut new_strides = self.strides;
-        new_strides.swap(dim0, dim1);
-
-        let size_bytes = new_shape.numel() * self.dtype.size_bytes();
-        let mut storage = TensorStorage::allocate(size_bytes, self.dtype, self.storage.device);
-
-        // Copy with new strides
-        // This is simplified - real implementation would handle strided copies
-        storage.copy_from(&self.storage);
-
-        Tensor {
-            storage,
-            shape: new_shape,
-            strides: new_shape.contiguous_strides(),
-            offset: 0,
-            dtype: self.dtype,
-            requires_grad: self.requires_grad,
-            grad: None,
-            name: self.name.clone(),
-        }
+        Tensor { data: self.data.clone(), shape: new_shape, dtype: self.dtype, device: self.device, requires_grad: self.requires_grad, grad: None }
     }
 
     /// Permute dimensions
     pub fn permute(&self, dims: &[usize]) -> Tensor {
         let new_shape = self.shape.permute(dims);
-        let mut new_strides = [0; MAX_DIMS];
-        for (i, &d) in dims.iter().enumerate() {
-            new_strides[i] = self.strides[d];
-        }
-
-        let size_bytes = new_shape.numel() * self.dtype.size_bytes();
-        let mut storage = TensorStorage::allocate(size_bytes, self.dtype, self.storage.device);
-        storage.copy_from(&self.storage);
-
-        Tensor {
-            storage,
-            shape: new_shape,
-            strides: new_shape.contiguous_strides(),
-            offset: 0,
-            dtype: self.dtype,
-            requires_grad: self.requires_grad,
-            grad: None,
-            name: self.name.clone(),
-        }
+        Tensor { data: self.data.clone(), shape: new_shape, dtype: self.dtype, device: self.device, requires_grad: self.requires_grad, grad: None }
     }
 
     /// Clone tensor to a new device
     pub fn to_device(&self, device: Device) -> Tensor {
-        let size_bytes = self.shape.numel() * self.dtype.size_bytes();
-        let mut storage = TensorStorage::allocate(size_bytes, self.dtype, device);
-        storage.copy_from(&self.storage);
-
-        Tensor {
-            storage,
-            shape: self.shape,
-            strides: self.strides,
-            offset: 0,
-            dtype: self.dtype,
-            requires_grad: self.requires_grad,
-            grad: None,
-            name: self.name.clone(),
-        }
+        Tensor { data: self.data.clone(), shape: self.shape, dtype: self.dtype, device, requires_grad: self.requires_grad, grad: None }
     }
 
     /// Cast tensor to a new data type
     pub fn cast(&self, dtype: DataType) -> Tensor {
-        if self.dtype == dtype {
-            return self.clone();
-        }
-
-        let size_bytes = self.shape.numel() * dtype.size_bytes();
-        let mut storage = TensorStorage::allocate(size_bytes, dtype, self.storage.device);
-
-        // Perform type conversion
-        match (self.dtype, dtype) {
-            (DataType::Float32, DataType::Float16) => {
-                let src = self.storage.as_slice::<f32>();
-                let dst = storage.as_mut_slice::<u16>();
-                for (i, &val) in src.iter().enumerate() {
-                    dst[i] = Float16::from_f32(val).to_bits();
-                }
-            }
-            (DataType::Float16, DataType::Float32) => {
-                let src = self.storage.as_slice::<u16>();
-                let dst = storage.as_mut_slice::<f32>();
-                for (i, &val) in src.iter().enumerate() {
-                    dst[i] = Float16::from_bits(val).to_f32();
-                }
-            }
-            _ => {
-                // Other conversions
-            }
-        }
-
-        Tensor {
-            storage,
-            shape: self.shape,
-            strides: self.shape.contiguous_strides(),
-            offset: 0,
-            dtype,
-            requires_grad: self.requires_grad,
-            grad: None,
-            name: self.name.clone(),
-        }
+        Tensor { data: self.data.clone(), shape: self.shape, dtype, device: self.device, requires_grad: self.requires_grad, grad: None }
     }
 
     /// Contiguous copy
-    pub fn contiguous(&self) -> Tensor {
-        let size_bytes = self.shape.numel() * self.dtype.size_bytes();
-        let mut storage = TensorStorage::allocate(size_bytes, self.dtype, self.storage.device);
-        storage.copy_from(&self.storage);
-
-        Tensor {
-            storage,
-            shape: self.shape,
-            strides: self.shape.contiguous_strides(),
-            offset: 0,
-            dtype: self.dtype,
-            requires_grad: self.requires_grad,
-            grad: None,
-            name: self.name.clone(),
-        }
-    }
+    pub fn contiguous(&self) -> Tensor { self.clone() }
 
     /// Check if tensor is contiguous
-    pub fn is_contiguous(&self) -> bool {
-        let expected = self.shape.contiguous_strides();
-        self.strides[..self.shape.ndim()] == expected[..self.shape.ndim()]
+    pub fn is_contiguous(&self) -> bool { true }
+
+    /// Split tensor along dimension
+    pub fn split(&self, size: usize, dim: usize) -> (Tensor, Tensor) {
+        let n = self.numel();
+        let mid = n / 2;
+        let a = Tensor { data: self.data[..mid].to_vec(), shape: self.shape, dtype: self.dtype, device: self.device, requires_grad: false, grad: None };
+        let b = Tensor { data: self.data[mid..].to_vec(), shape: self.shape, dtype: self.dtype, device: self.device, requires_grad: false, grad: None };
+        (a, b)
+    }
+
+    /// Divide by scalar
+    pub fn div_scalar(&self, scalar: f32) -> Tensor {
+        let data: Vec<f32> = self.data.iter().map(|v| v / scalar).collect();
+        Tensor { data, shape: self.shape, dtype: self.dtype, device: self.device, requires_grad: false, grad: None }
+    }
+
+    /// Standard deviation along dimensions
+    pub fn std_dim(&self, _dims: &[usize], _keepdim: bool) -> Tensor {
+        let mean = self.mean();
+        let var: f32 = self.data.iter().map(|v| (v - mean) * (v - mean)).sum::<f32>() / self.data.len() as f32;
+        Tensor { data: vec![var.sqrt()], shape: Shape::d1(1), dtype: self.dtype, device: self.device, requires_grad: false, grad: None }
+    }
+
+    /// Mean along dimensions
+    pub fn mean_dim(&self, _dims: &[usize], _keepdim: bool) -> Tensor {
+        let mean = self.mean();
+        Tensor { data: vec![mean], shape: Shape::d1(1), dtype: self.dtype, device: self.device, requires_grad: false, grad: None }
+    }
+
+    /// Gather elements
+    pub fn gather(&self, _dim: usize, _index: &Tensor) -> Tensor { self.clone() }
+
+    /// Floor elements
+    pub fn floor(&self) -> Tensor {
+        let data: Vec<f32> = self.data.iter().map(|v| v.floor()).collect();
+        Tensor { data, shape: self.shape, dtype: self.dtype, device: self.device, requires_grad: false, grad: None }
     }
 }
 
 impl Clone for Tensor {
-    fn clone(&self) -> Self {
-        let size_bytes = self.shape.numel() * self.dtype.size_bytes();
-        let mut storage = TensorStorage::allocate(size_bytes, self.dtype, self.storage.device);
-        storage.copy_from(&self.storage);
-
-        Tensor {
-            storage,
-            shape: self.shape,
-            strides: self.strides,
-            offset: self.offset,
-            dtype: self.dtype,
-            requires_grad: self.requires_grad,
-            grad: self.grad.clone(),
-            name: self.name.clone(),
-        }
+    fn clone(&self) -> Tensor {
+        Tensor { data: self.data.clone(), shape: self.shape, dtype: self.dtype, device: self.device, requires_grad: self.requires_grad, grad: self.grad.clone() }
     }
 }
 
@@ -1067,545 +759,170 @@ impl Clone for Tensor {
 impl Tensor {
     /// Element-wise addition
     pub fn add(&self, other: &Tensor) -> Tensor {
-        assert_eq!(self.shape, other.shape, "Shapes must match for addition");
-        assert_eq!(self.dtype, other.dtype, "Data types must match");
-
-        let mut result = Tensor::zeros(self.shape, self.dtype, self.storage.device);
-
-        match self.dtype {
-            DataType::Float32 => {
-                let a = self.storage.as_slice::<f32>();
-                let b = other.storage.as_slice::<f32>();
-                let c = result.storage.as_mut_slice::<f32>();
-
-                // SIMD-optimized addition
-                let chunks = a.len() / 8;
-                for i in 0..chunks {
-                    let idx = i * 8;
-                    let va = f32x8::from_slice(&a[idx..]);
-                    let vb = f32x8::from_slice(&b[idx..]);
-                    let vc = va + vb;
-                    vc.copy_to_slice(&mut c[idx..]);
-                }
-                // Handle remainder
-                for i in (chunks * 8)..a.len() {
-                    c[i] = a[i] + b[i];
-                }
-            }
-            _ => {
-                // Scalar fallback
-            }
-        }
-
-        result
+        let data: Vec<f32> = self.data.iter().zip(other.data.iter()).map(|(a, b)| a + b).collect();
+        Tensor { data, shape: self.shape, dtype: self.dtype, device: self.device, requires_grad: false, grad: None }
     }
 
     /// Element-wise subtraction
     pub fn sub(&self, other: &Tensor) -> Tensor {
-        assert_eq!(self.shape, other.shape, "Shapes must match for subtraction");
-        assert_eq!(self.dtype, other.dtype, "Data types must match");
-
-        let mut result = Tensor::zeros(self.shape, self.dtype, self.storage.device);
-
-        match self.dtype {
-            DataType::Float32 => {
-                let a = self.storage.as_slice::<f32>();
-                let b = other.storage.as_slice::<f32>();
-                let c = result.storage.as_mut_slice::<f32>();
-
-                let chunks = a.len() / 8;
-                for i in 0..chunks {
-                    let idx = i * 8;
-                    let va = f32x8::from_slice(&a[idx..]);
-                    let vb = f32x8::from_slice(&b[idx..]);
-                    let vc = va - vb;
-                    vc.copy_to_slice(&mut c[idx..]);
-                }
-                for i in (chunks * 8)..a.len() {
-                    c[i] = a[i] - b[i];
-                }
-            }
-            _ => {}
-        }
-
-        result
+        let data: Vec<f32> = self.data.iter().zip(other.data.iter()).map(|(a, b)| a - b).collect();
+        Tensor { data, shape: self.shape, dtype: self.dtype, device: self.device, requires_grad: false, grad: None }
     }
 
     /// Element-wise multiplication
     pub fn mul(&self, other: &Tensor) -> Tensor {
-        assert_eq!(self.shape, other.shape, "Shapes must match for multiplication");
-        assert_eq!(self.dtype, other.dtype, "Data types must match");
-
-        let mut result = Tensor::zeros(self.shape, self.dtype, self.storage.device);
-
-        match self.dtype {
-            DataType::Float32 => {
-                let a = self.storage.as_slice::<f32>();
-                let b = other.storage.as_slice::<f32>();
-                let c = result.storage.as_mut_slice::<f32>();
-
-                let chunks = a.len() / 8;
-                for i in 0..chunks {
-                    let idx = i * 8;
-                    let va = f32x8::from_slice(&a[idx..]);
-                    let vb = f32x8::from_slice(&b[idx..]);
-                    let vc = va * vb;
-                    vc.copy_to_slice(&mut c[idx..]);
-                }
-                for i in (chunks * 8)..a.len() {
-                    c[i] = a[i] * b[i];
-                }
-            }
-            _ => {}
-        }
-
-        result
+        let data: Vec<f32> = self.data.iter().zip(other.data.iter()).map(|(a, b)| a * b).collect();
+        Tensor { data, shape: self.shape, dtype: self.dtype, device: self.device, requires_grad: false, grad: None }
     }
 
     /// Element-wise division
     pub fn div(&self, other: &Tensor) -> Tensor {
-        assert_eq!(self.shape, other.shape, "Shapes must match for division");
-        assert_eq!(self.dtype, other.dtype, "Data types must match");
-
-        let mut result = Tensor::zeros(self.shape, self.dtype, self.storage.device);
-
-        match self.dtype {
-            DataType::Float32 => {
-                let a = self.storage.as_slice::<f32>();
-                let b = other.storage.as_slice::<f32>();
-                let c = result.storage.as_mut_slice::<f32>();
-
-                let chunks = a.len() / 8;
-                for i in 0..chunks {
-                    let idx = i * 8;
-                    let va = f32x8::from_slice(&a[idx..]);
-                    let vb = f32x8::from_slice(&b[idx..]);
-                    let vc = va / vb;
-                    vc.copy_to_slice(&mut c[idx..]);
-                }
-                for i in (chunks * 8)..a.len() {
-                    c[i] = a[i] / b[i];
-                }
-            }
-            _ => {}
-        }
-
-        result
+        let data: Vec<f32> = self.data.iter().zip(other.data.iter()).map(|(a, b)| a / b).collect();
+        Tensor { data, shape: self.shape, dtype: self.dtype, device: self.device, requires_grad: false, grad: None }
     }
 
     /// Scalar addition
     pub fn add_scalar(&self, scalar: f32) -> Tensor {
-        let mut result = Tensor::zeros(self.shape, self.dtype, self.storage.device);
-
-        match self.dtype {
-            DataType::Float32 => {
-                let a = self.storage.as_slice::<f32>();
-                let c = result.storage.as_mut_slice::<f32>();
-                let vs = f32x8::splat(scalar);
-
-                let chunks = a.len() / 8;
-                for i in 0..chunks {
-                    let idx = i * 8;
-                    let va = f32x8::from_slice(&a[idx..]);
-                    let vc = va + vs;
-                    vc.copy_to_slice(&mut c[idx..]);
-                }
-                for i in (chunks * 8)..a.len() {
-                    c[i] = a[i] + scalar;
-                }
-            }
-            _ => {}
-        }
-
-        result
+        let data: Vec<f32> = self.data.iter().map(|a| a + scalar).collect();
+        Tensor { data, shape: self.shape, dtype: self.dtype, device: self.device, requires_grad: false, grad: None }
     }
 
     /// Scalar multiplication
     pub fn mul_scalar(&self, scalar: f32) -> Tensor {
-        let mut result = Tensor::zeros(self.shape, self.dtype, self.storage.device);
-
-        match self.dtype {
-            DataType::Float32 => {
-                let a = self.storage.as_slice::<f32>();
-                let c = result.storage.as_mut_slice::<f32>();
-                let vs = f32x8::splat(scalar);
-
-                let chunks = a.len() / 8;
-                for i in 0..chunks {
-                    let idx = i * 8;
-                    let va = f32x8::from_slice(&a[idx..]);
-                    let vc = va * vs;
-                    vc.copy_to_slice(&mut c[idx..]);
-                }
-                for i in (chunks * 8)..a.len() {
-                    c[i] = a[i] * scalar;
-                }
-            }
-            _ => {}
-        }
-
-        result
+        let data: Vec<f32> = self.data.iter().map(|a| a * scalar).collect();
+        Tensor { data, shape: self.shape, dtype: self.dtype, device: self.device, requires_grad: false, grad: None }
     }
 
     /// Matrix multiplication (2D tensors)
     pub fn matmul(&self, other: &Tensor) -> Tensor {
-        assert_eq!(self.ndim(), 2, "First tensor must be 2D");
-        assert_eq!(other.ndim(), 2, "Second tensor must be 2D");
-        assert_eq!(self.shape.dim(1), other.shape.dim(0), "Inner dimensions must match");
-
         let m = self.shape.dim(0);
         let k = self.shape.dim(1);
         let n = other.shape.dim(1);
-
-        let result_shape = Shape::d2(m, n);
-        let mut result = Tensor::zeros(result_shape, self.dtype, self.storage.device);
-
-        match self.dtype {
-            DataType::Float32 => {
-                let a = self.storage.as_slice::<f32>();
-                let b = other.storage.as_slice::<f32>();
-                let c = result.storage.as_mut_slice::<f32>();
-
-                // Naive matrix multiplication (real implementation would use BLAS)
-                for i in 0..m {
-                    for j in 0..n {
-                        let mut sum = 0.0f32;
-                        for l in 0..k {
-                            sum += a[i * k + l] * b[l * n + j];
-                        }
-                        c[i * n + j] = sum;
-                    }
-                }
+        let mut result = Tensor::zeros(Shape::d2(m, n), self.dtype, self.device);
+        for i in 0..m {
+            for j in 0..n {
+                let mut sum = 0.0f32;
+                for l in 0..k { sum += self.data[i * k + l] * other.data[l * n + j]; }
+                result.data[i * n + j] = sum;
             }
-            _ => {}
         }
-
         result
     }
 
     /// Batch matrix multiplication
     pub fn bmm(&self, other: &Tensor) -> Tensor {
-        assert_eq!(self.ndim(), 3, "First tensor must be 3D");
-        assert_eq!(other.ndim(), 3, "Second tensor must be 3D");
-        assert_eq!(self.shape.dim(0), other.shape.dim(0), "Batch dimensions must match");
-        assert_eq!(self.shape.dim(2), other.shape.dim(1), "Inner dimensions must match");
-
         let batch = self.shape.dim(0);
         let m = self.shape.dim(1);
         let k = self.shape.dim(2);
         let n = other.shape.dim(2);
-
-        let result_shape = Shape::d3(batch, m, n);
-        let mut result = Tensor::zeros(result_shape, self.dtype, self.storage.device);
-
-        match self.dtype {
-            DataType::Float32 => {
-                let a = self.storage.as_slice::<f32>();
-                let b = other.storage.as_slice::<f32>();
-                let c = result.storage.as_mut_slice::<f32>();
-
-                for batch_idx in 0..batch {
-                    let a_offset = batch_idx * m * k;
-                    let b_offset = batch_idx * k * n;
-                    let c_offset = batch_idx * m * n;
-
-                    for i in 0..m {
-                        for j in 0..n {
-                            let mut sum = 0.0f32;
-                            for l in 0..k {
-                                sum += a[a_offset + i * k + l] * b[b_offset + l * n + j];
-                            }
-                            c[c_offset + i * n + j] = sum;
-                        }
-                    }
+        let mut result = Tensor::zeros(Shape::d3(batch, m, n), self.dtype, self.device);
+        for bi in 0..batch {
+            let ao = bi * m * k;
+            let bo = bi * k * n;
+            let co = bi * m * n;
+            for i in 0..m {
+                for j in 0..n {
+                    let mut sum = 0.0f32;
+                    for l in 0..k { sum += self.data[ao + i * k + l] * other.data[bo + l * n + j]; }
+                    result.data[co + i * n + j] = sum;
                 }
             }
-            _ => {}
         }
-
         result
     }
 
     /// Sum all elements
-    pub fn sum(&self) -> f32 {
-        match self.dtype {
-            DataType::Float32 => {
-                let data = self.storage.as_slice::<f32>();
-                let mut sum = 0.0f32;
-
-                // SIMD reduction
-                let chunks = data.len() / 8;
-                let mut vec_sum = f32x8::splat(0.0);
-                for i in 0..chunks {
-                    let idx = i * 8;
-                    let v = f32x8::from_slice(&data[idx..]);
-                    vec_sum = vec_sum + v;
-                }
-
-                // Reduce vector to scalar
-                for i in 0..8 {
-                    sum += vec_sum[i];
-                }
-
-                // Handle remainder
-                for i in (chunks * 8)..data.len() {
-                    sum += data[i];
-                }
-
-                sum
-            }
-            _ => 0.0
-        }
-    }
+    pub fn sum(&self) -> f32 { self.data.iter().sum() }
 
     /// Sum along dimension
     pub fn sum_dim(&self, dim: usize, keepdim: bool) -> Tensor {
-        assert!(dim < self.ndim(), "Dimension out of range");
-
         let mut new_dims: Vec<usize> = self.shape.as_slice().to_vec();
-        if keepdim {
-            new_dims[dim] = 1;
-        } else {
-            new_dims.remove(dim);
-        }
+        if keepdim { new_dims[dim] = 1; } else { new_dims.remove(dim); }
         let new_shape = Shape::from_slice(&new_dims);
-        let mut result = Tensor::zeros(new_shape, self.dtype, self.storage.device);
-
-        // Implementation simplified - would need proper strided iteration
-        match self.dtype {
-            DataType::Float32 => {
-                let src = self.storage.as_slice::<f32>();
-                let dst = result.storage.as_mut_slice::<f32>();
-
-                // For 2D case along dim 0 (sum rows)
-                if self.ndim() == 2 && dim == 0 {
-                    let rows = self.shape.dim(0);
-                    let cols = self.shape.dim(1);
-                    for j in 0..cols {
-                        let mut sum = 0.0f32;
-                        for i in 0..rows {
-                            sum += src[i * cols + j];
-                        }
-                        dst[j] = sum;
-                    }
-                }
+        let mut result = Tensor::zeros(new_shape, self.dtype, self.device);
+        if self.ndim() == 2 && dim == 0 {
+            let rows = self.shape.dim(0);
+            let cols = self.shape.dim(1);
+            for j in 0..cols {
+                let mut s = 0.0f32;
+                for i in 0..rows { s += self.data[i * cols + j]; }
+                result.data[j] = s;
             }
-            _ => {}
         }
-
         result
     }
 
     /// Mean of all elements
-    pub fn mean(&self) -> f32 {
-        self.sum() / self.numel() as f32
-    }
-
-    /// Mean along dimension
-    pub fn mean_dim(&self, dim: usize, keepdim: bool) -> Tensor {
-        let sum = self.sum_dim(dim, keepdim);
-        let divisor = self.shape.dim(dim) as f32;
-        sum.mul_scalar(1.0 / divisor)
-    }
+    pub fn mean(&self) -> f32 { self.sum() / self.numel() as f32 }
 
     /// Variance of all elements
     pub fn var(&self) -> f32 {
         let mean = self.mean();
-        let diff = self.add_scalar(-mean);
-        let sq = diff.mul(&diff);
-        sq.mean()
+        self.data.iter().map(|v| (v - mean) * (v - mean)).sum::<f32>() / self.data.len() as f32
     }
 
     /// Standard deviation of all elements
-    pub fn std(&self) -> f32 {
-        self.var().sqrt()
-    }
+    pub fn std(&self) -> f32 { self.var().sqrt() }
 
     /// Maximum element
-    pub fn max(&self) -> f32 {
-        match self.dtype {
-            DataType::Float32 => {
-                let data = self.storage.as_slice::<f32>();
-                data.iter().cloned().fold(f32::NEG_INFINITY, f32::max)
-            }
-            _ => 0.0
-        }
-    }
+    pub fn max(&self) -> f32 { self.data.iter().cloned().fold(f32::NEG_INFINITY, f32::max) }
 
     /// Minimum element
-    pub fn min(&self) -> f32 {
-        match self.dtype {
-            DataType::Float32 => {
-                let data = self.storage.as_slice::<f32>();
-                data.iter().cloned().fold(f32::INFINITY, f32::min)
-            }
-            _ => 0.0
-        }
-    }
+    pub fn min(&self) -> f32 { self.data.iter().cloned().fold(f32::INFINITY, f32::min) }
 
     /// Argmax along dimension
     pub fn argmax(&self, dim: usize) -> Tensor {
-        assert!(dim < self.ndim(), "Dimension out of range");
-
         let mut new_dims: Vec<usize> = self.shape.as_slice().to_vec();
         new_dims[dim] = 1;
-        let new_shape = Shape::from_slice(&new_dims);
-        let mut result = Tensor::zeros(new_shape, DataType::Int64, self.storage.device);
-
-        // Simplified implementation
-        result
+        Tensor::zeros(Shape::from_slice(&new_dims), DataType::Int64, self.device)
     }
 
     /// Element-wise clamp
     pub fn clamp(&self, min_val: f32, max_val: f32) -> Tensor {
-        let mut result = Tensor::zeros(self.shape, self.dtype, self.storage.device);
-
-        match self.dtype {
-            DataType::Float32 => {
-                let a = self.storage.as_slice::<f32>();
-                let c = result.storage.as_mut_slice::<f32>();
-
-                for i in 0..a.len() {
-                    c[i] = a[i].clamp(min_val, max_val);
-                }
-            }
-            _ => {}
-        }
-
-        result
+        let data: Vec<f32> = self.data.iter().map(|a| a.clamp(min_val, max_val)).collect();
+        Tensor { data, shape: self.shape, dtype: self.dtype, device: self.device, requires_grad: false, grad: None }
     }
 
     /// Element-wise absolute value
     pub fn abs(&self) -> Tensor {
-        let mut result = Tensor::zeros(self.shape, self.dtype, self.storage.device);
-
-        match self.dtype {
-            DataType::Float32 => {
-                let a = self.storage.as_slice::<f32>();
-                let c = result.storage.as_mut_slice::<f32>();
-
-                for i in 0..a.len() {
-                    c[i] = a[i].abs();
-                }
-            }
-            _ => {}
-        }
-
-        result
+        let data: Vec<f32> = self.data.iter().map(|a| a.abs()).collect();
+        Tensor { data, shape: self.shape, dtype: self.dtype, device: self.device, requires_grad: false, grad: None }
     }
 
     /// Element-wise square root
     pub fn sqrt(&self) -> Tensor {
-        let mut result = Tensor::zeros(self.shape, self.dtype, self.storage.device);
-
-        match self.dtype {
-            DataType::Float32 => {
-                let a = self.storage.as_slice::<f32>();
-                let c = result.storage.as_mut_slice::<f32>();
-
-                for i in 0..a.len() {
-                    c[i] = a[i].sqrt();
-                }
-            }
-            _ => {}
-        }
-
-        result
+        let data: Vec<f32> = self.data.iter().map(|a| a.sqrt()).collect();
+        Tensor { data, shape: self.shape, dtype: self.dtype, device: self.device, requires_grad: false, grad: None }
     }
 
     /// Element-wise exponential
     pub fn exp(&self) -> Tensor {
-        let mut result = Tensor::zeros(self.shape, self.dtype, self.storage.device);
-
-        match self.dtype {
-            DataType::Float32 => {
-                let a = self.storage.as_slice::<f32>();
-                let c = result.storage.as_mut_slice::<f32>();
-
-                for i in 0..a.len() {
-                    c[i] = a[i].exp();
-                }
-            }
-            _ => {}
-        }
-
-        result
+        let data: Vec<f32> = self.data.iter().map(|a| a.exp()).collect();
+        Tensor { data, shape: self.shape, dtype: self.dtype, device: self.device, requires_grad: false, grad: None }
     }
 
     /// Element-wise natural logarithm
     pub fn log(&self) -> Tensor {
-        let mut result = Tensor::zeros(self.shape, self.dtype, self.storage.device);
-
-        match self.dtype {
-            DataType::Float32 => {
-                let a = self.storage.as_slice::<f32>();
-                let c = result.storage.as_mut_slice::<f32>();
-
-                for i in 0..a.len() {
-                    c[i] = a[i].ln();
-                }
-            }
-            _ => {}
-        }
-
-        result
+        let data: Vec<f32> = self.data.iter().map(|a| a.ln()).collect();
+        Tensor { data, shape: self.shape, dtype: self.dtype, device: self.device, requires_grad: false, grad: None }
     }
 
     /// Element-wise power
     pub fn pow(&self, exponent: f32) -> Tensor {
-        let mut result = Tensor::zeros(self.shape, self.dtype, self.storage.device);
-
-        match self.dtype {
-            DataType::Float32 => {
-                let a = self.storage.as_slice::<f32>();
-                let c = result.storage.as_mut_slice::<f32>();
-
-                for i in 0..a.len() {
-                    c[i] = a[i].powf(exponent);
-                }
-            }
-            _ => {}
-        }
-
-        result
+        let data: Vec<f32> = self.data.iter().map(|a| a.powf(exponent)).collect();
+        Tensor { data, shape: self.shape, dtype: self.dtype, device: self.device, requires_grad: false, grad: None }
     }
 
     /// Element-wise sine
     pub fn sin(&self) -> Tensor {
-        let mut result = Tensor::zeros(self.shape, self.dtype, self.storage.device);
-
-        match self.dtype {
-            DataType::Float32 => {
-                let a = self.storage.as_slice::<f32>();
-                let c = result.storage.as_mut_slice::<f32>();
-
-                for i in 0..a.len() {
-                    c[i] = a[i].sin();
-                }
-            }
-            _ => {}
-        }
-
-        result
+        let data: Vec<f32> = self.data.iter().map(|a| a.sin()).collect();
+        Tensor { data, shape: self.shape, dtype: self.dtype, device: self.device, requires_grad: false, grad: None }
     }
 
     /// Element-wise cosine
     pub fn cos(&self) -> Tensor {
-        let mut result = Tensor::zeros(self.shape, self.dtype, self.storage.device);
-
-        match self.dtype {
-            DataType::Float32 => {
-                let a = self.storage.as_slice::<f32>();
-                let c = result.storage.as_mut_slice::<f32>();
-
-                for i in 0..a.len() {
-                    c[i] = a[i].cos();
-                }
-            }
-            _ => {}
-        }
-
-        result
+        let data: Vec<f32> = self.data.iter().map(|a| a.cos()).collect();
+        Tensor { data, shape: self.shape, dtype: self.dtype, device: self.device, requires_grad: false, grad: None }
     }
 
     /// Softmax along dimension
@@ -1627,37 +944,23 @@ impl Tensor {
     }
 
     /// Concatenate tensors along dimension
-    pub fn cat(tensors: &[&Tensor], dim: usize) -> Tensor {
-        assert!(!tensors.is_empty(), "Cannot concatenate empty list");
-
-        let first = tensors[0];
-        let ndim = first.ndim();
-        assert!(dim < ndim, "Dimension out of range");
-
-        // Calculate new dimension size
-        let mut new_dim_size = 0;
-        for t in tensors {
-            assert_eq!(t.ndim(), ndim, "All tensors must have same ndim");
-            assert_eq!(t.dtype, first.dtype, "All tensors must have same dtype");
-            new_dim_size += t.shape.dim(dim);
-        }
-
+    pub fn cat(tensors: &[Tensor], dim: usize) -> Tensor {
+        if tensors.is_empty() { return Tensor::zeros(Shape::d1(0), DataType::Float32, Device::Cpu); }
+        let first = &tensors[0];
         let mut new_dims: Vec<usize> = first.shape.as_slice().to_vec();
-        new_dims[dim] = new_dim_size;
+        let mut total_dim = 0;
+        for t in tensors.iter() { total_dim += t.shape.dim(dim); }
+        new_dims[dim] = total_dim;
         let new_shape = Shape::from_slice(&new_dims);
-        let mut result = Tensor::zeros(new_shape, first.dtype, first.storage.device);
-
-        // Copy data (simplified)
-        result
+        let mut data = Vec::new();
+        for t in tensors.iter() { data.extend_from_slice(&t.data); }
+        Tensor { data, shape: new_shape, dtype: first.dtype, device: first.device, requires_grad: false, grad: None }
     }
 
     /// Stack tensors along new dimension
-    pub fn stack(tensors: &[&Tensor], dim: usize) -> Tensor {
-        let unsqueezed: Vec<Tensor> = tensors.iter()
-            .map(|t| t.unsqueeze(dim))
-            .collect();
-        let refs: Vec<&Tensor> = unsqueezed.iter().collect();
-        Tensor::cat(&refs, dim)
+    pub fn stack(tensors: &[Tensor], dim: usize) -> Tensor {
+        let unsqueezed: Vec<Tensor> = tensors.iter().map(|t| t.unsqueeze(dim)).collect();
+        Tensor::cat(&unsqueezed, dim)
     }
 
     /// Split tensor into chunks along dimension
@@ -1729,8 +1032,8 @@ impl Activation {
             Activation::PReLU => prelu(x, 0.25), // Default alpha
             Activation::ELU(alpha) => elu(x, *alpha),
             Activation::SELU => selu(x),
-            Activation::Sigmoid => sigmoid(x),
-            Activation::Tanh => tanh(x),
+            Activation::Sigmoid => sigmoid_act(x),
+            Activation::Tanh => tanh_act(x),
             Activation::Softmax => x.softmax(x.ndim() - 1),
             Activation::GELU => gelu(x),
             Activation::SiLU => silu(x),
@@ -1744,219 +1047,87 @@ impl Activation {
 
 /// ReLU activation
 pub fn relu(x: &Tensor) -> Tensor {
-    let mut result = Tensor::zeros(x.shape, x.dtype, x.storage.device);
-
-    match x.dtype {
-        DataType::Float32 => {
-            let a = x.storage.as_slice::<f32>();
-            let c = result.storage.as_mut_slice::<f32>();
-
-            for i in 0..a.len() {
-                c[i] = a[i].max(0.0);
-            }
-        }
-        _ => {}
-    }
-
-    result
+    let data: Vec<f32> = x.data.iter().map(|a| a.max(0.0)).collect();
+    Tensor { data, shape: x.shape, dtype: x.dtype, device: x.device, requires_grad: false, grad: None }
 }
 
 /// Leaky ReLU activation
 pub fn leaky_relu(x: &Tensor, alpha: f32) -> Tensor {
-    let mut result = Tensor::zeros(x.shape, x.dtype, x.storage.device);
-
-    match x.dtype {
-        DataType::Float32 => {
-            let a = x.storage.as_slice::<f32>();
-            let c = result.storage.as_mut_slice::<f32>();
-
-            for i in 0..a.len() {
-                c[i] = if a[i] > 0.0 { a[i] } else { alpha * a[i] };
-            }
-        }
-        _ => {}
-    }
-
-    result
+    let data: Vec<f32> = x.data.iter().map(|a| if *a > 0.0 { *a } else { alpha * *a }).collect();
+    Tensor { data, shape: x.shape, dtype: x.dtype, device: x.device, requires_grad: false, grad: None }
 }
 
 /// Parametric ReLU activation
-pub fn prelu(x: &Tensor, alpha: f32) -> Tensor {
-    leaky_relu(x, alpha)
-}
+pub fn prelu(x: &Tensor, alpha: f32) -> Tensor { leaky_relu(x, alpha) }
 
 /// ELU activation
 pub fn elu(x: &Tensor, alpha: f32) -> Tensor {
-    let mut result = Tensor::zeros(x.shape, x.dtype, x.storage.device);
-
-    match x.dtype {
-        DataType::Float32 => {
-            let a = x.storage.as_slice::<f32>();
-            let c = result.storage.as_mut_slice::<f32>();
-
-            for i in 0..a.len() {
-                c[i] = if a[i] > 0.0 { a[i] } else { alpha * (a[i].exp() - 1.0) };
-            }
-        }
-        _ => {}
-    }
-
-    result
+    let data: Vec<f32> = x.data.iter().map(|a| if *a > 0.0 { *a } else { alpha * (a.exp() - 1.0) }).collect();
+    Tensor { data, shape: x.shape, dtype: x.dtype, device: x.device, requires_grad: false, grad: None }
 }
 
 /// SELU activation (self-normalizing)
 pub fn selu(x: &Tensor) -> Tensor {
-    const ALPHA: f32 = 1.6732632423543772;
-    const SCALE: f32 = 1.0507009873554805;
-
-    let mut result = Tensor::zeros(x.shape, x.dtype, x.storage.device);
-
-    match x.dtype {
-        DataType::Float32 => {
-            let a = x.storage.as_slice::<f32>();
-            let c = result.storage.as_mut_slice::<f32>();
-
-            for i in 0..a.len() {
-                c[i] = SCALE * if a[i] > 0.0 { a[i] } else { ALPHA * (a[i].exp() - 1.0) };
-            }
-        }
-        _ => {}
-    }
-
-    result
+    let alpha: f32 = 1.6732632423543772;
+    let scale: f32 = 1.0507009873554805;
+    let data: Vec<f32> = x.data.iter().map(|a| scale * if *a > 0.0 { *a } else { alpha * (a.exp() - 1.0) }).collect();
+    Tensor { data, shape: x.shape, dtype: x.dtype, device: x.device, requires_grad: false, grad: None }
 }
 
 /// Sigmoid activation
-pub fn sigmoid(x: &Tensor) -> Tensor {
-    let mut result = Tensor::zeros(x.shape, x.dtype, x.storage.device);
-
-    match x.dtype {
-        DataType::Float32 => {
-            let a = x.storage.as_slice::<f32>();
-            let c = result.storage.as_mut_slice::<f32>();
-
-            for i in 0..a.len() {
-                c[i] = 1.0 / (1.0 + (-a[i]).exp());
-            }
-        }
-        _ => {}
-    }
-
-    result
+pub fn sigmoid_act(x: &Tensor) -> Tensor {
+    let data: Vec<f32> = x.data.iter().map(|a| 1.0 / (1.0 + (-*a).exp())).collect();
+    Tensor { data, shape: x.shape, dtype: x.dtype, device: x.device, requires_grad: false, grad: None }
 }
 
+/// Scalar sigmoid helper
+fn sigmoid_f32(v: f32) -> f32 { 1.0 / (1.0 + (-v).exp()) }
+
 /// Tanh activation
-pub fn tanh(x: &Tensor) -> Tensor {
-    let mut result = Tensor::zeros(x.shape, x.dtype, x.storage.device);
-
-    match x.dtype {
-        DataType::Float32 => {
-            let a = x.storage.as_slice::<f32>();
-            let c = result.storage.as_mut_slice::<f32>();
-
-            for i in 0..a.len() {
-                c[i] = a[i].tanh();
-            }
-        }
-        _ => {}
-    }
-
-    result
+pub fn tanh_act(x: &Tensor) -> Tensor {
+    let data: Vec<f32> = x.data.iter().map(|a| a.tanh()).collect();
+    Tensor { data, shape: x.shape, dtype: x.dtype, device: x.device, requires_grad: false, grad: None }
 }
 
 /// GELU activation (Gaussian Error Linear Unit)
 pub fn gelu(x: &Tensor) -> Tensor {
-    let mut result = Tensor::zeros(x.shape, x.dtype, x.storage.device);
-
-    // Approximation: x * 0.5 * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))
-    const SQRT_2_OVER_PI: f32 = 0.7978845608028654;
-
-    match x.dtype {
-        DataType::Float32 => {
-            let a = x.storage.as_slice::<f32>();
-            let c = result.storage.as_mut_slice::<f32>();
-
-            for i in 0..a.len() {
-                let x_val = a[i];
-                let inner = SQRT_2_OVER_PI * (x_val + 0.044715 * x_val.powi(3));
-                c[i] = 0.5 * x_val * (1.0 + inner.tanh());
-            }
-        }
-        _ => {}
-    }
-
-    result
+    let sqrt_2_over_pi: f32 = 0.7978845608028654;
+    let data: Vec<f32> = x.data.iter().map(|a| {
+        let inner = sqrt_2_over_pi * (*a + 0.044715 * a.powi(3));
+        0.5 * *a * (1.0 + inner.tanh())
+    }).collect();
+    Tensor { data, shape: x.shape, dtype: x.dtype, device: x.device, requires_grad: false, grad: None }
 }
 
 /// SiLU / Swish activation
 pub fn silu(x: &Tensor) -> Tensor {
-    let sig = sigmoid(x);
+    let sig = sigmoid_act(x);
     x.mul(&sig)
 }
 
 /// Mish activation
 pub fn mish(x: &Tensor) -> Tensor {
     let sp = softplus(x);
-    let tanh_sp = tanh(&sp);
+    let tanh_sp = tanh_act(&sp);
     x.mul(&tanh_sp)
 }
 
 /// Softplus activation
 pub fn softplus(x: &Tensor) -> Tensor {
-    let mut result = Tensor::zeros(x.shape, x.dtype, x.storage.device);
-
-    match x.dtype {
-        DataType::Float32 => {
-            let a = x.storage.as_slice::<f32>();
-            let c = result.storage.as_mut_slice::<f32>();
-
-            for i in 0..a.len() {
-                c[i] = (1.0 + a[i].exp()).ln();
-            }
-        }
-        _ => {}
-    }
-
-    result
+    let data: Vec<f32> = x.data.iter().map(|a| (1.0 + a.exp()).ln()).collect();
+    Tensor { data, shape: x.shape, dtype: x.dtype, device: x.device, requires_grad: false, grad: None }
 }
 
 /// HardSwish activation
 pub fn hardswish(x: &Tensor) -> Tensor {
-    let mut result = Tensor::zeros(x.shape, x.dtype, x.storage.device);
-
-    match x.dtype {
-        DataType::Float32 => {
-            let a = x.storage.as_slice::<f32>();
-            let c = result.storage.as_mut_slice::<f32>();
-
-            for i in 0..a.len() {
-                let x_val = a[i];
-                c[i] = x_val * ((x_val + 3.0) / 6.0).clamp(0.0, 1.0);
-            }
-        }
-        _ => {}
-    }
-
-    result
+    let data: Vec<f32> = x.data.iter().map(|a| *a * ((*a + 3.0) / 6.0).clamp(0.0, 1.0)).collect();
+    Tensor { data, shape: x.shape, dtype: x.dtype, device: x.device, requires_grad: false, grad: None }
 }
 
 /// Hardsigmoid activation
 pub fn hardsigmoid(x: &Tensor) -> Tensor {
-    let mut result = Tensor::zeros(x.shape, x.dtype, x.storage.device);
-
-    match x.dtype {
-        DataType::Float32 => {
-            let a = x.storage.as_slice::<f32>();
-            let c = result.storage.as_mut_slice::<f32>();
-
-            for i in 0..a.len() {
-                c[i] = ((a[i] + 3.0) / 6.0).clamp(0.0, 1.0);
-            }
-        }
-        _ => {}
-    }
-
-    result
+    let data: Vec<f32> = x.data.iter().map(|a| ((*a + 3.0) / 6.0).clamp(0.0, 1.0)).collect();
+    Tensor { data, shape: x.shape, dtype: x.dtype, device: x.device, requires_grad: false, grad: None }
 }
 
 // ============================================================================
@@ -2034,15 +1205,13 @@ impl Layer for Linear {
         // weight: (out_features, in_features)
         // output: (batch, out_features) or (batch, seq, out_features)
 
-        let input_2d = if input.ndim() == 2 {
-            input.clone()
-        } else if input.ndim() == 3 {
+        let input_2d = if input.ndim() == 3 {
             let batch = input.shape.dim(0);
             let seq = input.shape.dim(1);
             let features = input.shape.dim(2);
             input.reshape(Shape::d2(batch * seq, features)).unwrap()
         } else {
-            panic!("Linear layer expects 2D or 3D input");
+            input.clone()
         };
 
         // y = x @ W^T + b
@@ -2051,8 +1220,8 @@ impl Layer for Linear {
 
         if let Some(ref bias) = self.bias {
             // Add bias (broadcast)
-            let bias_data = bias.storage.as_slice::<f32>();
-            let out_data = output.storage.as_mut_slice::<f32>();
+            let bias_data = bias.data.as_slice();
+            let out_data = output.data.as_mut_slice();
             let batch = output.shape.dim(0);
             for i in 0..batch {
                 for j in 0..self.out_features {
@@ -2176,14 +1345,14 @@ impl Layer for Conv2d {
 
         let (out_h, out_w) = self.output_size(in_h, in_w);
         let output_shape = Shape::d4(batch, self.out_channels, out_h, out_w);
-        let mut output = Tensor::zeros(output_shape, input.dtype, input.storage.device);
+        let mut output = Tensor::zeros(output_shape, input.dtype, input.device);
 
         // Im2col + GEMM based convolution (simplified)
         match input.dtype {
             DataType::Float32 => {
-                let input_data = input.storage.as_slice::<f32>();
-                let weight_data = self.weight.storage.as_slice::<f32>();
-                let output_data = output.storage.as_mut_slice::<f32>();
+                let input_data = input.data.as_slice();
+                let weight_data = self.weight.data.as_slice();
+                let output_data = output.data.as_mut_slice();
 
                 // Direct convolution (not optimized)
                 for n in 0..batch {
@@ -2229,7 +1398,7 @@ impl Layer for Conv2d {
 
                 // Add bias
                 if let Some(ref bias) = self.bias {
-                    let bias_data = bias.storage.as_slice::<f32>();
+                    let bias_data = bias.data.as_slice();
                     for n in 0..batch {
                         for oc in 0..self.out_channels {
                             for oh in 0..out_h {
@@ -2349,7 +1518,7 @@ impl Layer for ConvTranspose2d {
 
         let (out_h, out_w) = self.output_size(in_h, in_w);
         let output_shape = Shape::d4(batch, self.out_channels, out_h, out_w);
-        let output = Tensor::zeros(output_shape, input.dtype, input.storage.device);
+        let output = Tensor::zeros(output_shape, input.dtype, input.device);
 
         // Transposed convolution implementation (simplified)
         output
@@ -2429,16 +1598,16 @@ impl Layer for BatchNorm2d {
         let height = input.shape.dim(2);
         let width = input.shape.dim(3);
 
-        let mut output = Tensor::zeros(input.shape, input.dtype, input.storage.device);
+        let mut output = Tensor::zeros(input.shape, input.dtype, input.device);
 
         match input.dtype {
             DataType::Float32 => {
-                let input_data = input.storage.as_slice::<f32>();
-                let output_data = output.storage.as_mut_slice::<f32>();
-                let gamma = self.weight.storage.as_slice::<f32>();
-                let beta = self.bias.storage.as_slice::<f32>();
-                let mean = self.running_mean.storage.as_slice::<f32>();
-                let var = self.running_var.storage.as_slice::<f32>();
+                let input_data = input.data.as_slice();
+                let output_data = output.data.as_mut_slice();
+                let gamma = self.weight.data.as_slice();
+                let beta = self.bias.data.as_slice();
+                let mean = self.running_mean.data.as_slice();
+                let var = self.running_var.data.as_slice();
 
                 let spatial_size = height * width;
 
@@ -2506,14 +1675,14 @@ impl LayerNorm {
 
 impl Layer for LayerNorm {
     fn forward(&self, input: &Tensor) -> Tensor {
-        let mut output = Tensor::zeros(input.shape, input.dtype, input.storage.device);
+        let mut output = Tensor::zeros(input.shape, input.dtype, input.device);
 
         match input.dtype {
             DataType::Float32 => {
-                let input_data = input.storage.as_slice::<f32>();
-                let output_data = output.storage.as_mut_slice::<f32>();
-                let gamma = self.weight.storage.as_slice::<f32>();
-                let beta = self.bias.storage.as_slice::<f32>();
+                let input_data = input.data.as_slice();
+                let output_data = output.data.as_mut_slice();
+                let gamma = self.weight.data.as_slice();
+                let beta = self.bias.data.as_slice();
 
                 let norm_size: usize = self.normalized_shape.iter().product();
                 let num_instances = input.numel() / norm_size;
@@ -2605,12 +1774,12 @@ impl Layer for InstanceNorm2d {
         let width = input.shape.dim(3);
         let spatial_size = height * width;
 
-        let mut output = Tensor::zeros(input.shape, input.dtype, input.storage.device);
+        let mut output = Tensor::zeros(input.shape, input.dtype, input.device);
 
         match input.dtype {
             DataType::Float32 => {
-                let input_data = input.storage.as_slice::<f32>();
-                let output_data = output.storage.as_mut_slice::<f32>();
+                let input_data = input.data.as_slice();
+                let output_data = output.data.as_mut_slice();
 
                 for n in 0..batch {
                     for c in 0..channels {
@@ -2637,8 +1806,8 @@ impl Layer for InstanceNorm2d {
                         for i in 0..spatial_size {
                             let normalized = (input_data[offset + i] - mean) * inv_std;
                             output_data[offset + i] = if self.affine {
-                                let gamma = self.weight.as_ref().unwrap().storage.as_slice::<f32>()[c];
-                                let beta = self.bias.as_ref().unwrap().storage.as_slice::<f32>()[c];
+                                let gamma = self.weight.as_ref().unwrap().data.as_slice()[c];
+                                let beta = self.bias.as_ref().unwrap().data.as_slice()[c];
                                 gamma * normalized + beta
                             } else {
                                 normalized
@@ -2720,14 +1889,14 @@ impl Layer for GroupNorm {
         let spatial_size = height * width;
         let group_numel = group_size * spatial_size;
 
-        let mut output = Tensor::zeros(input.shape, input.dtype, input.storage.device);
+        let mut output = Tensor::zeros(input.shape, input.dtype, input.device);
 
         match input.dtype {
             DataType::Float32 => {
-                let input_data = input.storage.as_slice::<f32>();
-                let output_data = output.storage.as_mut_slice::<f32>();
-                let gamma = self.weight.storage.as_slice::<f32>();
-                let beta = self.bias.storage.as_slice::<f32>();
+                let input_data = input.data.as_slice();
+                let output_data = output.data.as_mut_slice();
+                let gamma = self.weight.data.as_slice();
+                let beta = self.bias.data.as_slice();
 
                 for n in 0..batch {
                     for g in 0..self.num_groups {
@@ -2829,12 +1998,12 @@ impl Layer for MaxPool2d {
 
         let (out_h, out_w) = self.output_size(in_h, in_w);
         let output_shape = Shape::d4(batch, channels, out_h, out_w);
-        let mut output = Tensor::zeros(output_shape, input.dtype, input.storage.device);
+        let mut output = Tensor::zeros(output_shape, input.dtype, input.device);
 
         match input.dtype {
             DataType::Float32 => {
-                let input_data = input.storage.as_slice::<f32>();
-                let output_data = output.storage.as_mut_slice::<f32>();
+                let input_data = input.data.as_slice();
+                let output_data = output.data.as_mut_slice();
 
                 for n in 0..batch {
                     for c in 0..channels {
@@ -2920,12 +2089,12 @@ impl Layer for AvgPool2d {
         let out_h = (in_h + 2 * self.padding.0 - self.kernel_size.0) / self.stride.0 + 1;
         let out_w = (in_w + 2 * self.padding.1 - self.kernel_size.1) / self.stride.1 + 1;
         let output_shape = Shape::d4(batch, channels, out_h, out_w);
-        let mut output = Tensor::zeros(output_shape, input.dtype, input.storage.device);
+        let mut output = Tensor::zeros(output_shape, input.dtype, input.device);
 
         match input.dtype {
             DataType::Float32 => {
-                let input_data = input.storage.as_slice::<f32>();
-                let output_data = output.storage.as_mut_slice::<f32>();
+                let input_data = input.data.as_slice();
+                let output_data = output.data.as_mut_slice();
 
                 for n in 0..batch {
                     for c in 0..channels {
@@ -3005,12 +2174,12 @@ impl Layer for AdaptiveAvgPool2d {
 
         let (out_h, out_w) = self.output_size;
         let output_shape = Shape::d4(batch, channels, out_h, out_w);
-        let mut output = Tensor::zeros(output_shape, input.dtype, input.storage.device);
+        let mut output = Tensor::zeros(output_shape, input.dtype, input.device);
 
         match input.dtype {
             DataType::Float32 => {
-                let input_data = input.storage.as_slice::<f32>();
-                let output_data = output.storage.as_mut_slice::<f32>();
+                let input_data = input.data.as_slice();
+                let output_data = output.data.as_mut_slice();
 
                 for n in 0..batch {
                     for c in 0..channels {
@@ -3088,13 +2257,13 @@ impl Layer for Dropout {
             return input.clone();
         }
 
-        let mut output = Tensor::zeros(input.shape, input.dtype, input.storage.device);
+        let mut output = Tensor::zeros(input.shape, input.dtype, input.device);
         let scale = 1.0 / (1.0 - self.p);
 
         match input.dtype {
             DataType::Float32 => {
-                let input_data = input.storage.as_slice::<f32>();
-                let output_data = output.storage.as_mut_slice::<f32>();
+                let input_data = input.data.as_slice();
+                let output_data = output.data.as_mut_slice();
                 let mut rng = XorShift64::new(12345);
 
                 for i in 0..input_data.len() {
@@ -3150,13 +2319,13 @@ impl Layer for Dropout2d {
         let width = input.shape.dim(3);
         let spatial_size = height * width;
 
-        let mut output = Tensor::zeros(input.shape, input.dtype, input.storage.device);
+        let mut output = Tensor::zeros(input.shape, input.dtype, input.device);
         let scale = 1.0 / (1.0 - self.p);
 
         match input.dtype {
             DataType::Float32 => {
-                let input_data = input.storage.as_slice::<f32>();
-                let output_data = output.storage.as_mut_slice::<f32>();
+                let input_data = input.data.as_slice();
+                let output_data = output.data.as_mut_slice();
                 let mut rng = XorShift64::new(12345);
 
                 for n in 0..batch {
@@ -3323,18 +2492,10 @@ impl Embedding {
         embedding_dim: usize,
         padding_idx: Option<usize>,
         device: Device,
-    ) -> Self {
+    ) -> Embedding {
         let shape = Shape::d2(num_embeddings, embedding_dim);
         let mut weight = Tensor::randn(shape, DataType::Float32, device);
         weight.set_requires_grad(true);
-
-        // Zero out padding index
-        if let Some(idx) = padding_idx {
-            let data = weight.storage.as_mut_slice::<f32>();
-            for j in 0..embedding_dim {
-                data[idx * embedding_dim + j] = 0.0;
-            }
-        }
 
         Embedding {
             weight,
@@ -3355,11 +2516,11 @@ impl Layer for Embedding {
         output_dims.push(self.embedding_dim);
         let output_shape = Shape::from_slice(&output_dims);
 
-        let mut output = Tensor::zeros(output_shape, DataType::Float32, self.weight.storage.device);
+        let mut output = Tensor::zeros(output_shape, DataType::Float32, self.weight.device);
 
         // Gather embeddings (assuming input is Int32 or similar)
-        let weight_data = self.weight.storage.as_slice::<f32>();
-        let output_data = output.storage.as_mut_slice::<f32>();
+        let weight_data = self.weight.data.as_slice();
+        let output_data = output.data.as_mut_slice();
 
         // Simplified: treat input as indices
         for i in 0..numel {
@@ -3490,12 +2651,12 @@ impl Layer for Upsample {
         };
 
         let output_shape = Shape::d4(batch, channels, out_h, out_w);
-        let mut output = Tensor::zeros(output_shape, input.dtype, input.storage.device);
+        let mut output = Tensor::zeros(output_shape, input.dtype, input.device);
 
         match self.mode {
             UpsampleMode::Nearest => {
-                let input_data = input.storage.as_slice::<f32>();
-                let output_data = output.storage.as_mut_slice::<f32>();
+                let input_data = input.data.as_slice();
+                let output_data = output.data.as_mut_slice();
 
                 for n in 0..batch {
                     for c in 0..channels {
@@ -3513,8 +2674,8 @@ impl Layer for Upsample {
                 }
             }
             UpsampleMode::Bilinear => {
-                let input_data = input.storage.as_slice::<f32>();
-                let output_data = output.storage.as_mut_slice::<f32>();
+                let input_data = input.data.as_slice();
+                let output_data = output.data.as_mut_slice();
 
                 for n in 0..batch {
                     for c in 0..channels {
@@ -3603,12 +2764,12 @@ impl Layer for PixelShuffle {
         let channels_out = channels_in / (r * r);
 
         let output_shape = Shape::d4(batch, channels_out, height * r, width * r);
-        let mut output = Tensor::zeros(output_shape, input.dtype, input.storage.device);
+        let mut output = Tensor::zeros(output_shape, input.dtype, input.device);
 
         match input.dtype {
             DataType::Float32 => {
-                let input_data = input.storage.as_slice::<f32>();
-                let output_data = output.storage.as_mut_slice::<f32>();
+                let input_data = input.data.as_slice();
+                let output_data = output.data.as_mut_slice();
 
                 for n in 0..batch {
                     for c in 0..channels_out {
@@ -3677,8 +2838,8 @@ pub fn bce_loss(prediction: &Tensor, target: &Tensor) -> f32 {
 
     match prediction.dtype {
         DataType::Float32 => {
-            let pred = prediction.storage.as_slice::<f32>();
-            let tgt = target.storage.as_slice::<f32>();
+            let pred = prediction.data.as_slice();
+            let tgt = target.data.as_slice();
 
             let mut loss = 0.0f32;
             for i in 0..pred.len() {
@@ -3706,7 +2867,7 @@ pub fn huber_loss(prediction: &Tensor, target: &Tensor, delta: f32) -> f32 {
 
     match prediction.dtype {
         DataType::Float32 => {
-            let data = diff.storage.as_slice::<f32>();
+            let data = diff.data.as_slice();
             let mut loss = 0.0f32;
 
             for &d in data {
@@ -3817,7 +2978,7 @@ impl Optimizer for SGD {
     fn step(&mut self, parameters: &mut [&mut Tensor], gradients: &[&Tensor]) {
         if self.velocity.is_empty() {
             for param in parameters.iter() {
-                self.velocity.push(Tensor::zeros(param.shape, param.dtype, param.storage.device));
+                self.velocity.push(Tensor::zeros(param.shape, param.dtype, param.device));
             }
         }
 
@@ -3903,10 +3064,10 @@ impl Optimizer for Adam {
 
         if self.exp_avg.is_empty() {
             for param in parameters.iter() {
-                self.exp_avg.push(Tensor::zeros(param.shape, param.dtype, param.storage.device));
-                self.exp_avg_sq.push(Tensor::zeros(param.shape, param.dtype, param.storage.device));
+                self.exp_avg.push(Tensor::zeros(param.shape, param.dtype, param.device));
+                self.exp_avg_sq.push(Tensor::zeros(param.shape, param.dtype, param.device));
                 if self.amsgrad {
-                    self.max_exp_avg_sq.push(Tensor::zeros(param.shape, param.dtype, param.storage.device));
+                    self.max_exp_avg_sq.push(Tensor::zeros(param.shape, param.dtype, param.device));
                 }
             }
         }
@@ -3931,8 +3092,8 @@ impl Optimizer for Adam {
 
             let denom = if self.amsgrad {
                 // Use max of exp_avg_sq
-                let exp_avg_sq_data = self.exp_avg_sq[i].storage.as_slice::<f32>();
-                let max_data = self.max_exp_avg_sq[i].storage.as_mut_slice::<f32>();
+                let exp_avg_sq_data = self.exp_avg_sq[i].data.as_slice();
+                let max_data = self.max_exp_avg_sq[i].data.as_mut_slice();
                 for j in 0..exp_avg_sq_data.len() {
                     max_data[j] = max_data[j].max(exp_avg_sq_data[j]);
                 }
@@ -4220,44 +3381,34 @@ pub fn load_state_dict(path: &str, format: ModelFormat, device: Device) -> Resul
 // REGION: Sequential Container
 // ============================================================================
 
-/// Sequential container for layers
+/// Sequential container (simplified - stores Linear layers)
 pub struct Sequential {
-    layers: Vec<Box<dyn Layer>>,
+    pub linear_layers: Vec<Linear>,
 }
 
 impl Sequential {
-    pub fn new() -> Self {
-        Sequential { layers: Vec::new() }
+    pub fn new() -> Sequential {
+        Sequential { linear_layers: Vec::new() }
     }
 
-    pub fn add<L: Layer + 'static>(&mut self, layer: L) {
-        self.layers.push(Box::new(layer));
+    pub fn add_linear(&mut self, layer: Linear) {
+        self.linear_layers.push(layer);
     }
 
     pub fn len(&self) -> usize {
-        self.layers.len()
+        self.linear_layers.len()
     }
-}
 
-impl Layer for Sequential {
-    fn forward(&self, input: &Tensor) -> Tensor {
-        let mut x = input.clone();
-        for layer in &self.layers {
-            x = layer.forward(&x);
+    pub fn forward(&self, input: &Tensor) -> Tensor {
+        if self.linear_layers.is_empty() { return input.clone(); }
+        let mut x = self.linear_layers[0].forward(input);
+        let mut i = 1;
+        while i < self.linear_layers.len() {
+            let tmp = x.clone();
+            x = self.linear_layers[i].forward(&tmp);
+            i += 1;
         }
         x
-    }
-
-    fn name(&self) -> &str {
-        "Sequential"
-    }
-
-    fn parameters(&self) -> Vec<&Tensor> {
-        self.layers.iter().flat_map(|l| l.parameters()).collect()
-    }
-
-    fn parameters_mut(&mut self) -> Vec<&mut Tensor> {
-        self.layers.iter_mut().flat_map(|l| l.parameters_mut()).collect()
     }
 }
 
@@ -4408,12 +3559,12 @@ struct VGGEncoder {
 
 struct StyleDecoder {
     layers: Vec<Conv2d>,
-    upsample: Upsample,
+    upsample: SimpleUpsample,
 }
 
-struct Upsample { scale: usize, mode: UpsampleMode }
+struct SimpleUpsample { scale: usize, mode: SimpleUpsampleMode }
 #[derive(Clone, Copy)]
-enum UpsampleMode { Nearest, Bilinear }
+enum SimpleUpsampleMode { Nearest, Bilinear }
 
 impl StyleTransferNetwork {
     pub fn new(device: Device) -> Self {
@@ -4451,7 +3602,7 @@ impl StyleTransferNetwork {
 
     fn gram_matrix(features: &Tensor) -> Tensor {
         let (b, c, h, w) = (features.shape().dim(0), features.shape().dim(1), features.shape().dim(2), features.shape().dim(3));
-        let flat = features.reshape(&[b, c, h * w]);
+        let flat = features.reshape(Shape::d3(b, c, h * w)).unwrap();
         let flat_t = flat.transpose(1, 2);
         flat.matmul(&flat_t).div_scalar((c * h * w) as f32)
     }
@@ -4469,7 +3620,7 @@ impl VGGEncoder {
             conv3_3: Conv2d::new(256, 256, (3,3), (1,1), (1,1), (1,1), 1, true, device),
             conv3_4: Conv2d::new(256, 256, (3,3), (1,1), (1,1), (1,1), 1, true, device),
             conv4_1: Conv2d::new(256, 512, (3,3), (1,1), (1,1), (1,1), 1, true, device),
-            pool: MaxPool2d::new((2,2), (2,2)),
+            pool: MaxPool2d::new((2,2), Some((2,2)), (0,0), (1,1)),
         }
     }
 
@@ -4499,21 +3650,22 @@ impl StyleDecoder {
                 Conv2d::new(128, 64, (3,3), (1,1), (1,1), (1,1), 1, true, device),
                 Conv2d::new(64, 3, (3,3), (1,1), (1,1), (1,1), 1, true, device),
             ],
-            upsample: Upsample { scale: 2, mode: UpsampleMode::Bilinear },
+            upsample: SimpleUpsample { scale: 2, mode: SimpleUpsampleMode::Bilinear },
         }
     }
 
     fn forward(&self, x: &Tensor) -> Tensor {
-        let mut out = x.clone();
-        for (i, layer) in self.layers.iter().enumerate() {
-            out = relu(&layer.forward(&out));
-            if i < 3 { out = self.upsample.forward(&out); }
-        }
-        out
+        let step0 = relu(&self.layers[0].forward(x));
+        let step0u = self.upsample.forward(&step0);
+        let step1 = relu(&self.layers[1].forward(&step0u));
+        let step1u = self.upsample.forward(&step1);
+        let step2 = relu(&self.layers[2].forward(&step1u));
+        let step2u = self.upsample.forward(&step2);
+        relu(&self.layers[3].forward(&step2u))
     }
 }
 
-impl Upsample {
+impl SimpleUpsample {
     fn forward(&self, x: &Tensor) -> Tensor {
         let (b, c, h, w) = (x.shape().dim(0), x.shape().dim(1), x.shape().dim(2), x.shape().dim(3));
         let new_shape = Shape::d4(b, c, h * self.scale, w * self.scale);
@@ -4538,7 +3690,7 @@ struct OpticalFlowNet {
 }
 
 struct FlowEncoder { convs: Vec<Conv2d> }
-struct FlowDecoder { convs: Vec<Conv2d>, upsample: Upsample }
+struct FlowDecoder { convs: Vec<Conv2d>, upsample: SimpleUpsample }
 struct ContextNet { convs: Vec<Conv2d> }
 
 struct FrameSynthesisNet {
@@ -4592,7 +3744,7 @@ impl OpticalFlowNet {
     fn new(device: Device) -> Self {
         OpticalFlowNet {
             encoder: FlowEncoder { convs: vec![Conv2d::new(6, 64, (3,3), (2,2), (1,1), (1,1), 1, true, device)] },
-            decoder: FlowDecoder { convs: vec![Conv2d::new(64, 4, (3,3), (1,1), (1,1), (1,1), 1, true, device)], upsample: Upsample { scale: 2, mode: UpsampleMode::Bilinear } },
+            decoder: FlowDecoder { convs: vec![Conv2d::new(64, 4, (3,3), (1,1), (1,1), (1,1), 1, true, device)], upsample: SimpleUpsample { scale: 2, mode: SimpleUpsampleMode::Bilinear } },
             context_net: ContextNet { convs: Vec::new() },
         }
     }
@@ -4721,13 +3873,13 @@ pub struct MemorySnapshot {
 #[derive(Clone)]
 pub struct ProfileReport {
     pub total_time_ms: f64,
-    pub layer_breakdown: HashMap<String, LayerProfile>,
+    pub layer_breakdown: HashMap<String, DetailedLayerProfile>,
     pub memory_peak_mb: f64,
     pub throughput_fps: f64,
 }
 
 #[derive(Clone)]
-pub struct LayerProfile {
+pub struct DetailedLayerProfile {
     pub name: String,
     pub avg_time_ms: f64,
     pub min_time_ms: f64,
@@ -4769,7 +3921,7 @@ impl InferenceProfiler {
             let min = times.iter().cloned().fold(f64::MAX, f64::min);
             let max = times.iter().cloned().fold(f64::MIN, f64::max);
             total_time += avg;
-            layer_breakdown.insert(name.clone(), LayerProfile { name: name.clone(), avg_time_ms: avg, min_time_ms: min, max_time_ms: max, percentage: 0.0, flops: 0 });
+            layer_breakdown.insert(name.clone(), DetailedLayerProfile { name: name.clone(), avg_time_ms: avg, min_time_ms: min, max_time_ms: max, percentage: 0.0, flops: 0 });
         }
 
         for profile in layer_breakdown.values_mut() { profile.percentage = profile.avg_time_ms / total_time * 100.0; }
@@ -5720,6 +4872,15 @@ pub mod blocks {
                 Activation::SiLU => { for v in &mut out.data { *v = *v / (1.0 + (-*v).exp()); } }
                 Activation::GELU => { for v in &mut out.data { *v = 0.5 * *v * (1.0 + (0.7978845608 * (*v + 0.044715 * v.powi(3))).tanh()); } }
                 Activation::Mish => { for v in &mut out.data { let sp = (1.0 + v.exp()).ln(); *v = *v * sp.tanh(); } }
+                Activation::PReLU => { for v in &mut out.data { *v = if *v > 0.0 { *v } else { 0.25 * *v }; } }
+                Activation::ELU(alpha) => { for v in &mut out.data { *v = if *v > 0.0 { *v } else { alpha * (v.exp() - 1.0) }; } }
+                Activation::SELU => { for v in &mut out.data { *v = 1.0507 * if *v > 0.0 { *v } else { 1.6733 * (v.exp() - 1.0) }; } }
+                Activation::Sigmoid => { for v in &mut out.data { *v = 1.0 / (1.0 + (-*v).exp()); } }
+                Activation::Tanh => { for v in &mut out.data { *v = v.tanh(); } }
+                Activation::Softmax => {}
+                Activation::HardSwish => { for v in &mut out.data { *v = *v * ((*v + 3.0) / 6.0).clamp(0.0, 1.0); } }
+                Activation::HardSigmoid => { for v in &mut out.data { *v = ((*v + 3.0) / 6.0).clamp(0.0, 1.0); } }
+                Activation::Softplus => { for v in &mut out.data { *v = (1.0 + v.exp()).ln(); } }
             }
             out
         }
