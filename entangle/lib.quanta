@@ -3960,7 +3960,7 @@ pub struct StatePreserver {
 
 impl StatePreserver {
     pub fn new(max_snapshots: usize) -> Self {
-        Self { snapshots: HashMap::new(), max_snapshots, auto_snapshot_interval: 5000, last_snapshot_time: 0 }
+        StatePreserver { snapshots: HashMap::new(), max_snapshots, auto_snapshot_interval: 5000, last_snapshot_time: 0 }
     }
 
     pub fn capture_snapshot(&mut self) -> SnapshotId {
@@ -4059,7 +4059,7 @@ pub enum Visibility { Public, Internal, Private }
 
 impl DependencyGraph {
     pub fn new() -> Self {
-        Self { modules: HashMap::new(), edges: Vec::new(), topological_order: Vec::new() }
+        DependencyGraph { modules: HashMap::new(), edges: Vec::new(), topological_order: Vec::new() }
     }
 
     pub fn add_module(&mut self, module: ModuleNode) {
@@ -4196,7 +4196,7 @@ pub struct CompiledSymbol {
 
 impl IncrementalCache {
     pub fn new() -> Self {
-        Self { artifacts: HashMap::new(), dependency_hashes: HashMap::new(), invalidated: HashSet::new() }
+        IncrementalCache { artifacts: HashMap::new(), dependency_hashes: HashMap::new(), invalidated: HashSet::new() }
     }
 
     pub fn get_artifact(&self, module: &str) -> Option<&CompilationArtifact> {
@@ -4286,7 +4286,7 @@ pub struct HotPatcher {
 
 impl HotPatcher {
     pub fn new() -> Self {
-        Self {
+        HotPatcher {
             active_patches: HashMap::new(),
             original_code: HashMap::new(),
             trampolines: Vec::new(),
@@ -4414,7 +4414,7 @@ pub enum MigrationStrategy {
 
 impl LayoutMigrator {
     pub fn new() -> Self {
-        Self { old_layouts: HashMap::new(), new_layouts: HashMap::new(), migrations: HashMap::new() }
+        LayoutMigrator { old_layouts: HashMap::new(), new_layouts: HashMap::new(), migrations: HashMap::new() }
     }
 
     pub fn register_old_layout(&mut self, layout: TypeLayout) {
@@ -4521,7 +4521,7 @@ pub struct HotReloadCoordinator {
 
 impl HotReloadCoordinator {
     pub fn new() -> Self {
-        Self {
+        HotReloadCoordinator {
             dependency_graph: DependencyGraph::new(),
             incremental_cache: IncrementalCache::new(),
             state_preserver: StatePreserver::new(10),
@@ -4671,7 +4671,7 @@ pub mod service_discovery {
 
     impl ServiceRegistry {
         pub fn new(ttl: Duration, heartbeat_interval: Duration) -> Self {
-            Self {
+            ServiceRegistry {
                 services: HashMap::new(),
                 ttl,
                 heartbeat_interval,
@@ -4751,7 +4751,7 @@ pub mod service_discovery {
 
     impl LoadBalancer {
         pub fn new(strategy: LoadBalanceStrategy) -> Self {
-            Self {
+            LoadBalancer {
                 strategy,
                 round_robin_counter: HashMap::new(),
             }
@@ -4872,7 +4872,7 @@ pub mod service_discovery {
 
     impl DnsServiceDiscovery {
         pub fn new(domain: &str) -> Self {
-            Self {
+            DnsServiceDiscovery {
                 domain: domain.to_string(),
                 services: HashMap::new(),
             }
@@ -4969,7 +4969,7 @@ pub mod rpc {
 
     impl RpcServer {
         pub fn new(max_concurrent_calls: usize) -> Self {
-            Self {
+            RpcServer {
                 services: HashMap::new(),
                 interceptors: Vec::new(),
                 max_concurrent_calls,
@@ -5059,7 +5059,7 @@ pub mod rpc {
 
     impl Default for RetryPolicy {
         fn default() -> Self {
-            Self {
+            RetryPolicy {
                 max_attempts: 3,
                 initial_backoff: Duration::from_millis(100),
                 max_backoff: Duration::from_secs(10),
@@ -5071,7 +5071,7 @@ pub mod rpc {
 
     impl RpcClient {
         pub fn new(endpoint: &str, timeout: Duration) -> Self {
-            Self {
+            RpcClient {
                 endpoint: endpoint.to_string(),
                 timeout,
                 retry_policy: RetryPolicy::default(),
@@ -5147,7 +5147,7 @@ pub mod rpc {
 
     impl<T: Clone, R: Clone> StreamingCall<T, R> {
         pub fn new() -> Self {
-            Self {
+            StreamingCall {
                 request_stream: Vec::new(),
                 response_stream: Vec::new(),
                 is_client_done: false,
@@ -5211,7 +5211,7 @@ pub mod message_bus {
 
     impl MessageBus {
         pub fn new() -> Self {
-            Self {
+            MessageBus {
                 subscriptions: HashMap::new(),
                 queues: HashMap::new(),
                 dead_letter_queue: VecDeque::new(),
@@ -5317,7 +5317,7 @@ pub mod message_bus {
 
     impl PriorityQueue {
         pub fn new() -> Self {
-            Self {
+            PriorityQueue {
                 queues: [
                     VecDeque::new(),
                     VecDeque::new(),
@@ -5371,7 +5371,7 @@ pub mod message_bus {
 
     impl PubSub {
         pub fn new() -> Self {
-            Self {
+            PubSub {
                 topics: HashMap::new(),
                 subscribers: HashMap::new(),
                 next_subscriber_id: 0,
@@ -5441,7 +5441,7 @@ pub mod distributed_state {
 
     impl VectorClock {
         pub fn new() -> Self {
-            Self { clock: HashMap::new() }
+            VectorClock { clock: HashMap::new() }
         }
 
         pub fn increment(&mut self, node_id: &str) {
@@ -5491,7 +5491,7 @@ pub mod distributed_state {
 
     impl GCounter {
         pub fn new() -> Self {
-            Self { counts: HashMap::new() }
+            GCounter { counts: HashMap::new() }
         }
 
         pub fn increment(&mut self, node_id: &str) {
@@ -5519,7 +5519,7 @@ pub mod distributed_state {
 
     impl PNCounter {
         pub fn new() -> Self {
-            Self {
+            PNCounter {
                 increments: GCounter::new(),
                 decrements: GCounter::new(),
             }
@@ -5553,7 +5553,7 @@ pub mod distributed_state {
 
     impl<T: Clone> LWWRegister<T> {
         pub fn new(value: T, node_id: &str) -> Self {
-            Self {
+            LWWRegister {
                 value,
                 timestamp: 0,
                 node_id: node_id.to_string(),
@@ -5590,7 +5590,7 @@ pub mod distributed_state {
 
     impl<T: Clone + Eq + std::hash::Hash> GSet<T> {
         pub fn new() -> Self {
-            Self { elements: std::collections::HashSet::new() }
+            GSet { elements: std::collections::HashSet::new() }
         }
 
         pub fn add(&mut self, element: T) {
@@ -5621,7 +5621,7 @@ pub mod distributed_state {
 
     impl<T: Clone + Eq + std::hash::Hash> TwoPSet<T> {
         pub fn new() -> Self {
-            Self {
+            TwoPSet {
                 additions: GSet::new(),
                 removals: GSet::new(),
             }
@@ -5658,7 +5658,7 @@ pub mod distributed_state {
 
     impl<T: Clone + Eq + std::hash::Hash> ORSet<T> {
         pub fn new() -> Self {
-            Self {
+            ORSet {
                 elements: HashMap::new(),
                 tombstones: HashMap::new(),
             }
@@ -5715,7 +5715,7 @@ pub mod distributed_state {
 
     impl<K: Clone + Eq + std::hash::Hash, V: Clone> LWWMap<K, V> {
         pub fn new() -> Self {
-            Self { entries: HashMap::new() }
+            LWWMap { entries: HashMap::new() }
         }
 
         pub fn set(&mut self, key: K, value: V, timestamp: u64, node_id: &str) {
@@ -5802,7 +5802,7 @@ pub mod api_gateway {
 
     impl ApiGateway {
         pub fn new() -> Self {
-            Self {
+            ApiGateway {
                 routes: Vec::new(),
                 rate_limiters: HashMap::new(),
                 circuit_breakers: HashMap::new(),
@@ -5895,7 +5895,7 @@ pub mod api_gateway {
 
     impl TokenBucket {
         pub fn new(requests_per_second: u32, burst_size: u32) -> Self {
-            Self {
+            TokenBucket {
                 capacity: burst_size,
                 tokens: burst_size as f64,
                 refill_rate: requests_per_second as f64,
@@ -5941,7 +5941,7 @@ pub mod api_gateway {
 
     impl CircuitBreaker {
         pub fn new(failure_threshold: u32, reset_timeout: Duration) -> Self {
-            Self {
+            CircuitBreaker {
                 state: CircuitState::Closed,
                 failure_count: 0,
                 failure_threshold,
@@ -6002,7 +6002,7 @@ pub mod api_gateway {
 
     impl RequestTransformer {
         pub fn new(transforms: Vec<Transform>) -> Self {
-            Self { transforms }
+            RequestTransformer { transforms }
         }
 
         pub fn transform_headers(&self, headers: &mut HashMap<String, String>) {
@@ -6076,7 +6076,7 @@ pub mod event_sourcing {
 
     impl EventStore {
         pub fn new(snapshot_frequency: u64) -> Self {
-            Self {
+            EventStore {
                 events: HashMap::new(),
                 snapshots: HashMap::new(),
                 snapshot_frequency,
@@ -6144,7 +6144,7 @@ pub mod event_sourcing {
 
     impl ProjectionManager {
         pub fn new() -> Self {
-            Self {
+            ProjectionManager {
                 projections: Vec::new(),
                 positions: HashMap::new(),
             }
@@ -6187,7 +6187,7 @@ pub mod event_sourcing {
         A::Event: Into<Event>,
     {
         pub fn new(event_store: EventStore) -> Self {
-            Self {
+            CommandHandler {
                 event_store,
                 _phantom: std::marker::PhantomData,
             }
@@ -6242,7 +6242,7 @@ pub mod distributed_transactions {
 
     impl TwoPhaseCommitCoordinator {
         pub fn new() -> Self {
-            Self {
+            TwoPhaseCommitCoordinator {
                 transactions: HashMap::new(),
                 participant_votes: HashMap::new(),
             }
@@ -6351,7 +6351,7 @@ pub mod distributed_transactions {
 
     impl Saga {
         pub fn new(id: &str, steps: Vec<SagaStep>) -> Self {
-            Self {
+            Saga {
                 id: id.to_string(),
                 steps,
                 current_step: 0,
@@ -6416,7 +6416,7 @@ pub mod distributed_transactions {
 
     impl SagaOrchestrator {
         pub fn new() -> Self {
-            Self {
+            SagaOrchestrator {
                 sagas: HashMap::new(),
                 completed: Vec::new(),
             }
@@ -6468,7 +6468,7 @@ pub mod distributed_transactions {
 
     impl Outbox {
         pub fn new() -> Self {
-            Self {
+            Outbox {
                 messages: Vec::new(),
                 processed: Vec::new(),
             }

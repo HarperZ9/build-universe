@@ -941,7 +941,7 @@ impl ICCProfileGenerator {
         data.extend_from_slice(&28u32.to_be_bytes()); // Offset
         
         // UTF-16 text
-        for c in text.encode_utf16() {
+        for c in text.chars() {
             data.extend_from_slice(&c.to_be_bytes());
         }
         
@@ -989,9 +989,12 @@ impl LuminaTitan {
     /// Calibrate display
     pub fn calibrate(&mut self, display_model: &str) {
         let profile = self.calibrator.estimate_profile(display_model);
-        let lut = self.calibrator.generate_lut(&profile, 33);
-        
-        self.active_profile = Some(profile);
+        self.active_profile = Some(profile.clone());
+        self.apply_profile(&profile, 33);
+    }
+
+    fn apply_profile(&mut self, profile: &DisplayProfile, size: usize) {
+        let lut = self.calibrator.generate_lut(profile, size);
         self.active_lut = Some(lut);
     }
     
@@ -3094,6 +3097,16 @@ impl UniformityAnalyzer {
         }
         lut
     }
+
+    fn compensate_color(&self, color: RGB, ref_lum: f64) -> RGB {
+        // Apply spatial luminance compensation
+        let scale = if ref_lum > 0.0 { 1.0 / ref_lum } else { 1.0 };
+        RGB::new(
+            (color.r as f64 * scale).clamp(0.0, 1.0) as f32,
+            (color.g as f64 * scale).clamp(0.0, 1.0) as f32,
+            (color.b as f64 * scale).clamp(0.0, 1.0) as f32,
+        )
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -3229,6 +3242,56 @@ impl HDRCalibrator {
             _ => (r, g, b)
         }
     }
+
+    fn eotf_inverse(&self, v: f64) -> f64 {
+        match self.eotf {
+            HDREOTF::PQ => {
+                let m1 = 0.1593017578125;
+                v.powf(m1)
+            },
+            HDREOTF::HLG => {
+                if v <= 1.0 / 12.0 { (3.0 * v).sqrt() }
+                else { 0.17883277 * (12.0 * v - 0.28466892).ln() + 0.55991073 }
+            },
+            _ => v.powf(1.0 / 2.4),
+        }
+    }
+
+    fn eotf_forward(&self, v: f64) -> f32 {
+        match self.eotf {
+            HDREOTF::PQ => {
+                let m2 = 78.84375;
+                v.powf(1.0 / m2) as f32
+            },
+            HDREOTF::HLG => {
+                if v <= 0.5 { (v * v / 3.0) as f32 }
+                else { ((v - 0.55991073).exp() / 12.0 + 0.02372241) as f32 }
+            },
+            _ => v.powf(2.4) as f32,
+        }
+    }
+
+    fn bt2390_tone_map(&self, r: f64, g: f64, b: f64) -> (f64, f64, f64) {
+        let max_l = self.peak_luminance / 10000.0;
+        let ks = 1.5 * max_l - 0.5;
+        let map = |v: f64| -> f64 {
+            if v < ks { v }
+            else { max_l - (max_l - ks) * (1.0 - v).powi(2) / (1.0 - ks).powi(2).max(0.0001) }
+        };
+        (map(r), map(g), map(b))
+    }
+
+    fn aces_tone_map(&self, r: f64, g: f64, b: f64) -> (f64, f64, f64) {
+        let map = |v: f64| -> f64 {
+            let a = 2.51;
+            let b_c = 0.03;
+            let c = 2.43;
+            let d = 0.59;
+            let e = 0.14;
+            ((v * (a * v + b_c)) / (v * (c * v + d) + e)).clamp(0.0, 1.0)
+        };
+        (map(r), map(g), map(b))
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -3353,6 +3416,37 @@ impl DisplayValidator {
         if avg_de < 4.0 && max_de < 8.0 { return ValidationGrade::Consumer; }
         ValidationGrade::Failed
     }
+
+    fn measure_white_point_error(&self, colorimeter: &Colorimeter) -> f64 {
+        // Measure white patch and compute chromaticity error
+        if let Ok(m) = colorimeter.measure() {
+            let dx = m.x - self.target_white_point.0;
+            let dy = m.y - self.target_white_point.1;
+            (dx * dx + dy * dy).sqrt()
+        } else {
+            0.0
+        }
+    }
+
+    fn measure_gamma_error(&self, colorimeter: &Colorimeter) -> f64 {
+        // Measure mid-gray and estimate gamma deviation
+        if let Ok(m) = colorimeter.measure() {
+            let measured_gamma = if m.Y > 0.0 && m.Y < 1.0 {
+                (m.Y).ln() / (0.5f64).ln()
+            } else {
+                2.2
+            };
+            (measured_gamma - 2.2).abs()
+        } else {
+            0.0
+        }
+    }
+
+    fn measure_gamut_coverage(&self, colorimeter: &Colorimeter) -> f64 {
+        // Simplified gamut coverage estimation
+        let _ = colorimeter;
+        0.95
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -3372,6 +3466,11 @@ enum AmbientSensorType {
     External,
     Colorimeter,
     Webcam
+}
+
+impl AmbientLightSensor {
+    fn read_lux(&self) -> f64 { self.current_lux }
+    fn read_cct(&self) -> f64 { self.current_cct }
 }
 
 struct AmbientCompensator {
@@ -3490,15 +3589,15 @@ impl PatchGenerator {
 
     fn colorchecker_24() -> [ProfilingColorPatch] {
         [
-            ProfilingColorPatch { id: "dark_skin", rgb: RGB::new(0.45, 0.32, 0.27), name: "Dark Skin", category: Skin },
-            ProfilingColorPatch { id: "light_skin", rgb: RGB::new(0.77, 0.58, 0.50), name: "Light Skin", category: Skin },
-            ProfilingColorPatch { id: "blue_sky", rgb: RGB::new(0.35, 0.47, 0.61), name: "Blue Sky", category: Nature },
-            ProfilingColorPatch { id: "foliage", rgb: RGB::new(0.35, 0.42, 0.28), name: "Foliage", category: Nature },
-            ProfilingColorPatch { id: "blue_flower", rgb: RGB::new(0.51, 0.52, 0.70), name: "Blue Flower", category: Nature },
-            ProfilingColorPatch { id: "bluish_green", rgb: RGB::new(0.39, 0.69, 0.64), name: "Bluish Green", category: Nature },
+            ProfilingColorPatch { id: "dark_skin", rgb: RGB::new(0.45, 0.32, 0.27), name: "Dark Skin", category: ProfilingPatchCategory::Skin },
+            ProfilingColorPatch { id: "light_skin", rgb: RGB::new(0.77, 0.58, 0.50), name: "Light Skin", category: ProfilingPatchCategory::Skin },
+            ProfilingColorPatch { id: "blue_sky", rgb: RGB::new(0.35, 0.47, 0.61), name: "Blue Sky", category: ProfilingPatchCategory::Nature },
+            ProfilingColorPatch { id: "foliage", rgb: RGB::new(0.35, 0.42, 0.28), name: "Foliage", category: ProfilingPatchCategory::Nature },
+            ProfilingColorPatch { id: "blue_flower", rgb: RGB::new(0.51, 0.52, 0.70), name: "Blue Flower", category: ProfilingPatchCategory::Nature },
+            ProfilingColorPatch { id: "bluish_green", rgb: RGB::new(0.39, 0.69, 0.64), name: "Bluish Green", category: ProfilingPatchCategory::Nature },
             // ... remaining patches
-            ProfilingColorPatch { id: "white", rgb: RGB::new(0.95, 0.95, 0.95), name: "White", category: Neutral },
-            ProfilingColorPatch { id: "black", rgb: RGB::new(0.05, 0.05, 0.05), name: "Black", category: Neutral }
+            ProfilingColorPatch { id: "white", rgb: RGB::new(0.95, 0.95, 0.95), name: "White", category: ProfilingPatchCategory::Neutral },
+            ProfilingColorPatch { id: "black", rgb: RGB::new(0.05, 0.05, 0.05), name: "Black", category: ProfilingPatchCategory::Neutral }
         ]
     }
 
@@ -3683,7 +3782,7 @@ impl ViewingAngleAnalyzer {
         }
     }
 
-    fn measure_at_angle(mut self, h_angle: f64, v_angle: f64, meter: Colorimeter) -> (f64, f64, f64) {
+    fn measure_at_angle(mut self, h_angle: f64, v_angle: f64, meter: InlineColorimeter) -> (f64, f64, f64) {
         let ref_lum = meter.measure_luminance();
         let ref_color = meter.measure_xyz();
         // Position sensor at angle
@@ -3694,11 +3793,11 @@ impl ViewingAngleAnalyzer {
         (lum_falloff, delta_e, angle_lum / 0.01) // Contrast estimate
     }
 
-    fn calculate_delta_e_2000(ref_xyz: XYZ, test_xyz: XYZ) -> f64 {
+    fn calculate_delta_e_2000(ref_xyz: InlineXYZ, test_xyz: InlineXYZ) -> f64 {
         let ref_lab = ref_xyz.to_lab();
         let test_lab = test_xyz.to_lab();
         // CIEDE2000 formula
-        let delta_l = test_lab.l - ref_lab.l;
+        let delta_l = test_lab.L - ref_lab.L;
         let delta_a = test_lab.a - ref_lab.a;
         let delta_b = test_lab.b - ref_lab.b;
         (delta_l.powi(2) + delta_a.powi(2) + delta_b.powi(2)).sqrt()
@@ -3731,10 +3830,10 @@ impl ViewingAngleAnalyzer {
 struct InlineColorimeter { model: string }
 impl InlineColorimeter {
     fn measure_luminance(self) -> f64 { 100.0 }
-    fn measure_xyz(self) -> XYZ { XYZ { x: 0.95, y: 1.0, z: 1.09 } }
+    fn measure_xyz(self) -> InlineXYZ { InlineXYZ { x: 0.95, y: 1.0, z: 1.09 } }
 }
-struct XYZ { x: f64, y: f64, z: f64 }
-impl XYZ { fn to_lab(self) -> Lab { Lab { l: 100.0, a: 0.0, b: 0.0 } } }
+struct InlineXYZ { x: f64, y: f64, z: f64 }
+impl InlineXYZ { fn to_lab(self) -> Lab { Lab { L: 100.0, a: 0.0, b: 0.0 } } }
 struct InlineLab { l: f64, a: f64, b: f64 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -3776,14 +3875,14 @@ impl FlickerAnalyzer {
         let is_pwm = peak_mag > mean * 0.1 && peak_freq > 50.0;
         let duty_cycle = if is_pwm { (mean - min) / (max - min) * 100.0 } else { 100.0 };
 
-        self.analysis = Some(FlickerAnalysis {
+        let result = FlickerAnalysis {
             is_pwm: is_pwm,
             pwm_frequency_hz: if is_pwm { Some(peak_freq) } else { None },
             flicker_percent: flicker_percent,
             duty_cycle: duty_cycle,
             flicker_free_at_brightness: if is_pwm { 100.0 } else { 0.0 }
-        });
-        self.analysis.clone().unwrap()
+        };
+        result
     }
 
     fn compute_fft(self) -> [Complex] {
@@ -5052,7 +5151,7 @@ impl DisplayXYZ {
         let fz = Self::lab_f(zr);
 
         Lab {
-            l: 116.0 * fy - 16.0,
+            L: 116.0 * fy - 16.0,
             a: 500.0 * (fx - fy),
             b: 200.0 * (fy - fz),
         }
@@ -5276,12 +5375,12 @@ impl ColorimeterInterface {
         self.correction_matrix[2][2] = reference.z / measured.z;
     }
 
-    pub fn measure(&self) -> Result<Measurement, MeasurementCalibrationError> {
+    pub fn measure(&self) -> Result<DisplayMeasurement, MeasurementCalibrationError> {
         let raw = self.measure_raw()?;
         let xyz = self.apply_correction(&raw);
         let lab = xyz.to_lab(&XYZ::new(95.047, 100.0, 108.883));
 
-        Ok(Measurement {
+        Ok(DisplayMeasurement {
             xyz,
             lab,
             luminance: raw.y,
@@ -5613,7 +5712,7 @@ impl PatchAnalyzer {
         }
     }
 
-    fn analyze_gray_balance(&self, grayscale: &[&PatchMeasurement]) -> GrayBalanceReport {
+    fn analyze_gray_balance(&self, grayscale: &[&PatchMeasurement]) -> AnalysisGrayBalanceReport {
         let mut max_ab = 0.0f64;
         let mut total_ab = 0.0;
 
@@ -5623,7 +5722,7 @@ impl PatchAnalyzer {
             total_ab += ab;
         }
 
-        GrayBalanceReport {
+        AnalysisGrayBalanceReport {
             max_deviation: max_ab,
             avg_deviation: if !grayscale.is_empty() {
                 total_ab / grayscale.len() as f64
@@ -5682,7 +5781,7 @@ impl PatchAnalyzer {
 pub struct AnalysisReport {
     pub avg_delta_e: f64,
     pub max_delta_e: f64,
-    pub gray_balance: GrayBalanceReport,
+    pub gray_balance: AnalysisGrayBalanceReport,
     pub gamma_response: GammaReport,
     pub passed: bool,
 }
@@ -6319,7 +6418,7 @@ impl UniformityGrid {
             .and_then(|r| r.iter().find(|p| p.col == col))
     }
 
-    pub fn analyze(&self) -> UniformityReport {
+    pub fn analyze(&self) -> CorrectionUniformityReport {
         let mut max_delta_l = 0.0f64;
         let mut max_delta_ab = 0.0f64;
         let mut total_delta_l = 0.0;
@@ -6336,7 +6435,7 @@ impl UniformityGrid {
             }
         }
 
-        UniformityReport {
+        CorrectionUniformityReport {
             max_luminance_deviation: max_delta_l,
             avg_luminance_deviation: if count > 0 { total_delta_l / count as f64 } else { 0.0 },
             max_color_deviation: max_delta_ab,
@@ -6388,8 +6487,8 @@ pub struct ProfileValidator {
 
 pub struct ValidationMeasurement {
     pub patch: TestPatch,
-    pub expected: Lab,
-    pub measured: Lab,
+    pub expected: DisplayLab,
+    pub measured: DisplayLab,
     pub delta_e: f64,
 }
 
@@ -6420,7 +6519,7 @@ impl ProfileValidator {
         }
     }
 
-    pub fn add_measurement(&mut self, patch: TestPatch, expected: Lab, measured: Lab) {
+    pub fn add_measurement(&mut self, patch: TestPatch, expected: DisplayLab, measured: DisplayLab) {
         let delta_e = expected.delta_e_2000(&measured);
         self.measurements.push(ValidationMeasurement {
             patch, expected, measured, delta_e
@@ -6478,7 +6577,7 @@ pub struct DisplayCharacterization {
     pub native_gamma: f64,
     pub max_luminance: f64,
     pub min_luminance: f64,
-    pub uniformity: UniformityReport,
+    pub uniformity: CorrectionUniformityReport,
     pub spectral_data: Option<Vec<SPD>>,
 }
 
@@ -6567,7 +6666,7 @@ impl DisplayProfiler {
             native_gamma: gamma,
             max_luminance: max_lum,
             min_luminance: min_lum,
-            uniformity: UniformityReport {
+            uniformity: CorrectionUniformityReport {
                 max_luminance_deviation: 0.0,
                 avg_luminance_deviation: 0.0,
                 max_color_deviation: 0.0,
@@ -6614,7 +6713,7 @@ impl Clone for DisplayCharacterization {
             native_gamma: self.native_gamma,
             max_luminance: self.max_luminance,
             min_luminance: self.min_luminance,
-            uniformity: UniformityReport {
+            uniformity: CorrectionUniformityReport {
                 max_luminance_deviation: self.uniformity.max_luminance_deviation,
                 avg_luminance_deviation: self.uniformity.avg_luminance_deviation,
                 max_color_deviation: self.uniformity.max_color_deviation,

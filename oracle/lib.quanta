@@ -269,6 +269,45 @@ impl Xorshift64 {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// GLOBAL HELPER FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Global RNG state for helper functions
+static mut GLOBAL_RNG: u64 = 42;
+
+fn random_normal(mean: f64, std_dev: f64) -> f64 {
+    unsafe {
+        let mut x = GLOBAL_RNG;
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        GLOBAL_RNG = x;
+        let u1 = (x as f64) / (u64::MAX as f64) + 1e-10;
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        GLOBAL_RNG = x;
+        let u2 = (x as f64) / (u64::MAX as f64);
+        mean + std_dev * sqrt(-2.0 * log(u1)) * cos(2.0 * std::f64::consts::PI * u2)
+    }
+}
+
+fn random_uniform(lo: f64, hi: f64) -> f64 {
+    unsafe {
+        let mut x = GLOBAL_RNG;
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        GLOBAL_RNG = x;
+        lo + (hi - lo) * ((x as f64) / (u64::MAX as f64))
+    }
+}
+
+fn softplus(x: f64) -> f64 {
+    if x > 20.0 { x } else { log(1.0 + exp(x)) }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // TIME SERIES DATA STRUCTURES
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -873,17 +912,17 @@ pub struct HoltWinters {
 
 #[derive(Debug, Clone, Copy)]
 pub enum TrendType {
-    None,
-    Additive,
-    Multiplicative,
+    NoTrend,
+    TrendAdditive,
+    TrendMultiplicative,
     Damped,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum SeasonalType {
-    None,
-    Additive,
-    Multiplicative,
+    NoSeason,
+    SeasonAdditive,
+    SeasonMultiplicative,
 }
 
 impl HoltWinters {
@@ -894,7 +933,7 @@ impl HoltWinters {
         seasonal_periods: usize,
         trend_type: TrendType,
         seasonal_type: SeasonalType,
-    ) -> Self {
+    ) -> HoltWinters {
         HoltWinters {
             alpha: alpha.clamp(0.0, 1.0),
             beta: beta.clamp(0.0, 1.0),
@@ -910,13 +949,13 @@ impl HoltWinters {
     }
 
     /// Simple exponential smoothing (no trend, no seasonality)
-    pub fn simple(alpha: f64) -> Self {
-        HoltWinters::new(alpha, 0.0, 0.0, 1, TrendType::None, SeasonalType::None)
+    pub fn simple(alpha: f64) -> HoltWinters {
+        HoltWinters::new(alpha, 0.0, 0.0, 1, TrendType::NoTrend, SeasonalType::NoSeason)
     }
 
     /// Double exponential smoothing (with trend)
-    pub fn double(alpha: f64, beta: f64) -> Self {
-        HoltWinters::new(alpha, beta, 0.0, 1, TrendType::Additive, SeasonalType::None)
+    pub fn double(alpha: f64, beta: f64) -> HoltWinters {
+        HoltWinters::new(alpha, beta, 0.0, 1, TrendType::TrendAdditive, SeasonalType::NoSeason)
     }
 
     /// Fit the model
@@ -930,7 +969,7 @@ impl HoltWinters {
         }
 
         // Initialize level and trend
-        if matches!(self.seasonal_type, SeasonalType::None) {
+        if matches!(self.seasonal_type, SeasonalType::NoSeason) {
             self.level = values[0];
         } else {
             // Average of first season
@@ -939,15 +978,15 @@ impl HoltWinters {
             // Initialize seasonal factors
             for i in 0..self.seasonal_periods {
                 self.seasonal[i] = match self.seasonal_type {
-                    SeasonalType::Additive => values[i] - self.level,
-                    SeasonalType::Multiplicative => values[i] / (self.level + 1e-10),
-                    SeasonalType::None => 0.0,
+                    SeasonalType::SeasonAdditive => values[i] - self.level,
+                    SeasonalType::SeasonMultiplicative => values[i] / (self.level + 1e-10),
+                    SeasonalType::NoSeason => 0.0,
                 };
             }
         }
 
         // Initialize trend
-        if matches!(self.trend_type, TrendType::Additive | TrendType::Multiplicative | TrendType::Damped) {
+        if matches!(self.trend_type, TrendType::TrendAdditive | TrendType::TrendMultiplicative | TrendType::Damped) {
             if n >= self.seasonal_periods * 2 {
                 let first_season: f64 = values[0..self.seasonal_periods].iter().sum::<f64>() / self.seasonal_periods as f64;
                 let second_season: f64 = values[self.seasonal_periods..2*self.seasonal_periods].iter().sum::<f64>() / self.seasonal_periods as f64;
@@ -966,43 +1005,43 @@ impl HoltWinters {
 
             // Update level
             let seasonal_adj = match self.seasonal_type {
-                SeasonalType::Additive => y - old_seasonal,
-                SeasonalType::Multiplicative => y / (old_seasonal + 1e-10),
-                SeasonalType::None => y,
+                SeasonalType::SeasonAdditive => y - old_seasonal,
+                SeasonalType::SeasonMultiplicative => y / (old_seasonal + 1e-10),
+                SeasonalType::NoSeason => y,
             };
 
             let trend_adj = match self.trend_type {
-                TrendType::Additive | TrendType::Damped => old_level + old_trend,
-                TrendType::Multiplicative => old_level * old_trend,
-                TrendType::None => old_level,
+                TrendType::TrendAdditive | TrendType::Damped => old_level + old_trend,
+                TrendType::TrendMultiplicative => old_level * old_trend,
+                TrendType::NoTrend => old_level,
             };
 
             self.level = self.alpha * seasonal_adj + (1.0 - self.alpha) * trend_adj;
 
             // Update trend
             match self.trend_type {
-                TrendType::Additive => {
+                TrendType::TrendAdditive => {
                     self.trend = self.beta * (self.level - old_level) + (1.0 - self.beta) * old_trend;
                 }
-                TrendType::Multiplicative => {
+                TrendType::TrendMultiplicative => {
                     self.trend = self.beta * (self.level / (old_level + 1e-10)) + (1.0 - self.beta) * old_trend;
                 }
                 TrendType::Damped => {
                     let phi = 0.9; // Damping parameter
                     self.trend = self.beta * (self.level - old_level) + (1.0 - self.beta) * phi * old_trend;
                 }
-                TrendType::None => {}
+                TrendType::NoTrend => {}
             }
 
             // Update seasonal
             match self.seasonal_type {
-                SeasonalType::Additive => {
+                SeasonalType::SeasonAdditive => {
                     self.seasonal[s_idx] = self.gamma * (y - self.level) + (1.0 - self.gamma) * old_seasonal;
                 }
-                SeasonalType::Multiplicative => {
+                SeasonalType::SeasonMultiplicative => {
                     self.seasonal[s_idx] = self.gamma * (y / (self.level + 1e-10)) + (1.0 - self.gamma) * old_seasonal;
                 }
-                SeasonalType::None => {}
+                SeasonalType::NoSeason => {}
             }
         }
 
@@ -1019,20 +1058,20 @@ impl HoltWinters {
             let s_idx = (h - 1) % self.seasonal_periods;
 
             let base = match self.trend_type {
-                TrendType::Additive => self.level + h as f64 * self.trend,
-                TrendType::Multiplicative => self.level * self.trend.powi(h as i32),
+                TrendType::TrendAdditive => self.level + h as f64 * self.trend,
+                TrendType::TrendMultiplicative => self.level * self.trend.powi(h as i32),
                 TrendType::Damped => {
                     let phi = 0.9;
                     let sum_phi: f64 = (1..=h).map(|i| phi.powi(i as i32)).sum();
                     self.level + sum_phi * self.trend
                 }
-                TrendType::None => self.level,
+                TrendType::NoTrend => self.level,
             };
 
             let forecast = match self.seasonal_type {
-                SeasonalType::Additive => base + self.seasonal[s_idx],
-                SeasonalType::Multiplicative => base * self.seasonal[s_idx],
-                SeasonalType::None => base,
+                SeasonalType::SeasonAdditive => base + self.seasonal[s_idx],
+                SeasonalType::SeasonMultiplicative => base * self.seasonal[s_idx],
+                SeasonalType::NoSeason => base,
             };
 
             forecasts.push(forecast);
@@ -1274,6 +1313,14 @@ impl PropheticEnsemble {
         }
     }
 
+    fn set_holt_winters(&mut self, hw: HoltWinters) {
+        self.holt_winters = Some(hw);
+    }
+
+    fn set_lstm(&mut self, lstm: LSTMForecaster) {
+        self.lstm = Some(lstm);
+    }
+
     /// Fit all ensemble models
     pub fn fit(&mut self, series: &TimeSeries) {
         // Auto-detect ARIMA order
@@ -1287,19 +1334,16 @@ impl PropheticEnsemble {
 
         // Holt-Winters with detected seasonality
         let seasonal_periods = self.detect_seasonality(series);
-        let mut hw = HoltWinters::new(
-            0.3, 0.1, 0.1,
-            seasonal_periods,
-            TrendType::Additive,
-            if seasonal_periods > 1 { SeasonalType::Additive } else { SeasonalType::None }
-        );
+        let seasonal_type = if seasonal_periods > 1 { SeasonalType::SeasonAdditive } else { SeasonalType::NoSeason };
+        let mut hw = HoltWinters::new(0.3, 0.1, 0.1, seasonal_periods, TrendType::TrendAdditive, seasonal_type);
         hw.fit(series);
-        self.holt_winters = Some(hw);
+        self.set_holt_winters(hw);
 
         // LSTM
-        let mut lstm = LSTMForecaster::new(min(20, series.len() / 2), 32, 42);
+        let lookback = min(20, series.len() / 2);
+        let mut lstm = LSTMForecaster::new(lookback, 32, 42);
         lstm.fit(series, 100, 0.01);
-        self.lstm = Some(lstm);
+        self.set_lstm(lstm);
 
         // Update weights based on validation performance
         if self.adaptive_weighting {
@@ -1613,17 +1657,19 @@ pub mod bayesian {
             }
 
             // Simple matrix inversion for small matrices
-            self.covariance = self.invert_matrix(&s_inv);
+            let cov = BayesianLinearRegression::invert_blr(&s_inv);
+            self.covariance = Tensor::from_vec(cov.data.clone(), cov.shape.clone());
 
             // Posterior mean: m = beta * S * X^T * y
             let xty = x_with_bias.transpose().matmul(&Tensor::from_vec(y.data.clone(), vec![n, 1]));
             let scaled_xty = xty.scale(self.beta);
-            self.mean = self.covariance.matmul(&scaled_xty);
+            let cov_tensor = Tensor::from_vec(cov.data.clone(), cov.shape.clone());
+            self.mean = cov_tensor.matmul(&scaled_xty);
 
             self.fitted = true;
         }
 
-        fn invert_matrix(&self, m: &Tensor) -> Tensor {
+        fn invert_blr(m: &Tensor) -> Tensor {
             let n = m.shape[0];
             let mut result = Tensor::zeros(vec![n, n]);
 
@@ -1734,7 +1780,7 @@ pub mod bayesian {
         }
 
         pub fn fit(&mut self, x: &Tensor, y: &Tensor) {
-            let n = x.numel();
+            let n = x.data.len();
 
             // Build covariance matrix
             let mut k = Tensor::zeros(vec![n, n]);
@@ -1795,11 +1841,11 @@ pub mod bayesian {
         pub fn predict(&self, x_test: &Tensor) -> (Vec<f64>, Vec<f64>) {
             let (x_train, y_train, k_inv) = match (&self.x_train, &self.y_train, &self.k_inv) {
                 (Some(x), Some(y), Some(k)) => (x, y, k),
-                _ => return (vec![0.0; x_test.numel()], vec![1.0; x_test.numel()]),
+                _ => return (vec![0.0; x_test.data.len()], vec![1.0; x_test.data.len()]),
             };
 
-            let n_train = x_train.numel();
-            let n_test = x_test.numel();
+            let n_train = x_train.data.len();
+            let n_test = x_test.data.len();
 
             let mut means = Vec::with_capacity(n_test);
             let mut stds = Vec::with_capacity(n_test);
@@ -2989,7 +3035,7 @@ pub mod gaussian_process {
 
         fn gradient(&self, x1: f64, x2: f64) -> Vec<f64> {
             let d = x1 - x2;
-            let k = self.compute(x1, x2);
+            let k = self.variance * (-0.5 * d * d / (self.length_scale * self.length_scale)).exp();
             let dl = k * d * d / (self.length_scale.powi(3));
             let dv = k / self.variance;
             vec![dl, dv]
@@ -3894,13 +3940,16 @@ pub mod deep_forecast {
 
             for x in sequence {
                 let mut h = x.clone();
-                for layer in &mut self.layers {
-                    h = layer.forward(&h);
+                let n_layers = self.layers.len();
+                for idx in 0..n_layers {
+                    let next_h = self.layers[idx].forward(&h);
+                    h = next_h;
                 }
                 output = h;
             }
 
-            self.output_layer.forward(&output)
+            let final_out = output.clone();
+            self.output_layer.forward(&final_out)
         }
 
         pub fn forecast(&mut self, series: &TimeSeries, horizon: usize) -> Vec<f64> {
@@ -5601,7 +5650,7 @@ pub mod survival {
 
             match self.distribution {
                 AFTDistribution::Exponential | AFTDistribution::Weibull => {
-                    (lp + self.scale * 0.0_f64.ln_1p().abs()).exp()
+                    (lp + self.scale * log(1.0 + 0.0).abs()).exp()
                 },
                 AFTDistribution::LogNormal => lp.exp(),
                 AFTDistribution::LogLogistic => lp.exp(),
@@ -6502,13 +6551,13 @@ pub mod quantile {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// GAUSSIAN PROCESSES
+// ADVANCED GAUSSIAN PROCESSES
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub mod gaussian_process {
+pub mod advanced_gaussian_process {
     use super::*;
 
-    pub trait Kernel {
+    pub trait MultivariateKernel {
         fn compute(&self, x1: &[f64], x2: &[f64]) -> f64;
         fn gradient(&self, x1: &[f64], x2: &[f64]) -> Vec<f64>;
     }
@@ -6524,7 +6573,7 @@ pub mod gaussian_process {
         }
     }
 
-    impl Kernel for AdvancedRBFKernel {
+    impl MultivariateKernel for AdvancedRBFKernel {
         fn compute(&self, x1: &[f64], x2: &[f64]) -> f64 {
             let sq_dist: f64 = x1.iter().zip(x2.iter())
                 .map(|(a, b)| (a - b).powi(2))
@@ -6533,10 +6582,10 @@ pub mod gaussian_process {
         }
 
         fn gradient(&self, x1: &[f64], x2: &[f64]) -> Vec<f64> {
-            let k = self.compute(x1, x2);
             let sq_dist: f64 = x1.iter().zip(x2.iter())
                 .map(|(a, b)| (a - b).powi(2))
                 .sum();
+            let k = self.variance * (-sq_dist / (2.0 * self.length_scale.powi(2))).exp();
             vec![
                 k * sq_dist / self.length_scale.powi(3),  // d/d(length_scale)
                 k / self.variance                          // d/d(variance)
@@ -6550,7 +6599,7 @@ pub mod gaussian_process {
         pub nu: f64  // 0.5, 1.5, 2.5
     }
 
-    impl Kernel for AdvancedMaternKernel {
+    impl MultivariateKernel for AdvancedMaternKernel {
         fn compute(&self, x1: &[f64], x2: &[f64]) -> f64 {
             let dist: f64 = x1.iter().zip(x2.iter())
                 .map(|(a, b)| (a - b).powi(2))
@@ -6579,7 +6628,7 @@ pub mod gaussian_process {
         pub period: f64
     }
 
-    impl Kernel for AdvancedPeriodicKernel {
+    impl MultivariateKernel for AdvancedPeriodicKernel {
         fn compute(&self, x1: &[f64], x2: &[f64]) -> f64 {
             let dist: f64 = x1.iter().zip(x2.iter())
                 .map(|(a, b)| (a - b).powi(2))
@@ -6595,7 +6644,7 @@ pub mod gaussian_process {
     }
 
     pub struct CompositeKernel {
-        pub kernels: Vec<Box<dyn Kernel>>,
+        pub kernels: Vec<Box<dyn MultivariateKernel>>,
         pub operation: KernelOp
     }
 
@@ -6604,7 +6653,7 @@ pub mod gaussian_process {
         Multiply
     }
 
-    impl Kernel for CompositeKernel {
+    impl MultivariateKernel for CompositeKernel {
         fn compute(&self, x1: &[f64], x2: &[f64]) -> f64 {
             match self.operation {
                 KernelOp::Add => self.kernels.iter().map(|k| k.compute(x1, x2)).sum(),
@@ -6617,7 +6666,7 @@ pub mod gaussian_process {
         }
     }
 
-    pub struct AdvancedGaussianProcess<K: Kernel> {
+    pub struct AdvancedGaussianProcess<K: MultivariateKernel> {
         pub kernel: K,
         pub noise_variance: f64,
         x_train: Vec<Vec<f64>>,
@@ -6626,7 +6675,7 @@ pub mod gaussian_process {
         alpha: Vec<f64>
     }
 
-    impl<K: Kernel> AdvancedGaussianProcess<K> {
+    impl<K: MultivariateKernel> AdvancedGaussianProcess<K> {
         pub fn new(kernel: K, noise_variance: f64) -> Self {
             AdvancedGaussianProcess {
                 kernel,
@@ -7607,14 +7656,14 @@ impl OnlinePredictor {
                 *bias += self.learning_rate * error;
             },
             Adam { ref mut weights, ref mut bias, ref mut m, ref mut v, ref mut t } => {
-                *t += 1;
+                t += 1;
                 let beta1 = 0.9; let beta2 = 0.999; let eps = 1e-8;
                 for (i, (w, xi)) in weights.iter_mut().zip(x.iter()).enumerate() {
                     let grad = -error * xi;
                     m[i] = beta1 * m[i] + (1.0 - beta1) * grad;
                     v[i] = beta2 * v[i] + (1.0 - beta2) * grad * grad;
-                    let m_hat = m[i] / (1.0 - beta1.powi(*t as i32));
-                    let v_hat = v[i] / (1.0 - beta2.powi(*t as i32));
+                    let m_hat = m[i] / (1.0 - beta1.powi(t as i32));
+                    let v_hat = v[i] / (1.0 - beta2.powi(t as i32));
                     *w -= self.learning_rate * m_hat / (v_hat.sqrt() + eps);
                 }
                 *bias += self.learning_rate * error;
@@ -7849,7 +7898,7 @@ impl ODEFunc {
         for (i, (layer, bias)) in self.layers.iter().zip(self.biases.iter()).enumerate() {
             let out: Vec<f64> = (0..layer.len()).map(|j| {
                 let sum: f64 = x.iter().zip(layer[j].iter()).map(|(a,b)| a*b).sum::<f64>() + bias[j];
-                if i < self.layers.len() - 1 { tanh(sum) } else { sum }
+                if i < self.layers.len() - 1 { sum.tanh() } else { sum }
             }).collect();
             x = out;
         }
@@ -7943,7 +7992,7 @@ struct VAEEncoder {
 impl VAEEncoder {
     fn new(input_dim: usize, hidden_dim: usize, latent_dim: usize) -> VAEEncoder {
         VAEEncoder {
-            lstm: LSTMCell::new(input_dim, hidden_dim),
+            lstm: LSTMCell::new(input_dim, hidden_dim, 42),
             fc_mu: (0..latent_dim).map(|_| (0..hidden_dim).map(|_| random_normal(0.0, 0.02)).collect()).collect(),
             fc_logvar: (0..latent_dim).map(|_| (0..hidden_dim).map(|_| random_normal(0.0, 0.02)).collect()).collect(),
             mu_bias: vec![0.0; latent_dim], logvar_bias: vec![0.0; latent_dim],
@@ -7955,8 +8004,11 @@ impl VAEEncoder {
         let mut h = vec![0.0; self.hidden_dim];
         let mut c = vec![0.0; self.hidden_dim];
         for t in 0..x.len() {
-            let (new_h, new_c) = self.lstm.forward(x[t].clone(), h, c);
-            h = new_h; c = new_c;
+            let x_t = Tensor::from_vec(x[t].clone(), vec![x[t].len()]);
+            let h_t = Tensor::from_vec(h.clone(), vec![h.len()]);
+            let c_t = Tensor::from_vec(c.clone(), vec![c.len()]);
+            let (new_h, new_c) = self.lstm.forward(&x_t, &h_t, &c_t);
+            h = new_h.data; c = new_c.data;
         }
         let mu: Vec<f64> = (0..self.latent_dim).map(|i| {
             self.mu_bias[i] + h.iter().zip(self.fc_mu[i].iter()).map(|(a,b)| a*b).sum::<f64>()
@@ -7989,7 +8041,7 @@ impl VAEDecoder {
         VAEDecoder {
             fc_init: (0..hidden_dim).map(|_| (0..latent_dim).map(|_| random_normal(0.0, 0.02)).collect()).collect(),
             init_bias: vec![0.0; hidden_dim],
-            lstm: LSTMCell::new(output_dim, hidden_dim),
+            lstm: LSTMCell::new(output_dim, hidden_dim, 43),
             fc_out: (0..output_dim).map(|_| (0..hidden_dim).map(|_| random_normal(0.0, 0.02)).collect()).collect(),
             out_bias: vec![0.0; output_dim], hidden_dim: hidden_dim, output_dim: output_dim
         }
@@ -8005,8 +8057,11 @@ impl VAEDecoder {
         let mut curr_c = c;
         let mut prev_out = vec![0.0; self.output_dim];
         for _ in 0..seq_len {
-            let (new_h, new_c) = self.lstm.forward(prev_out.clone(), curr_h, curr_c);
-            curr_h = new_h; curr_c = new_c;
+            let x_t = Tensor::from_vec(prev_out.clone(), vec![prev_out.len()]);
+            let h_t = Tensor::from_vec(curr_h.clone(), vec![curr_h.len()]);
+            let c_t = Tensor::from_vec(curr_c.clone(), vec![curr_c.len()]);
+            let (new_h, new_c) = self.lstm.forward(&x_t, &h_t, &c_t);
+            curr_h = new_h.data; curr_c = new_c.data;
             let out: Vec<f64> = (0..self.output_dim).map(|i| {
                 self.out_bias[i] + curr_h.iter().zip(self.fc_out[i].iter()).map(|(a,b)| a*b).sum::<f64>()
             }).collect();
@@ -8082,8 +8137,8 @@ impl PlanarFlow {
         }
     }
 
-    fn h(self, x: f64) -> f64 { tanh(x) }
-    fn h_prime(self, x: f64) -> f64 { 1.0 - tanh(x).powi(2) }
+    fn h(self, x: f64) -> f64 { x.tanh() }
+    fn h_prime(self, x: f64) -> f64 { 1.0 - x.tanh().powi(2) }
 }
 
 impl Flow for PlanarFlow {
@@ -8391,8 +8446,8 @@ impl NeuralHawkes {
             let dt = t - prev_t;
             let mut input = vec![dt];
             for i in 0..self.n_marks { input.push(if i == *k { 1.0 } else { 0.0 }); }
-            h = self.rnn.forward(input, h.clone());
-            prev_t = *t;
+            h = self.rnn.forward(&input);
+            prev_t = t;
         }
         (0..self.n_marks).map(|i| {
             let raw = self.intensity_bias[i] + h.iter().zip(self.intensity_net[i].iter()).map(|(a,b)| a*b).sum::<f64>();
@@ -8412,8 +8467,8 @@ impl NeuralHawkes {
             let dt = t - prev_t;
             let mut input = vec![dt];
             for i in 0..self.n_marks { input.push(if i == *k { 1.0 } else { 0.0 }); }
-            h = self.rnn.forward(input, h);
-            prev_t = *t;
+            h = self.rnn.forward(&input);
+            prev_t = t;
         }
         let final_integral = self.integrate_intensity(prev_t, t_max, h);
         ll -= final_integral;
@@ -8455,7 +8510,7 @@ impl NeuralHawkes {
             events.push((t, k));
             let mut input = vec![dt];
             for i in 0..self.n_marks { input.push(if i == k { 1.0 } else { 0.0 }); }
-            h = self.rnn.forward(input, h);
+            h = self.rnn.forward(&input);
         }
         events
     }
@@ -8849,7 +8904,7 @@ impl CWT {
         let n = signal.len();
         let kernel = self.wavelet_kernel(scale, n);
         (0..n).map(|i| {
-            (0..n).map(|j| signal[j] * kernel[(i as isize - j as isize).rem_euclid(n as isize) as usize]).sum()
+            (0..n).map(|j| { let idx = ((i as isize - j as isize) % n as isize + n as isize) % n as isize; signal[j] * kernel[idx as usize] }).sum()
         }).collect()
     }
 
@@ -9175,7 +9230,7 @@ impl<T: ConditionalIndependenceTest> PCAlgorithm<T> {
         }
 
         // Phase 2: Orient v-structures (simplified)
-        let mut directed = vec![vec![EdgeType::None; n_vars]; n_vars];
+        let mut directed = vec![vec![EdgeType::NoEdge; n_vars]; n_vars];
         for i in 0..n_vars {
             for j in 0..n_vars {
                 if adj[i][j] { directed[i][j] = EdgeType::Undirected; }
@@ -9200,7 +9255,7 @@ impl<T: ConditionalIndependenceTest> PCAlgorithm<T> {
 }
 
 #[derive(Clone, Copy, PartialEq)]
-pub enum EdgeType { None, Undirected, Directed, Bidirected }
+pub enum EdgeType { NoEdge, Undirected, Directed, Bidirected }
 
 /// Learned causal graph
 pub struct CausalGraph {
@@ -9219,7 +9274,7 @@ impl CausalGraph {
     }
 
     pub fn neighbors(&self, node: usize) -> Vec<usize> {
-        (0..self.n_vars).filter(|&i| self.edges[node][i] != EdgeType::None || self.edges[i][node] != EdgeType::None).collect()
+        (0..self.n_vars).filter(|&i| self.edges[node][i] != EdgeType::NoEdge || self.edges[i][node] != EdgeType::NoEdge).collect()
     }
 }
 
@@ -10462,7 +10517,11 @@ pub mod deep_learning {
         }
         pub fn forward(&mut self, x: &DeepLearningTensor, mask: Option<&DeepLearningTensor>) -> DeepLearningTensor {
             let mut out = x.clone();
-            for layer in &mut self.layers { out = layer.forward(&out, mask); }
+            let n_layers = self.layers.len();
+            for idx in 0..n_layers {
+                let next_out = self.layers[idx].forward(&out, mask);
+                out = next_out;
+            }
             out
         }
     }
@@ -10605,7 +10664,7 @@ pub mod deep_learning {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod optimization {
-    pub struct Adam {
+    pub struct AdamOptimizer {
         pub lr: f64,
         pub beta1: f64,
         pub beta2: f64,
@@ -10614,9 +10673,9 @@ pub mod optimization {
         v: Vec<f64>,
         t: usize,
     }
-    impl Adam {
-        pub fn new(n_params: usize, lr: f64) -> Self {
-            Self { lr, beta1: 0.9, beta2: 0.999, eps: 1e-8, m: vec![0.0; n_params], v: vec![0.0; n_params], t: 0 }
+    impl AdamOptimizer {
+        pub fn new(n_params: usize, lr: f64) -> AdamOptimizer {
+            AdamOptimizer { lr, beta1: 0.9, beta2: 0.999, eps: 1e-8, m: vec![0.0; n_params], v: vec![0.0; n_params], t: 0 }
         }
         pub fn step(&mut self, params: &mut [f64], grads: &[f64]) {
             self.t += 1;
@@ -11360,7 +11419,7 @@ mod tests {
         }).collect();
         let ts = TimeSeries::from_values("test", &values, Frequency::Monthly);
 
-        let mut hw = HoltWinters::new(0.3, 0.1, 0.1, 12, TrendType::Additive, SeasonalType::Additive);
+        let mut hw = HoltWinters::new(0.3, 0.1, 0.1, 12, TrendType::TrendAdditive, SeasonalType::SeasonAdditive);
         hw.fit(&ts);
 
         assert!(hw.fitted);
