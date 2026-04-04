@@ -1,6 +1,6 @@
 # Quanta Ecosystem — Engineering Runbook
 
-Last verified: 2026-04-03. 16/16 ecosystem modules compile. Compiler 604 tests green.
+Last verified: 2026-04-04. 16/16 ecosystem modules compile. 64/65 programs MSVC-native clean. Compiler 604 tests green.
 
 ## Quick Reference
 
@@ -70,6 +70,16 @@ Last verified: 2026-04-03. 16/16 ecosystem modules compile. Compiler 604 tests g
 - **Infinite type false positive**: Functions taking `&StructType` and returning a struct literal of the same type trigger an incorrect occurs-check. Workaround: pass by value instead of reference.
 - **Self as unit struct constructor**: `pub fn new() -> Self { Self }` doesn't compile for unit structs. Use the struct name directly.
 - **Trait method dispatch on self**: `self.method()` within a trait impl block may not find the trait's methods. Inline the value instead.
+
+### Compiler — RESOLVED (2026-04-04)
+- ~~Enum forward declarations~~ — Enums now forward-declared as `typedef struct` (MSVC compatible).
+- ~~Enum typedef redefinition~~ — Enum struct body uses `struct X {}` not `typedef struct X {} X`.
+- ~~Intrinsic_ prefix in C output~~ — `intrinsic::trunc` etc. now mapped to C stdlib (trunc, exp2, asin...).
+- ~~Vec method dispatch~~ — `.push()/.len()/.pop()/.get()` emit typed runtime calls.
+- ~~Vec subscript on QuantaVecHandle~~ — `vec[i]` emits `quanta_hvec_get_<type>()`.
+- ~~Missing ctype.h~~ — toupper/tolower/isspace now compile.
+- **64/65 programs compile with MSVC 19.50 zero errors**
+- **7 native executables verified** (color_test 12/12 pass, wc, calc, base64, basename, cmp, grep)
 
 ### Compiler — RESOLVED (2026-04-03)
 - ~~No module imports~~ — `mod foo;` and `use foo::bar;` fully implemented.
