@@ -1185,7 +1185,8 @@ impl PatchManager {
     }
 
     fn install_vtable_hook(&self, vtable: usize, index: usize, target: usize) -> Result<(), PatchError> {
-        let address = vtable + index * std::mem::size_of::<usize>();
+        let ptr_size: usize = 8; // size_of::<usize>() on 64-bit
+        let address = vtable + index * ptr_size;
         unsafe { self.write_memory(address, &target.to_le_bytes()) }
     }
 
@@ -1307,7 +1308,7 @@ pub enum MergeStrategy {
 
 /// Result of a merge operation
 #[derive(Debug)]
-pub enum MergeResult {
+pub enum FileMergeResult {
     Success(Vec<u8>),
     Conflict(MergeConflict),
     Failed(String),
@@ -1333,11 +1334,11 @@ impl ModMerger {
     }
 
     /// Merge two versions of a file
-    pub fn merge(&self, original: &[u8], version_a: &[u8], version_b: &[u8]) -> MergeResult {
+    pub fn merge(&self, original: &[u8], version_a: &[u8], version_b: &[u8]) -> FileMergeResult {
         match self.strategy {
             MergeStrategy::Priority => {
                 // Just use version_a (higher priority)
-                MergeResult::Success(version_a.to_vec())
+                FileMergeResult::Success(version_a.to_vec())
             }
             MergeStrategy::AutoMerge => {
                 self.three_way_merge(original, version_a, version_b)
@@ -1346,35 +1347,37 @@ impl ModMerger {
                 // Concatenate changes
                 let mut result = version_a.to_vec();
                 result.extend_from_slice(version_b);
-                MergeResult::Success(result)
+                FileMergeResult::Success(result)
             }
             MergeStrategy::Interactive => {
-                MergeResult::Conflict(MergeConflict {
+                let conflict = MergeConflict {
                     file_path: String::new(),
                     mod_a: String::new(),
                     mod_b: String::new(),
                     diff_a: version_a.to_vec(),
                     diff_b: version_b.to_vec(),
-                })
+                };
+                FileMergeResult::Conflict(conflict)
             }
         }
     }
 
     /// Three-way merge algorithm
-    fn three_way_merge(&self, original: &[u8], version_a: &[u8], version_b: &[u8]) -> MergeResult {
+    fn three_way_merge(&self, original: &[u8], version_a: &[u8], version_b: &[u8]) -> FileMergeResult {
         // Compute diffs
         let diff_a = self.compute_diff(original, version_a);
         let diff_b = self.compute_diff(original, version_b);
 
         // Check for overlapping changes
         if self.diffs_overlap(&diff_a, &diff_b) {
-            return MergeResult::Conflict(MergeConflict {
+            let conflict = MergeConflict {
                 file_path: String::new(),
                 mod_a: String::new(),
                 mod_b: String::new(),
                 diff_a: version_a.to_vec(),
                 diff_b: version_b.to_vec(),
-            });
+            };
+            return FileMergeResult::Conflict(conflict);
         }
 
         // Apply both diffs
@@ -1382,7 +1385,7 @@ impl ModMerger {
         self.apply_diff(&mut result, &diff_a);
         self.apply_diff(&mut result, &diff_b);
 
-        MergeResult::Success(result)
+        FileMergeResult::Success(result)
     }
 
     fn compute_diff(&self, original: &[u8], modified: &[u8]) -> Vec<DiffHunk> {
@@ -2526,7 +2529,7 @@ impl LocalizationManager {
                 return text;
             }
         }
-        key
+        return key;
     }
 
     pub fn get_formatted(&self, key: &str, args: &HashMap<String, String>) -> String {
@@ -3792,7 +3795,7 @@ pub mod scripting {
 pub mod memory {
     use super::*;
 
-    pub struct MemoryPatch {
+    pub struct RawMemoryPatch {
         pub name: String,
         pub address: usize,
         pub original_bytes: Vec<u8>,
@@ -3852,7 +3855,7 @@ pub mod memory {
     }
 
     pub struct PatchManager {
-        patches: Vec<MemoryPatch>,
+        patches: Vec<RawMemoryPatch>,
         scanner: PatternScanner,
     }
 
@@ -3861,9 +3864,9 @@ pub mod memory {
             Self { patches: Vec::new(), scanner: PatternScanner::new() }
         }
 
-        pub fn create_patch(&mut self, name: &str, address: usize, patch_bytes: Vec<u8>) -> &MemoryPatch {
+        pub fn create_patch(&mut self, name: &str, address: usize, patch_bytes: Vec<u8>) -> &RawMemoryPatch {
             let original = vec![0u8; patch_bytes.len()];  // Would read actual memory
-            self.patches.push(MemoryPatch {
+            self.patches.push(RawMemoryPatch {
                 name: name.to_string(), address, original_bytes: original,
                 patch_bytes, is_applied: false,
             });
@@ -4382,9 +4385,9 @@ impl BackupManager {
 pub enum ConflictType { FileOverwrite, AssetConflict, PluginConflict, RecordConflict, ResourceConflict }
 pub enum ConflictSeverity { Low, Medium, High, Critical }
 
-pub struct Conflict {
-    pub conflict_type: ConflictType,
-    pub severity: ConflictSeverity,
+pub struct ModConflict {
+    pub conflict_type: ModConflictType,
+    pub severity: ModConflictSeverity,
     pub mod_a: String,
     pub mod_b: String,
     pub resource: String,
@@ -4392,14 +4395,14 @@ pub struct Conflict {
     pub auto_resolvable: bool,
 }
 
-pub struct ConflictDetector {
-    pub conflicts: Vec<Conflict>,
+pub struct ModConflictDetector {
+    pub conflicts: Vec<ModConflict>,
     pub file_owners: HashMap<String, Vec<String>>,
     pub record_owners: HashMap<String, Vec<String>>,
     pub ignore_patterns: Vec<String>,
 }
 
-impl ConflictDetector {
+impl ModConflictDetector {
     pub fn new() -> Self { Self { conflicts: Vec::new(), file_owners: HashMap::new(), record_owners: HashMap::new(), ignore_patterns: Vec::new() } }
 
     pub fn register_file(&mut self, path: &str, mod_id: &str) {
@@ -4456,7 +4459,7 @@ impl ConflictDetector {
 // PROFILE MANAGEMENT
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub struct ModProfile {
+pub struct SimpleProfile {
     pub name: String,
     pub description: String,
     pub enabled_mods: Vec<String>,
@@ -4467,7 +4470,7 @@ pub struct ModProfile {
 }
 
 pub struct ProfileManager {
-    pub profiles: HashMap<String, ModProfile>,
+    pub profiles: HashMap<String, SimpleProfile>,
     pub active_profile: Option<String>,
     pub default_profile: String,
 }
@@ -4478,7 +4481,7 @@ impl ProfileManager {
     pub fn create(&mut self, name: &str, description: &str) -> bool {
         if self.profiles.contains_key(name) { return false; }
         let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
-        self.profiles.insert(name.to_string(), ModProfile {
+        self.profiles.insert(name.to_string(), SimpleProfile {
             name: name.to_string(), description: description.to_string(), enabled_mods: Vec::new(),
             load_order: Vec::new(), settings: HashMap::new(), created: now, last_used: now,
         });
@@ -4491,8 +4494,9 @@ impl ProfileManager {
             if let Some(p) = self.profiles.get_mut(name) {
                 p.last_used = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
             }
-            true
-        } else { false }
+            return true;
+        }
+        return false;
     }
 
     pub fn delete(&mut self, name: &str) -> bool {
@@ -4514,11 +4518,11 @@ impl ProfileManager {
         } else { false }
     }
 
-    pub fn active(&self) -> Option<&ModProfile> {
+    pub fn active(&self) -> Option<&SimpleProfile> {
         self.active_profile.as_ref().and_then(|n| self.profiles.get(n))
     }
 
-    pub fn active_mut(&mut self) -> Option<&mut ModProfile> {
+    pub fn active_mut(&mut self) -> Option<&mut SimpleProfile> {
         let name = self.active_profile.clone()?;
         self.profiles.get_mut(&name)
     }
@@ -4537,10 +4541,10 @@ impl ProfileManager {
 // ASSET REDIRECTION
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub struct AssetRedirect { pub original: String, pub replacement: String, pub mod_id: String, pub priority: i32 }
+pub struct SimpleRedirect { pub original: String, pub replacement: String, pub mod_id: String, pub priority: i32 }
 
 pub struct AssetRedirector {
-    pub redirects: HashMap<String, Vec<AssetRedirect>>,
+    pub redirects: HashMap<String, Vec<SimpleRedirect>>,
     pub cache: HashMap<String, String>,
     pub enabled: bool,
 }
@@ -4549,7 +4553,7 @@ impl AssetRedirector {
     pub fn new() -> Self { Self { redirects: HashMap::new(), cache: HashMap::new(), enabled: true } }
 
     pub fn add_redirect(&mut self, original: &str, replacement: &str, mod_id: &str, priority: i32) {
-        let redirect = AssetRedirect { original: original.to_string(), replacement: replacement.to_string(), mod_id: mod_id.to_string(), priority };
+        let redirect = SimpleRedirect { original: original.to_string(), replacement: replacement.to_string(), mod_id: mod_id.to_string(), priority };
         self.redirects.entry(original.to_string()).or_insert_with(Vec::new).push(redirect);
         self.redirects.get_mut(original).unwrap().sort_by(|a, b| b.priority.cmp(&a.priority));
         self.cache.remove(original);
@@ -4819,7 +4823,7 @@ impl FomodInstaller {
                 FomodConditionItem::Version { .. } => true,
             }
         }).collect();
-        match condition.operator { FomodConditionOp::And => results.iter().all(|&b| b), FomodConditionOp::Or => results.iter().any(|&b| b) }
+        return match condition.operator { FomodConditionOp::And => results.iter().all(|&b| b), FomodConditionOp::Or => results.iter().any(|&b| b) };
     }
 
     pub fn select_plugin(&mut self, step_idx: usize, group_idx: usize, plugin_idx: usize) -> Result<(), String> {
@@ -4843,7 +4847,11 @@ impl FomodInstaller {
         for (step_idx, step) in self.config.install_steps.iter().enumerate() {
             if let Some(ref cond) = step.visible { if !self.evaluate_condition(cond) { continue; } }
             for (group_idx, group) in step.groups.iter().enumerate() {
-                let count = (0..group.plugins.len()).filter(|&i| self.selected_plugins.contains(&format!("{}_{}_{}", step_idx, group_idx, i))).count();
+                let mut count: i64 = 0;
+                for i in 0..group.plugins.len() {
+                    let key = format!("{}_{}_{}", step_idx, group_idx, i);
+                    if self.selected_plugins.contains(&key) { count = count + 1; }
+                }
                 match group.group_type {
                     FomodGroupType::SelectExactlyOne => if count != 1 { errors.push(format!("Group '{}' requires exactly one selection", group.name)); },
                     FomodGroupType::SelectAtLeastOne => if count < 1 { errors.push(format!("Group '{}' requires at least one selection", group.name)); },
@@ -4875,11 +4883,11 @@ impl FomodInstaller {
 // MOD REPOSITORY & DOWNLOAD MANAGER
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub struct ModRepository { pub name: String, pub base_url: String, pub api_key: Option<String>, pub enabled: bool, pub priority: i32, pub cache: HashMap<String, CachedModInfo>, pub last_sync: u64 }
+pub struct SimpleModRepo { pub name: String, pub base_url: String, pub api_key: Option<String>, pub enabled: bool, pub priority: i32, pub cache: HashMap<String, CachedModInfo>, pub last_sync: u64 }
 pub struct CachedModInfo { pub mod_id: String, pub name: String, pub version: String, pub author: String, pub description: String, pub downloads: u64, pub endorsements: u64, pub updated: u64, pub files: Vec<RemoteFile> }
 pub struct RemoteFile { pub file_id: String, pub name: String, pub version: String, pub size: u64, pub primary: bool, pub download_url: Option<String> }
 
-impl ModRepository {
+impl SimpleModRepo {
     pub fn new(name: &str, base_url: &str) -> Self { Self { name: name.to_string(), base_url: base_url.to_string(), api_key: None, enabled: true, priority: 0, cache: HashMap::new(), last_sync: 0 } }
     pub fn with_api_key(mut self, key: &str) -> Self { self.api_key = Some(key.to_string()); self }
     pub fn search(&self, query: &str) -> Vec<&CachedModInfo> { self.cache.values().filter(|m| m.name.to_lowercase().contains(&query.to_lowercase()) || m.description.to_lowercase().contains(&query.to_lowercase())).collect() }
@@ -4926,10 +4934,10 @@ impl DownloadManager {
         id
     }
 
-    pub fn pause(&mut self, id: &str) -> bool { if let Some(dl) = self.downloads.get_mut(id) { if matches!(dl.status, DownloadStatus::Downloading) { dl.status = DownloadStatus::Paused; return true; } } false }
-    pub fn resume(&mut self, id: &str) -> bool { if let Some(dl) = self.downloads.get_mut(id) { if matches!(dl.status, DownloadStatus::Paused) { dl.status = DownloadStatus::Queued; self.queue.push_back(id.to_string()); return true; } } false }
-    pub fn cancel(&mut self, id: &str) -> bool { self.downloads.remove(id).is_some() }
-    pub fn retry(&mut self, id: &str) -> bool { if let Some(dl) = self.downloads.get_mut(id) { if matches!(dl.status, DownloadStatus::Failed) { dl.status = DownloadStatus::Queued; dl.retries += 1; dl.error = None; self.queue.push_back(id.to_string()); return true; } } false }
+    pub fn pause(&mut self, id: &str) -> bool { if let Some(dl) = self.downloads.get_mut(id) { if matches!(dl.status, DownloadStatus::Downloading) { dl.status = DownloadStatus::Paused; return true; } } return false; }
+    pub fn resume(&mut self, id: &str) -> bool { if let Some(dl) = self.downloads.get_mut(id) { if matches!(dl.status, DownloadStatus::Paused) { dl.status = DownloadStatus::Queued; self.queue.push_back(id.to_string()); return true; } } return false; }
+    pub fn cancel(&mut self, id: &str) -> bool { let removed = self.downloads.remove(id); return removed.is_some(); }
+    pub fn retry(&mut self, id: &str) -> bool { if let Some(dl) = self.downloads.get_mut(id) { if matches!(dl.status, DownloadStatus::Failed) { dl.status = DownloadStatus::Queued; dl.retries += 1; dl.error = None; self.queue.push_back(id.to_string()); return true; } } return false; }
 
     pub fn active_count(&self) -> usize { self.downloads.values().filter(|d| matches!(d.status, DownloadStatus::Downloading)).count() }
     pub fn total_progress(&self) -> (u64, u64) { self.downloads.values().fold((0, 0), |(d, t), dl| (d + dl.downloaded, t + dl.size)) }
@@ -5766,11 +5774,11 @@ pub mod downloads {
             next
         }
 
-        pub fn pause(&mut self, id: &str) -> bool { if let Some(task) = self.tasks.get_mut(id) { if task.state == DownloadState::Downloading { task.state = DownloadState::Paused; self.active_downloads = self.active_downloads.saturating_sub(1); return true; } } false }
+        pub fn pause(&mut self, id: &str) -> bool { if let Some(task) = self.tasks.get_mut(id) { if task.state == DownloadState::Downloading { task.state = DownloadState::Paused; self.active_downloads = self.active_downloads.saturating_sub(1); return true; } } return false; }
 
-        pub fn resume(&mut self, id: &str) -> bool { if let Some(task) = self.tasks.get_mut(id) { if task.state == DownloadState::Paused { task.state = DownloadState::Queued; return true; } } false }
+        pub fn resume(&mut self, id: &str) -> bool { if let Some(task) = self.tasks.get_mut(id) { if task.state == DownloadState::Paused { task.state = DownloadState::Queued; return true; } } return false; }
 
-        pub fn cancel(&mut self, id: &str) -> bool { if let Some(task) = self.tasks.get_mut(id) { if task.state == DownloadState::Downloading { self.active_downloads = self.active_downloads.saturating_sub(1); } task.state = DownloadState::Failed; self.queue.retain(|q| q != id); return true; } false }
+        pub fn cancel(&mut self, id: &str) -> bool { if let Some(task) = self.tasks.get_mut(id) { if task.state == DownloadState::Downloading { self.active_downloads = self.active_downloads.saturating_sub(1); } task.state = DownloadState::Failed; self.queue.retain(|q| q != id); return true; } return false; }
 
         pub fn complete(&mut self, id: &str) { if let Some(task) = self.tasks.get_mut(id) { task.state = DownloadState::Completed; self.active_downloads = self.active_downloads.saturating_sub(1); } }
 

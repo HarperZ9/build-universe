@@ -269,6 +269,45 @@ impl Xorshift64 {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// GLOBAL HELPER FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Global RNG state for helper functions
+static mut GLOBAL_RNG: u64 = 42;
+
+fn random_normal(mean: f64, std_dev: f64) -> f64 {
+    unsafe {
+        let mut x = GLOBAL_RNG;
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        GLOBAL_RNG = x;
+        let u1 = (x as f64) / (u64::MAX as f64) + 1e-10;
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        GLOBAL_RNG = x;
+        let u2 = (x as f64) / (u64::MAX as f64);
+        mean + std_dev * sqrt(-2.0 * log(u1)) * cos(2.0 * std::f64::consts::PI * u2)
+    }
+}
+
+fn random_uniform(lo: f64, hi: f64) -> f64 {
+    unsafe {
+        let mut x = GLOBAL_RNG;
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        GLOBAL_RNG = x;
+        lo + (hi - lo) * ((x as f64) / (u64::MAX as f64))
+    }
+}
+
+fn softplus(x: f64) -> f64 {
+    if x > 20.0 { x } else { log(1.0 + exp(x)) }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // TIME SERIES DATA STRUCTURES
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -873,17 +912,17 @@ pub struct HoltWinters {
 
 #[derive(Debug, Clone, Copy)]
 pub enum TrendType {
-    None,
-    Additive,
-    Multiplicative,
+    NoTrend,
+    TrendAdditive,
+    TrendMultiplicative,
     Damped,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum SeasonalType {
-    None,
-    Additive,
-    Multiplicative,
+    NoSeason,
+    SeasonAdditive,
+    SeasonMultiplicative,
 }
 
 impl HoltWinters {
@@ -894,7 +933,7 @@ impl HoltWinters {
         seasonal_periods: usize,
         trend_type: TrendType,
         seasonal_type: SeasonalType,
-    ) -> Self {
+    ) -> HoltWinters {
         HoltWinters {
             alpha: alpha.clamp(0.0, 1.0),
             beta: beta.clamp(0.0, 1.0),
@@ -910,13 +949,13 @@ impl HoltWinters {
     }
 
     /// Simple exponential smoothing (no trend, no seasonality)
-    pub fn simple(alpha: f64) -> Self {
-        HoltWinters::new(alpha, 0.0, 0.0, 1, TrendType::None, SeasonalType::None)
+    pub fn simple(alpha: f64) -> HoltWinters {
+        HoltWinters::new(alpha, 0.0, 0.0, 1, TrendType::NoTrend, SeasonalType::NoSeason)
     }
 
     /// Double exponential smoothing (with trend)
-    pub fn double(alpha: f64, beta: f64) -> Self {
-        HoltWinters::new(alpha, beta, 0.0, 1, TrendType::Additive, SeasonalType::None)
+    pub fn double(alpha: f64, beta: f64) -> HoltWinters {
+        HoltWinters::new(alpha, beta, 0.0, 1, TrendType::TrendAdditive, SeasonalType::NoSeason)
     }
 
     /// Fit the model
@@ -930,7 +969,7 @@ impl HoltWinters {
         }
 
         // Initialize level and trend
-        if matches!(self.seasonal_type, SeasonalType::None) {
+        if matches!(self.seasonal_type, SeasonalType::NoSeason) {
             self.level = values[0];
         } else {
             // Average of first season
@@ -939,15 +978,15 @@ impl HoltWinters {
             // Initialize seasonal factors
             for i in 0..self.seasonal_periods {
                 self.seasonal[i] = match self.seasonal_type {
-                    SeasonalType::Additive => values[i] - self.level,
-                    SeasonalType::Multiplicative => values[i] / (self.level + 1e-10),
-                    SeasonalType::None => 0.0,
+                    SeasonalType::SeasonAdditive => values[i] - self.level,
+                    SeasonalType::SeasonMultiplicative => values[i] / (self.level + 1e-10),
+                    SeasonalType::NoSeason => 0.0,
                 };
             }
         }
 
         // Initialize trend
-        if matches!(self.trend_type, TrendType::Additive | TrendType::Multiplicative | TrendType::Damped) {
+        if matches!(self.trend_type, TrendType::TrendAdditive | TrendType::TrendMultiplicative | TrendType::Damped) {
             if n >= self.seasonal_periods * 2 {
                 let first_season: f64 = values[0..self.seasonal_periods].iter().sum::<f64>() / self.seasonal_periods as f64;
                 let second_season: f64 = values[self.seasonal_periods..2*self.seasonal_periods].iter().sum::<f64>() / self.seasonal_periods as f64;
@@ -966,43 +1005,43 @@ impl HoltWinters {
 
             // Update level
             let seasonal_adj = match self.seasonal_type {
-                SeasonalType::Additive => y - old_seasonal,
-                SeasonalType::Multiplicative => y / (old_seasonal + 1e-10),
-                SeasonalType::None => y,
+                SeasonalType::SeasonAdditive => y - old_seasonal,
+                SeasonalType::SeasonMultiplicative => y / (old_seasonal + 1e-10),
+                SeasonalType::NoSeason => y,
             };
 
             let trend_adj = match self.trend_type {
-                TrendType::Additive | TrendType::Damped => old_level + old_trend,
-                TrendType::Multiplicative => old_level * old_trend,
-                TrendType::None => old_level,
+                TrendType::TrendAdditive | TrendType::Damped => old_level + old_trend,
+                TrendType::TrendMultiplicative => old_level * old_trend,
+                TrendType::NoTrend => old_level,
             };
 
             self.level = self.alpha * seasonal_adj + (1.0 - self.alpha) * trend_adj;
 
             // Update trend
             match self.trend_type {
-                TrendType::Additive => {
+                TrendType::TrendAdditive => {
                     self.trend = self.beta * (self.level - old_level) + (1.0 - self.beta) * old_trend;
                 }
-                TrendType::Multiplicative => {
+                TrendType::TrendMultiplicative => {
                     self.trend = self.beta * (self.level / (old_level + 1e-10)) + (1.0 - self.beta) * old_trend;
                 }
                 TrendType::Damped => {
                     let phi = 0.9; // Damping parameter
                     self.trend = self.beta * (self.level - old_level) + (1.0 - self.beta) * phi * old_trend;
                 }
-                TrendType::None => {}
+                TrendType::NoTrend => {}
             }
 
             // Update seasonal
             match self.seasonal_type {
-                SeasonalType::Additive => {
+                SeasonalType::SeasonAdditive => {
                     self.seasonal[s_idx] = self.gamma * (y - self.level) + (1.0 - self.gamma) * old_seasonal;
                 }
-                SeasonalType::Multiplicative => {
+                SeasonalType::SeasonMultiplicative => {
                     self.seasonal[s_idx] = self.gamma * (y / (self.level + 1e-10)) + (1.0 - self.gamma) * old_seasonal;
                 }
-                SeasonalType::None => {}
+                SeasonalType::NoSeason => {}
             }
         }
 
@@ -1019,20 +1058,20 @@ impl HoltWinters {
             let s_idx = (h - 1) % self.seasonal_periods;
 
             let base = match self.trend_type {
-                TrendType::Additive => self.level + h as f64 * self.trend,
-                TrendType::Multiplicative => self.level * self.trend.powi(h as i32),
+                TrendType::TrendAdditive => self.level + h as f64 * self.trend,
+                TrendType::TrendMultiplicative => self.level * self.trend.powi(h as i32),
                 TrendType::Damped => {
                     let phi = 0.9;
                     let sum_phi: f64 = (1..=h).map(|i| phi.powi(i as i32)).sum();
                     self.level + sum_phi * self.trend
                 }
-                TrendType::None => self.level,
+                TrendType::NoTrend => self.level,
             };
 
             let forecast = match self.seasonal_type {
-                SeasonalType::Additive => base + self.seasonal[s_idx],
-                SeasonalType::Multiplicative => base * self.seasonal[s_idx],
-                SeasonalType::None => base,
+                SeasonalType::SeasonAdditive => base + self.seasonal[s_idx],
+                SeasonalType::SeasonMultiplicative => base * self.seasonal[s_idx],
+                SeasonalType::NoSeason => base,
             };
 
             forecasts.push(forecast);
@@ -1274,6 +1313,14 @@ impl PropheticEnsemble {
         }
     }
 
+    fn set_holt_winters(&mut self, hw: HoltWinters) {
+        self.holt_winters = Some(hw);
+    }
+
+    fn set_lstm(&mut self, lstm: LSTMForecaster) {
+        self.lstm = Some(lstm);
+    }
+
     /// Fit all ensemble models
     pub fn fit(&mut self, series: &TimeSeries) {
         // Auto-detect ARIMA order
@@ -1287,19 +1334,16 @@ impl PropheticEnsemble {
 
         // Holt-Winters with detected seasonality
         let seasonal_periods = self.detect_seasonality(series);
-        let mut hw = HoltWinters::new(
-            0.3, 0.1, 0.1,
-            seasonal_periods,
-            TrendType::Additive,
-            if seasonal_periods > 1 { SeasonalType::Additive } else { SeasonalType::None }
-        );
+        let seasonal_type = if seasonal_periods > 1 { SeasonalType::SeasonAdditive } else { SeasonalType::NoSeason };
+        let mut hw = HoltWinters::new(0.3, 0.1, 0.1, seasonal_periods, TrendType::TrendAdditive, seasonal_type);
         hw.fit(series);
-        self.holt_winters = Some(hw);
+        self.set_holt_winters(hw);
 
         // LSTM
-        let mut lstm = LSTMForecaster::new(min(20, series.len() / 2), 32, 42);
+        let lookback = min(20, series.len() / 2);
+        let mut lstm = LSTMForecaster::new(lookback, 32, 42);
         lstm.fit(series, 100, 0.01);
-        self.lstm = Some(lstm);
+        self.set_lstm(lstm);
 
         // Update weights based on validation performance
         if self.adaptive_weighting {
@@ -1613,17 +1657,19 @@ pub mod bayesian {
             }
 
             // Simple matrix inversion for small matrices
-            self.covariance = self.invert_matrix(&s_inv);
+            let cov = BayesianLinearRegression::invert_blr(&s_inv);
+            self.covariance = Tensor::from_vec(cov.data.clone(), cov.shape.clone());
 
             // Posterior mean: m = beta * S * X^T * y
             let xty = x_with_bias.transpose().matmul(&Tensor::from_vec(y.data.clone(), vec![n, 1]));
             let scaled_xty = xty.scale(self.beta);
-            self.mean = self.covariance.matmul(&scaled_xty);
+            let cov_tensor = Tensor::from_vec(cov.data.clone(), cov.shape.clone());
+            self.mean = cov_tensor.matmul(&scaled_xty);
 
             self.fitted = true;
         }
 
-        fn invert_matrix(&self, m: &Tensor) -> Tensor {
+        fn invert_blr(m: &Tensor) -> Tensor {
             let n = m.shape[0];
             let mut result = Tensor::zeros(vec![n, n]);
 
@@ -1734,7 +1780,7 @@ pub mod bayesian {
         }
 
         pub fn fit(&mut self, x: &Tensor, y: &Tensor) {
-            let n = x.numel();
+            let n = x.data.len();
 
             // Build covariance matrix
             let mut k = Tensor::zeros(vec![n, n]);
@@ -1795,11 +1841,11 @@ pub mod bayesian {
         pub fn predict(&self, x_test: &Tensor) -> (Vec<f64>, Vec<f64>) {
             let (x_train, y_train, k_inv) = match (&self.x_train, &self.y_train, &self.k_inv) {
                 (Some(x), Some(y), Some(k)) => (x, y, k),
-                _ => return (vec![0.0; x_test.numel()], vec![1.0; x_test.numel()]),
+                _ => return (vec![0.0; x_test.data.len()], vec![1.0; x_test.data.len()]),
             };
 
-            let n_train = x_train.numel();
-            let n_test = x_test.numel();
+            let n_train = x_train.data.len();
+            let n_test = x_test.data.len();
 
             let mut means = Vec::with_capacity(n_test);
             let mut stds = Vec::with_capacity(n_test);
@@ -2989,7 +3035,7 @@ pub mod gaussian_process {
 
         fn gradient(&self, x1: f64, x2: f64) -> Vec<f64> {
             let d = x1 - x2;
-            let k = self.compute(x1, x2);
+            let k = self.variance * (-0.5 * d * d / (self.length_scale * self.length_scale)).exp();
             let dl = k * d * d / (self.length_scale.powi(3));
             let dv = k / self.variance;
             vec![dl, dv]
@@ -3047,7 +3093,7 @@ pub mod gaussian_process {
     }
 
     /// Gaussian Process regressor
-    pub struct GaussianProcess {
+    pub struct GPGaussianProcess {
         kernel: Box<dyn Kernel>,
         noise: f64,
         x_train: Vec<f64>,
@@ -3057,7 +3103,7 @@ pub mod gaussian_process {
         fitted: bool,
     }
 
-    impl GaussianProcess {
+    impl GPGaussianProcess {
         pub fn new(kernel: Box<dyn Kernel>, noise: f64) -> Self {
             Self {
                 kernel,
@@ -3767,7 +3813,7 @@ pub mod deep_forecast {
     }
 
     /// LSTM cell for sequence modeling
-    pub struct LSTMCell {
+    pub struct DeepForecastLSTMCell {
         pub hidden_size: usize,
         pub input_size: usize,
         // Gate weights: input, forget, cell, output
@@ -3781,7 +3827,7 @@ pub mod deep_forecast {
         pub c: Vec<f64>,
     }
 
-    impl LSTMCell {
+    impl DeepForecastLSTMCell {
         pub fn new(input_size: usize, hidden_size: usize) -> Self {
             let scale = (2.0 / (input_size + hidden_size) as f64).sqrt();
             let mut rng_state = 12345u64;
@@ -3865,7 +3911,7 @@ pub mod deep_forecast {
 
     /// Multi-layer LSTM network
     pub struct LSTM {
-        pub layers: Vec<LSTMCell>,
+        pub layers: Vec<DeepForecastLSTMCell>,
         pub output_layer: DenseLayer,
         pub sequence_length: usize,
     }
@@ -3876,7 +3922,7 @@ pub mod deep_forecast {
             let mut prev_size = input_size;
 
             for &hidden in hidden_sizes {
-                layers.push(LSTMCell::new(prev_size, hidden));
+                layers.push(DeepForecastLSTMCell::new(prev_size, hidden));
                 prev_size = hidden;
             }
 
@@ -3894,13 +3940,16 @@ pub mod deep_forecast {
 
             for x in sequence {
                 let mut h = x.clone();
-                for layer in &mut self.layers {
-                    h = layer.forward(&h);
+                let n_layers = self.layers.len();
+                for idx in 0..n_layers {
+                    let next_h = self.layers[idx].forward(&h);
+                    h = next_h;
                 }
                 output = h;
             }
 
-            self.output_layer.forward(&output)
+            let final_out = output.clone();
+            self.output_layer.forward(&final_out)
         }
 
         pub fn forecast(&mut self, series: &TimeSeries, horizon: usize) -> Vec<f64> {
@@ -5601,7 +5650,7 @@ pub mod survival {
 
             match self.distribution {
                 AFTDistribution::Exponential | AFTDistribution::Weibull => {
-                    (lp + self.scale * 0.0_f64.ln_1p().abs()).exp()
+                    (lp + self.scale * log(1.0 + 0.0).abs()).exp()
                 },
                 AFTDistribution::LogNormal => lp.exp(),
                 AFTDistribution::LogLogistic => lp.exp(),
@@ -6502,29 +6551,29 @@ pub mod quantile {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// GAUSSIAN PROCESSES
+// ADVANCED GAUSSIAN PROCESSES
 // ═══════════════════════════════════════════════════════════════════════════════
 
-pub mod gaussian_process {
+pub mod advanced_gaussian_process {
     use super::*;
 
-    pub trait Kernel {
+    pub trait MultivariateKernel {
         fn compute(&self, x1: &[f64], x2: &[f64]) -> f64;
         fn gradient(&self, x1: &[f64], x2: &[f64]) -> Vec<f64>;
     }
 
-    pub struct RBFKernel {
+    pub struct AdvancedRBFKernel {
         pub length_scale: f64,
         pub variance: f64
     }
 
-    impl RBFKernel {
+    impl AdvancedRBFKernel {
         pub fn new(length_scale: f64, variance: f64) -> Self {
-            RBFKernel { length_scale, variance }
+            AdvancedRBFKernel { length_scale, variance }
         }
     }
 
-    impl Kernel for RBFKernel {
+    impl MultivariateKernel for AdvancedRBFKernel {
         fn compute(&self, x1: &[f64], x2: &[f64]) -> f64 {
             let sq_dist: f64 = x1.iter().zip(x2.iter())
                 .map(|(a, b)| (a - b).powi(2))
@@ -6533,10 +6582,10 @@ pub mod gaussian_process {
         }
 
         fn gradient(&self, x1: &[f64], x2: &[f64]) -> Vec<f64> {
-            let k = self.compute(x1, x2);
             let sq_dist: f64 = x1.iter().zip(x2.iter())
                 .map(|(a, b)| (a - b).powi(2))
                 .sum();
+            let k = self.variance * (-sq_dist / (2.0 * self.length_scale.powi(2))).exp();
             vec![
                 k * sq_dist / self.length_scale.powi(3),  // d/d(length_scale)
                 k / self.variance                          // d/d(variance)
@@ -6544,13 +6593,13 @@ pub mod gaussian_process {
         }
     }
 
-    pub struct MaternKernel {
+    pub struct AdvancedMaternKernel {
         pub length_scale: f64,
         pub variance: f64,
         pub nu: f64  // 0.5, 1.5, 2.5
     }
 
-    impl Kernel for MaternKernel {
+    impl MultivariateKernel for AdvancedMaternKernel {
         fn compute(&self, x1: &[f64], x2: &[f64]) -> f64 {
             let dist: f64 = x1.iter().zip(x2.iter())
                 .map(|(a, b)| (a - b).powi(2))
@@ -6573,13 +6622,13 @@ pub mod gaussian_process {
         }
     }
 
-    pub struct PeriodicKernel {
+    pub struct AdvancedPeriodicKernel {
         pub length_scale: f64,
         pub variance: f64,
         pub period: f64
     }
 
-    impl Kernel for PeriodicKernel {
+    impl MultivariateKernel for AdvancedPeriodicKernel {
         fn compute(&self, x1: &[f64], x2: &[f64]) -> f64 {
             let dist: f64 = x1.iter().zip(x2.iter())
                 .map(|(a, b)| (a - b).powi(2))
@@ -6595,7 +6644,7 @@ pub mod gaussian_process {
     }
 
     pub struct CompositeKernel {
-        pub kernels: Vec<Box<dyn Kernel>>,
+        pub kernels: Vec<Box<dyn MultivariateKernel>>,
         pub operation: KernelOp
     }
 
@@ -6604,7 +6653,7 @@ pub mod gaussian_process {
         Multiply
     }
 
-    impl Kernel for CompositeKernel {
+    impl MultivariateKernel for CompositeKernel {
         fn compute(&self, x1: &[f64], x2: &[f64]) -> f64 {
             match self.operation {
                 KernelOp::Add => self.kernels.iter().map(|k| k.compute(x1, x2)).sum(),
@@ -6617,7 +6666,7 @@ pub mod gaussian_process {
         }
     }
 
-    pub struct GaussianProcess<K: Kernel> {
+    pub struct AdvancedGaussianProcess<K: MultivariateKernel> {
         pub kernel: K,
         pub noise_variance: f64,
         x_train: Vec<Vec<f64>>,
@@ -6626,9 +6675,9 @@ pub mod gaussian_process {
         alpha: Vec<f64>
     }
 
-    impl<K: Kernel> GaussianProcess<K> {
+    impl<K: MultivariateKernel> AdvancedGaussianProcess<K> {
         pub fn new(kernel: K, noise_variance: f64) -> Self {
-            GaussianProcess {
+            AdvancedGaussianProcess {
                 kernel,
                 noise_variance,
                 x_train: Vec::new(),
@@ -6760,7 +6809,7 @@ pub mod gaussian_process {
                 }
                 k_uu[i][i] += 1e-6;
             }
-            self.k_uu_inv = GaussianProcess::<K>::cholesky_inverse(&k_uu);
+            self.k_uu_inv = AdvancedGaussianProcess::<K>::cholesky_inverse(&k_uu);
             let mut k_uf = vec![vec![0.0; x.len()]; m];
             for i in 0..m {
                 for j in 0..x.len() {
@@ -6769,7 +6818,7 @@ pub mod gaussian_process {
             }
             // Compute alpha = K_uu^{-1} K_uf y
             let k_uf_y: Vec<f64> = (0..m).map(|i| k_uf[i].iter().zip(y).map(|(k, yi)| k * yi).sum()).collect();
-            self.alpha = GaussianProcess::<K>::matrix_vec_mult(&self.k_uu_inv, &k_uf_y);
+            self.alpha = AdvancedGaussianProcess::<K>::matrix_vec_mult(&self.k_uu_inv, &k_uf_y);
         }
 
         fn select_inducing_points(x: &[Vec<f64>], m: usize) -> Vec<Vec<f64>> {
@@ -7356,11 +7405,11 @@ struct MultiHorizonForecaster {
     history: [f64]
 }
 
-trait Forecaster { fn forecast(self, history: [f64], horizon: usize) -> ForecastResult; fn update(mut self, value: f64); }
+trait Forecaster { fn forecast(self, history: [f64], horizon: usize) -> ChangepointForecastResult; fn update(mut self, value: f64); }
 
 enum CombinationMethod { Average, WeightedByHorizon, OptimalWeights([f64]) }
 
-struct ForecastResult {
+struct ChangepointForecastResult {
     point: f64,
     lower_bound: f64,
     upper_bound: f64,
@@ -7379,7 +7428,7 @@ impl MultiHorizonForecaster {
         self.models.insert(horizon, model);
     }
 
-    fn forecast_all(self) -> HashMap<usize, ForecastResult> {
+    fn forecast_all(self) -> HashMap<usize, ChangepointForecastResult> {
         let mut results = HashMap::new();
         for h in self.horizons.iter() {
             if let Some(model) = self.models.get(h) {
@@ -7396,15 +7445,15 @@ impl MultiHorizonForecaster {
         }
     }
 
-    fn combined_forecast(self, target_horizon: usize) -> ForecastResult {
+    fn combined_forecast(self, target_horizon: usize) -> ChangepointForecastResult {
         let relevant: Vec<_> = self.horizons.iter().filter(|h| **h <= target_horizon).collect();
-        if relevant.is_empty() { return ForecastResult { point: 0.0, lower_bound: 0.0, upper_bound: 0.0, confidence: 0.0 }; }
+        if relevant.is_empty() { return ChangepointForecastResult { point: 0.0, lower_bound: 0.0, upper_bound: 0.0, confidence: 0.0 }; }
 
         let forecasts: Vec<_> = relevant.iter().filter_map(|h| self.models.get(*h).map(|m| m.forecast(self.history.clone(), **h))).collect();
         match self.combination_method {
             Average => {
                 let n = forecasts.len() as f64;
-                ForecastResult {
+                ChangepointForecastResult {
                     point: forecasts.iter().map(|f| f.point).sum::<f64>() / n,
                     lower_bound: forecasts.iter().map(|f| f.lower_bound).sum::<f64>() / n,
                     upper_bound: forecasts.iter().map(|f| f.upper_bound).sum::<f64>() / n,
@@ -7415,11 +7464,11 @@ impl MultiHorizonForecaster {
                 let weights: Vec<_> = relevant.iter().map(|h| 1.0 / (**h as f64)).collect();
                 let total_w: f64 = weights.iter().sum();
                 let weighted_point = forecasts.iter().zip(weights.iter()).map(|(f, w)| f.point * w).sum::<f64>() / total_w;
-                ForecastResult { point: weighted_point, lower_bound: weighted_point * 0.9, upper_bound: weighted_point * 1.1, confidence: 0.8 }
+                ChangepointForecastResult { point: weighted_point, lower_bound: weighted_point * 0.9, upper_bound: weighted_point * 1.1, confidence: 0.8 }
             },
             OptimalWeights(ref w) => {
                 let weighted = forecasts.iter().zip(w.iter()).map(|(f, weight)| f.point * weight).sum();
-                ForecastResult { point: weighted, lower_bound: weighted * 0.9, upper_bound: weighted * 1.1, confidence: 0.85 }
+                ChangepointForecastResult { point: weighted, lower_bound: weighted * 0.9, upper_bound: weighted * 1.1, confidence: 0.85 }
             }
         }
     }
@@ -7428,11 +7477,11 @@ impl MultiHorizonForecaster {
 struct DirectForecaster { horizon: usize, model: LinearRegression, lookback: usize }
 
 impl Forecaster for DirectForecaster {
-    fn forecast(self, history: [f64], horizon: usize) -> ForecastResult {
-        if history.len() < self.lookback { return ForecastResult { point: 0.0, lower_bound: 0.0, upper_bound: 0.0, confidence: 0.0 }; }
+    fn forecast(self, history: [f64], horizon: usize) -> ChangepointForecastResult {
+        if history.len() < self.lookback { return ChangepointForecastResult { point: 0.0, lower_bound: 0.0, upper_bound: 0.0, confidence: 0.0 }; }
         let x: Vec<_> = history[history.len()-self.lookback..].to_vec();
         let pred = self.model.predict(&x);
-        ForecastResult { point: pred, lower_bound: pred * 0.9, upper_bound: pred * 1.1, confidence: 0.8 }
+        ChangepointForecastResult { point: pred, lower_bound: pred * 0.9, upper_bound: pred * 1.1, confidence: 0.8 }
     }
     fn update(mut self, value: f64) { /* Update model */ }
 }
@@ -7607,14 +7656,14 @@ impl OnlinePredictor {
                 *bias += self.learning_rate * error;
             },
             Adam { ref mut weights, ref mut bias, ref mut m, ref mut v, ref mut t } => {
-                *t += 1;
+                t += 1;
                 let beta1 = 0.9; let beta2 = 0.999; let eps = 1e-8;
                 for (i, (w, xi)) in weights.iter_mut().zip(x.iter()).enumerate() {
                     let grad = -error * xi;
                     m[i] = beta1 * m[i] + (1.0 - beta1) * grad;
                     v[i] = beta2 * v[i] + (1.0 - beta2) * grad * grad;
-                    let m_hat = m[i] / (1.0 - beta1.powi(*t as i32));
-                    let v_hat = v[i] / (1.0 - beta2.powi(*t as i32));
+                    let m_hat = m[i] / (1.0 - beta1.powi(t as i32));
+                    let v_hat = v[i] / (1.0 - beta2.powi(t as i32));
                     *w -= self.learning_rate * m_hat / (v_hat.sqrt() + eps);
                 }
                 *bias += self.learning_rate * error;
@@ -7849,7 +7898,7 @@ impl ODEFunc {
         for (i, (layer, bias)) in self.layers.iter().zip(self.biases.iter()).enumerate() {
             let out: Vec<f64> = (0..layer.len()).map(|j| {
                 let sum: f64 = x.iter().zip(layer[j].iter()).map(|(a,b)| a*b).sum::<f64>() + bias[j];
-                if i < self.layers.len() - 1 { tanh(sum) } else { sum }
+                if i < self.layers.len() - 1 { sum.tanh() } else { sum }
             }).collect();
             x = out;
         }
@@ -7943,7 +7992,7 @@ struct VAEEncoder {
 impl VAEEncoder {
     fn new(input_dim: usize, hidden_dim: usize, latent_dim: usize) -> VAEEncoder {
         VAEEncoder {
-            lstm: LSTMCell::new(input_dim, hidden_dim),
+            lstm: LSTMCell::new(input_dim, hidden_dim, 42),
             fc_mu: (0..latent_dim).map(|_| (0..hidden_dim).map(|_| random_normal(0.0, 0.02)).collect()).collect(),
             fc_logvar: (0..latent_dim).map(|_| (0..hidden_dim).map(|_| random_normal(0.0, 0.02)).collect()).collect(),
             mu_bias: vec![0.0; latent_dim], logvar_bias: vec![0.0; latent_dim],
@@ -7955,8 +8004,11 @@ impl VAEEncoder {
         let mut h = vec![0.0; self.hidden_dim];
         let mut c = vec![0.0; self.hidden_dim];
         for t in 0..x.len() {
-            let (new_h, new_c) = self.lstm.forward(x[t].clone(), h, c);
-            h = new_h; c = new_c;
+            let x_t = Tensor::from_vec(x[t].clone(), vec![x[t].len()]);
+            let h_t = Tensor::from_vec(h.clone(), vec![h.len()]);
+            let c_t = Tensor::from_vec(c.clone(), vec![c.len()]);
+            let (new_h, new_c) = self.lstm.forward(&x_t, &h_t, &c_t);
+            h = new_h.data; c = new_c.data;
         }
         let mu: Vec<f64> = (0..self.latent_dim).map(|i| {
             self.mu_bias[i] + h.iter().zip(self.fc_mu[i].iter()).map(|(a,b)| a*b).sum::<f64>()
@@ -7989,7 +8041,7 @@ impl VAEDecoder {
         VAEDecoder {
             fc_init: (0..hidden_dim).map(|_| (0..latent_dim).map(|_| random_normal(0.0, 0.02)).collect()).collect(),
             init_bias: vec![0.0; hidden_dim],
-            lstm: LSTMCell::new(output_dim, hidden_dim),
+            lstm: LSTMCell::new(output_dim, hidden_dim, 43),
             fc_out: (0..output_dim).map(|_| (0..hidden_dim).map(|_| random_normal(0.0, 0.02)).collect()).collect(),
             out_bias: vec![0.0; output_dim], hidden_dim: hidden_dim, output_dim: output_dim
         }
@@ -8005,8 +8057,11 @@ impl VAEDecoder {
         let mut curr_c = c;
         let mut prev_out = vec![0.0; self.output_dim];
         for _ in 0..seq_len {
-            let (new_h, new_c) = self.lstm.forward(prev_out.clone(), curr_h, curr_c);
-            curr_h = new_h; curr_c = new_c;
+            let x_t = Tensor::from_vec(prev_out.clone(), vec![prev_out.len()]);
+            let h_t = Tensor::from_vec(curr_h.clone(), vec![curr_h.len()]);
+            let c_t = Tensor::from_vec(curr_c.clone(), vec![curr_c.len()]);
+            let (new_h, new_c) = self.lstm.forward(&x_t, &h_t, &c_t);
+            curr_h = new_h.data; curr_c = new_c.data;
             let out: Vec<f64> = (0..self.output_dim).map(|i| {
                 self.out_bias[i] + curr_h.iter().zip(self.fc_out[i].iter()).map(|(a,b)| a*b).sum::<f64>()
             }).collect();
@@ -8082,8 +8137,8 @@ impl PlanarFlow {
         }
     }
 
-    fn h(self, x: f64) -> f64 { tanh(x) }
-    fn h_prime(self, x: f64) -> f64 { 1.0 - tanh(x).powi(2) }
+    fn h(self, x: f64) -> f64 { x.tanh() }
+    fn h_prime(self, x: f64) -> f64 { 1.0 - x.tanh().powi(2) }
 }
 
 impl Flow for PlanarFlow {
@@ -8391,8 +8446,8 @@ impl NeuralHawkes {
             let dt = t - prev_t;
             let mut input = vec![dt];
             for i in 0..self.n_marks { input.push(if i == *k { 1.0 } else { 0.0 }); }
-            h = self.rnn.forward(input, h.clone());
-            prev_t = *t;
+            h = self.rnn.forward(&input);
+            prev_t = t;
         }
         (0..self.n_marks).map(|i| {
             let raw = self.intensity_bias[i] + h.iter().zip(self.intensity_net[i].iter()).map(|(a,b)| a*b).sum::<f64>();
@@ -8412,8 +8467,8 @@ impl NeuralHawkes {
             let dt = t - prev_t;
             let mut input = vec![dt];
             for i in 0..self.n_marks { input.push(if i == *k { 1.0 } else { 0.0 }); }
-            h = self.rnn.forward(input, h);
-            prev_t = *t;
+            h = self.rnn.forward(&input);
+            prev_t = t;
         }
         let final_integral = self.integrate_intensity(prev_t, t_max, h);
         ll -= final_integral;
@@ -8455,7 +8510,7 @@ impl NeuralHawkes {
             events.push((t, k));
             let mut input = vec![dt];
             for i in 0..self.n_marks { input.push(if i == k { 1.0 } else { 0.0 }); }
-            h = self.rnn.forward(input, h);
+            h = self.rnn.forward(&input);
         }
         events
     }
@@ -8849,7 +8904,7 @@ impl CWT {
         let n = signal.len();
         let kernel = self.wavelet_kernel(scale, n);
         (0..n).map(|i| {
-            (0..n).map(|j| signal[j] * kernel[(i as isize - j as isize).rem_euclid(n as isize) as usize]).sum()
+            (0..n).map(|j| { let idx = ((i as isize - j as isize) % n as isize + n as isize) % n as isize; signal[j] * kernel[idx as usize] }).sum()
         }).collect()
     }
 
@@ -9175,7 +9230,7 @@ impl<T: ConditionalIndependenceTest> PCAlgorithm<T> {
         }
 
         // Phase 2: Orient v-structures (simplified)
-        let mut directed = vec![vec![EdgeType::None; n_vars]; n_vars];
+        let mut directed = vec![vec![EdgeType::NoEdge; n_vars]; n_vars];
         for i in 0..n_vars {
             for j in 0..n_vars {
                 if adj[i][j] { directed[i][j] = EdgeType::Undirected; }
@@ -9200,7 +9255,7 @@ impl<T: ConditionalIndependenceTest> PCAlgorithm<T> {
 }
 
 #[derive(Clone, Copy, PartialEq)]
-pub enum EdgeType { None, Undirected, Directed, Bidirected }
+pub enum EdgeType { NoEdge, Undirected, Directed, Bidirected }
 
 /// Learned causal graph
 pub struct CausalGraph {
@@ -9219,7 +9274,7 @@ impl CausalGraph {
     }
 
     pub fn neighbors(&self, node: usize) -> Vec<usize> {
-        (0..self.n_vars).filter(|&i| self.edges[node][i] != EdgeType::None || self.edges[i][node] != EdgeType::None).collect()
+        (0..self.n_vars).filter(|&i| self.edges[node][i] != EdgeType::NoEdge || self.edges[i][node] != EdgeType::NoEdge).collect()
     }
 }
 
@@ -9292,7 +9347,7 @@ pub struct GrangerResult {
 /// Neural Prophet-style forecaster
 pub struct NeuralProphet {
     trend: TrendComponent,
-    seasonality: Vec<SeasonalityComponent>,
+    seasonality: Vec<ChangepointSeasonalityComponent>,
     regressors: Vec<RegressorComponent>,
     ar_order: usize,
     learning_rate: f64,
@@ -9309,7 +9364,7 @@ struct SeasonalityParams { coefficients: Vec<(f64, f64)> }
 pub enum TrendComponent { Linear, Logistic { cap: f64, floor: f64 }, Piecewise { n_changepoints: usize } }
 
 #[derive(Clone)]
-pub struct SeasonalityComponent {
+pub struct ChangepointSeasonalityComponent {
     pub name: String,
     pub period: f64,
     pub fourier_order: usize,
@@ -9326,8 +9381,8 @@ impl NeuralProphet {
         Self {
             trend: TrendComponent::Linear,
             seasonality: vec![
-                SeasonalityComponent { name: "yearly".into(), period: 365.25, fourier_order: 10 },
-                SeasonalityComponent { name: "weekly".into(), period: 7.0, fourier_order: 3 },
+                ChangepointSeasonalityComponent { name: "yearly".into(), period: 365.25, fourier_order: 10 },
+                ChangepointSeasonalityComponent { name: "weekly".into(), period: 7.0, fourier_order: 3 },
             ],
             regressors: Vec::new(),
             ar_order: 0,
@@ -9342,7 +9397,7 @@ impl NeuralProphet {
     pub fn with_trend(mut self, trend: TrendComponent) -> Self { self.trend = trend; self }
     pub fn with_ar(mut self, order: usize) -> Self { self.ar_order = order; self }
     pub fn add_seasonality(mut self, name: &str, period: f64, order: usize) -> Self {
-        self.seasonality.push(SeasonalityComponent { name: name.into(), period, fourier_order: order }); self
+        self.seasonality.push(ChangepointSeasonalityComponent { name: name.into(), period, fourier_order: order }); self
     }
     pub fn add_regressor(mut self, name: &str, mode: RegressorMode) -> Self {
         self.regressors.push(RegressorComponent { name: name.into(), mode }); self
@@ -9584,33 +9639,33 @@ pub mod ensemble {
     pub struct EnsembleForecaster {
         models: Vec<Box<dyn Forecaster>>,
         weights: Vec<f64>,
-        pub combination: CombinationMethod,
+        pub combination: EnsembleCombinationMethod,
     }
 
     #[derive(Clone, Copy)]
-    pub enum CombinationMethod { Simple, Weighted, Median, Trimmed(f64), OptimalWeights }
+    pub enum EnsembleCombinationMethod { Simple, Weighted, Median, Trimmed(f64), OptimalWeights }
 
     impl EnsembleForecaster {
-        pub fn new() -> Self { Self { models: Vec::new(), weights: Vec::new(), combination: CombinationMethod::Simple } }
+        pub fn new() -> Self { Self { models: Vec::new(), weights: Vec::new(), combination: EnsembleCombinationMethod::Simple } }
         pub fn add_model(&mut self, model: Box<dyn Forecaster>, weight: f64) { self.models.push(model); self.weights.push(weight); }
 
         pub fn forecast(&self, data: &[f64], horizon: usize) -> Vec<f64> {
             if self.models.is_empty() { return vec![0.0; horizon]; }
             let forecasts: Vec<Vec<f64>> = self.models.iter().map(|m| m.forecast(data, horizon)).collect();
             match self.combination {
-                CombinationMethod::Simple => (0..horizon).map(|h| forecasts.iter().map(|f| f.get(h).copied().unwrap_or(0.0)).sum::<f64>() / self.models.len() as f64).collect(),
-                CombinationMethod::Weighted => {
+                EnsembleCombinationMethod::Simple => (0..horizon).map(|h| forecasts.iter().map(|f| f.get(h).copied().unwrap_or(0.0)).sum::<f64>() / self.models.len() as f64).collect(),
+                EnsembleCombinationMethod::Weighted => {
                     let w_sum: f64 = self.weights.iter().sum();
                     (0..horizon).map(|h| forecasts.iter().zip(&self.weights).map(|(f, &w)| f.get(h).copied().unwrap_or(0.0) * w).sum::<f64>() / w_sum.max(1e-10)).collect()
                 }
-                CombinationMethod::Median => {
+                EnsembleCombinationMethod::Median => {
                     (0..horizon).map(|h| { let mut vals: Vec<f64> = forecasts.iter().filter_map(|f| f.get(h).copied()).collect(); vals.sort_by(|a, b| a.partial_cmp(b).unwrap()); vals.get(vals.len() / 2).copied().unwrap_or(0.0) }).collect()
                 }
-                CombinationMethod::Trimmed(pct) => {
+                EnsembleCombinationMethod::Trimmed(pct) => {
                     let trim = ((self.models.len() as f64 * pct) / 2.0).floor() as usize;
                     (0..horizon).map(|h| { let mut vals: Vec<f64> = forecasts.iter().filter_map(|f| f.get(h).copied()).collect(); vals.sort_by(|a, b| a.partial_cmp(b).unwrap()); let n = vals.len(); if n > 2 * trim { vals[trim..n - trim].iter().sum::<f64>() / (n - 2 * trim) as f64 } else { vals.iter().sum::<f64>() / n.max(1) as f64 } }).collect()
                 }
-                CombinationMethod::OptimalWeights => self.forecast_optimal_weights(&forecasts, horizon),
+                EnsembleCombinationMethod::OptimalWeights => self.forecast_optimal_weights(&forecasts, horizon),
             }
         }
 
@@ -9646,11 +9701,11 @@ pub mod ensemble {
         }
     }
 
-    pub struct ModelSelector { models: Vec<(String, Box<dyn Forecaster>)>, pub selection_criterion: SelectionCriterion }
+    pub struct EnsembleModelSelector { models: Vec<(String, Box<dyn Forecaster>)>, pub selection_criterion: SelectionCriterion }
     #[derive(Clone, Copy)]
     pub enum SelectionCriterion { AIC, BIC, RMSE, MAE, MAPE }
 
-    impl ModelSelector {
+    impl EnsembleModelSelector {
         pub fn new(criterion: SelectionCriterion) -> Self { Self { models: Vec::new(), selection_criterion: criterion } }
         pub fn add_candidate(&mut self, name: &str, model: Box<dyn Forecaster>) { self.models.push((name.to_string(), model)); }
 
@@ -10285,13 +10340,13 @@ pub mod ensemble {
 pub mod deep_learning {
     use std::collections::VecDeque;
 
-    pub struct Tensor {
+    pub struct DeepLearningTensor {
         pub data: Vec<f64>,
         pub shape: Vec<usize>,
         pub requires_grad: bool,
         pub grad: Option<Vec<f64>>,
     }
-    impl Tensor {
+    impl DeepLearningTensor {
         pub fn new(data: Vec<f64>, shape: Vec<usize>) -> Self { Self { data, shape, requires_grad: false, grad: None } }
         pub fn zeros(shape: Vec<usize>) -> Self {
             let size: usize = shape.iter().product();
@@ -10309,35 +10364,35 @@ pub mod deep_learning {
         }
         pub fn numel(&self) -> usize { self.shape.iter().product() }
         pub fn reshape(&self, new_shape: Vec<usize>) -> Self { Self::new(self.data.clone(), new_shape) }
-        pub fn add(&self, other: &Tensor) -> Tensor { Tensor::new(self.data.iter().zip(&other.data).map(|(a, b)| a + b).collect(), self.shape.clone()) }
-        pub fn mul(&self, other: &Tensor) -> Tensor { Tensor::new(self.data.iter().zip(&other.data).map(|(a, b)| a * b).collect(), self.shape.clone()) }
-        pub fn scale(&self, s: f64) -> Tensor { Tensor::new(self.data.iter().map(|x| x * s).collect(), self.shape.clone()) }
-        pub fn matmul(&self, other: &Tensor) -> Tensor {
+        pub fn add(&self, other: &DeepLearningTensor) -> DeepLearningTensor { DeepLearningTensor::new(self.data.iter().zip(&other.data).map(|(a, b)| a + b).collect(), self.shape.clone()) }
+        pub fn mul(&self, other: &DeepLearningTensor) -> DeepLearningTensor { DeepLearningTensor::new(self.data.iter().zip(&other.data).map(|(a, b)| a * b).collect(), self.shape.clone()) }
+        pub fn scale(&self, s: f64) -> DeepLearningTensor { DeepLearningTensor::new(self.data.iter().map(|x| x * s).collect(), self.shape.clone()) }
+        pub fn matmul(&self, other: &DeepLearningTensor) -> DeepLearningTensor {
             let m = self.shape[0];
             let k = self.shape[1];
             let n = other.shape[1];
             let mut result = vec![0.0; m * n];
             for i in 0..m { for j in 0..n { for l in 0..k { result[i * n + j] += self.data[i * k + l] * other.data[l * n + j]; } } }
-            Tensor::new(result, vec![m, n])
+            DeepLearningTensor::new(result, vec![m, n])
         }
-        pub fn transpose(&self) -> Tensor {
+        pub fn transpose(&self) -> DeepLearningTensor {
             let m = self.shape[0];
             let n = self.shape[1];
             let mut result = vec![0.0; m * n];
             for i in 0..m { for j in 0..n { result[j * m + i] = self.data[i * n + j]; } }
-            Tensor::new(result, vec![n, m])
+            DeepLearningTensor::new(result, vec![n, m])
         }
     }
 
-    pub struct Linear { pub weights: Tensor, pub bias: Tensor, pub in_features: usize, pub out_features: usize }
+    pub struct Linear { pub weights: DeepLearningTensor, pub bias: DeepLearningTensor, pub in_features: usize, pub out_features: usize }
     impl Linear {
         pub fn new(in_f: usize, out_f: usize, rng: &mut u64) -> Self {
             let scale = (2.0 / in_f as f64).sqrt();
-            let weights = Tensor::randn(vec![in_f, out_f], rng).scale(scale);
-            let bias = Tensor::zeros(vec![out_f]);
+            let weights = DeepLearningTensor::randn(vec![in_f, out_f], rng).scale(scale);
+            let bias = DeepLearningTensor::zeros(vec![out_f]);
             Self { weights, bias, in_features: in_f, out_features: out_f }
         }
-        pub fn forward(&self, x: &Tensor) -> Tensor {
+        pub fn forward(&self, x: &DeepLearningTensor) -> DeepLearningTensor {
             let batch = x.shape[0];
             let mut output = x.matmul(&self.weights);
             for i in 0..batch { for j in 0..self.out_features { output.data[i * self.out_features + j] += self.bias.data[j]; } }
@@ -10346,15 +10401,15 @@ pub mod deep_learning {
     }
 
     #[derive(Clone, Copy)]
-    pub enum Activation { ReLU, Sigmoid, Tanh, GELU, Swish, Softmax }
-    pub fn activate(x: &Tensor, act: Activation) -> Tensor {
+    pub enum DeepActivation { ReLU, Sigmoid, Tanh, GELU, Swish, Softmax }
+    pub fn activate(x: &DeepLearningTensor, act: DeepActivation) -> DeepLearningTensor {
         match act {
-            Activation::ReLU => Tensor::new(x.data.iter().map(|&v| v.max(0.0)).collect(), x.shape.clone()),
-            Activation::Sigmoid => Tensor::new(x.data.iter().map(|&v| 1.0 / (1.0 + (-v).exp())).collect(), x.shape.clone()),
-            Activation::Tanh => Tensor::new(x.data.iter().map(|&v| v.tanh()).collect(), x.shape.clone()),
-            Activation::GELU => Tensor::new(x.data.iter().map(|&v| 0.5 * v * (1.0 + (0.7978845608 * (v + 0.044715 * v.powi(3))).tanh())).collect(), x.shape.clone()),
-            Activation::Swish => Tensor::new(x.data.iter().map(|&v| v / (1.0 + (-v).exp())).collect(), x.shape.clone()),
-            Activation::Softmax => {
+            DeepActivation::ReLU => DeepLearningTensor::new(x.data.iter().map(|&v| v.max(0.0)).collect(), x.shape.clone()),
+            DeepActivation::Sigmoid => DeepLearningTensor::new(x.data.iter().map(|&v| 1.0 / (1.0 + (-v).exp())).collect(), x.shape.clone()),
+            DeepActivation::Tanh => DeepLearningTensor::new(x.data.iter().map(|&v| v.tanh()).collect(), x.shape.clone()),
+            DeepActivation::GELU => DeepLearningTensor::new(x.data.iter().map(|&v| 0.5 * v * (1.0 + (0.7978845608 * (v + 0.044715 * v.powi(3))).tanh())).collect(), x.shape.clone()),
+            DeepActivation::Swish => DeepLearningTensor::new(x.data.iter().map(|&v| v / (1.0 + (-v).exp())).collect(), x.shape.clone()),
+            DeepActivation::Softmax => {
                 let batch = x.shape[0];
                 let dim = x.shape[1];
                 let mut result = x.data.clone();
@@ -10364,15 +10419,15 @@ pub mod deep_learning {
                     let exp_sum: f64 = row.iter().map(|&v| (v - max_val).exp()).sum();
                     for j in 0..dim { result[b * dim + j] = (row[j] - max_val).exp() / exp_sum; }
                 }
-                Tensor::new(result, x.shape.clone())
+                DeepLearningTensor::new(result, x.shape.clone())
             }
         }
     }
 
-    pub struct LayerNorm { pub gamma: Tensor, pub beta: Tensor, pub eps: f64 }
+    pub struct LayerNorm { pub gamma: DeepLearningTensor, pub beta: DeepLearningTensor, pub eps: f64 }
     impl LayerNorm {
-        pub fn new(dim: usize) -> Self { Self { gamma: Tensor::new(vec![1.0; dim], vec![dim]), beta: Tensor::zeros(vec![dim]), eps: 1e-5 } }
-        pub fn forward(&self, x: &Tensor) -> Tensor {
+        pub fn new(dim: usize) -> Self { Self { gamma: DeepLearningTensor::new(vec![1.0; dim], vec![dim]), beta: DeepLearningTensor::zeros(vec![dim]), eps: 1e-5 } }
+        pub fn forward(&self, x: &DeepLearningTensor) -> DeepLearningTensor {
             let batch = x.shape[0];
             let dim = x.shape[1];
             let mut result = vec![0.0; batch * dim];
@@ -10383,24 +10438,24 @@ pub mod deep_learning {
                 let std = (var + self.eps).sqrt();
                 for j in 0..dim { result[b * dim + j] = (row[j] - mean) / std * self.gamma.data[j] + self.beta.data[j]; }
             }
-            Tensor::new(result, x.shape.clone())
+            DeepLearningTensor::new(result, x.shape.clone())
         }
     }
 
     pub struct Dropout { pub rate: f64, pub training: bool, rng_state: u64 }
     impl Dropout {
         pub fn new(rate: f64) -> Self { Self { rate, training: true, rng_state: 42 } }
-        pub fn forward(&mut self, x: &Tensor) -> Tensor {
+        pub fn forward(&mut self, x: &DeepLearningTensor) -> DeepLearningTensor {
             if !self.training { return x.clone(); }
             let scale = 1.0 / (1.0 - self.rate);
             let data: Vec<f64> = x.data.iter().map(|&v| {
                 self.rng_state ^= self.rng_state << 13; self.rng_state ^= self.rng_state >> 7; self.rng_state ^= self.rng_state << 17;
                 if (self.rng_state as f64 / u64::MAX as f64) > self.rate { v * scale } else { 0.0 }
             }).collect();
-            Tensor::new(data, x.shape.clone())
+            DeepLearningTensor::new(data, x.shape.clone())
         }
     }
-    impl Clone for Tensor { fn clone(&self) -> Self { Self { data: self.data.clone(), shape: self.shape.clone(), requires_grad: self.requires_grad, grad: self.grad.clone() } } }
+    impl Clone for DeepLearningTensor { fn clone(&self) -> Self { Self { data: self.data.clone(), shape: self.shape.clone(), requires_grad: self.requires_grad, grad: self.grad.clone() } } }
 
     pub struct MultiHeadAttention {
         pub d_model: usize,
@@ -10416,7 +10471,7 @@ pub mod deep_learning {
             let d_head = d_model / n_heads;
             Self { d_model, n_heads, d_head, wq: Linear::new(d_model, d_model, rng), wk: Linear::new(d_model, d_model, rng), wv: Linear::new(d_model, d_model, rng), wo: Linear::new(d_model, d_model, rng) }
         }
-        pub fn forward(&self, q: &Tensor, k: &Tensor, v: &Tensor, mask: Option<&Tensor>) -> Tensor {
+        pub fn forward(&self, q: &DeepLearningTensor, k: &DeepLearningTensor, v: &DeepLearningTensor, mask: Option<&DeepLearningTensor>) -> DeepLearningTensor {
             let batch = q.shape[0];
             let seq_len = q.shape[1];
             let q_proj = self.wq.forward(q);
@@ -10425,7 +10480,7 @@ pub mod deep_learning {
             let scale = (self.d_head as f64).sqrt();
             let mut scores = q_proj.matmul(&k_proj.transpose()).scale(1.0 / scale);
             if let Some(m) = mask { scores = scores.add(m); }
-            let attn = activate(&scores, Activation::Softmax);
+            let attn = activate(&scores, DeepActivation::Softmax);
             let context = attn.matmul(&v_proj);
             self.wo.forward(&context)
         }
@@ -10443,31 +10498,35 @@ pub mod deep_learning {
         pub fn new(d_model: usize, n_heads: usize, ff_dim: usize, dropout_rate: f64, rng: &mut u64) -> Self {
             Self { attention: MultiHeadAttention::new(d_model, n_heads, rng), norm1: LayerNorm::new(d_model), norm2: LayerNorm::new(d_model), ff1: Linear::new(d_model, ff_dim, rng), ff2: Linear::new(ff_dim, d_model, rng), dropout: Dropout::new(dropout_rate) }
         }
-        pub fn forward(&mut self, x: &Tensor, mask: Option<&Tensor>) -> Tensor {
+        pub fn forward(&mut self, x: &DeepLearningTensor, mask: Option<&DeepLearningTensor>) -> DeepLearningTensor {
             let attn_out = self.attention.forward(x, x, x, mask);
             let x1 = self.norm1.forward(&x.add(&self.dropout.forward(&attn_out)));
-            let ff_out = self.ff2.forward(&activate(&self.ff1.forward(&x1), Activation::GELU));
+            let ff_out = self.ff2.forward(&activate(&self.ff1.forward(&x1), DeepActivation::GELU));
             self.norm2.forward(&x1.add(&self.dropout.forward(&ff_out)))
         }
     }
 
-    pub struct TransformerEncoder {
+    pub struct DeepLearningTransformerEncoder {
         pub layers: Vec<TransformerBlock>,
         pub d_model: usize,
     }
-    impl TransformerEncoder {
+    impl DeepLearningTransformerEncoder {
         pub fn new(n_layers: usize, d_model: usize, n_heads: usize, ff_dim: usize, dropout: f64, rng: &mut u64) -> Self {
             let layers = (0..n_layers).map(|_| TransformerBlock::new(d_model, n_heads, ff_dim, dropout, rng)).collect();
             Self { layers, d_model }
         }
-        pub fn forward(&mut self, x: &Tensor, mask: Option<&Tensor>) -> Tensor {
+        pub fn forward(&mut self, x: &DeepLearningTensor, mask: Option<&DeepLearningTensor>) -> DeepLearningTensor {
             let mut out = x.clone();
-            for layer in &mut self.layers { out = layer.forward(&out, mask); }
+            let n_layers = self.layers.len();
+            for idx in 0..n_layers {
+                let next_out = self.layers[idx].forward(&out, mask);
+                out = next_out;
+            }
             out
         }
     }
 
-    pub struct PositionalEncoding { pub max_len: usize, pub d_model: usize, pub encodings: Tensor }
+    pub struct PositionalEncoding { pub max_len: usize, pub d_model: usize, pub encodings: DeepLearningTensor }
     impl PositionalEncoding {
         pub fn new(max_len: usize, d_model: usize) -> Self {
             let mut data = vec![0.0; max_len * d_model];
@@ -10477,26 +10536,26 @@ pub mod deep_learning {
                     data[pos * d_model + i] = if i % 2 == 0 { angle.sin() } else { angle.cos() };
                 }
             }
-            Self { max_len, d_model, encodings: Tensor::new(data, vec![max_len, d_model]) }
+            Self { max_len, d_model, encodings: DeepLearningTensor::new(data, vec![max_len, d_model]) }
         }
-        pub fn forward(&self, x: &Tensor) -> Tensor {
+        pub fn forward(&self, x: &DeepLearningTensor) -> DeepLearningTensor {
             let seq_len = x.shape[0].min(self.max_len);
-            let pe = Tensor::new(self.encodings.data[..seq_len * self.d_model].to_vec(), vec![seq_len, self.d_model]);
+            let pe = DeepLearningTensor::new(self.encodings.data[..seq_len * self.d_model].to_vec(), vec![seq_len, self.d_model]);
             x.add(&pe)
         }
     }
 
-    pub struct LSTMCell {
+    pub struct DeepLearningLSTMCell {
         pub input_size: usize,
         pub hidden_size: usize,
         wi: Linear,
         wh: Linear,
     }
-    impl LSTMCell {
+    impl DeepLearningLSTMCell {
         pub fn new(input_size: usize, hidden_size: usize, rng: &mut u64) -> Self {
             Self { input_size, hidden_size, wi: Linear::new(input_size, 4 * hidden_size, rng), wh: Linear::new(hidden_size, 4 * hidden_size, rng) }
         }
-        pub fn forward(&self, x: &Tensor, h: &Tensor, c: &Tensor) -> (Tensor, Tensor) {
+        pub fn forward(&self, x: &DeepLearningTensor, h: &DeepLearningTensor, c: &DeepLearningTensor) -> (DeepLearningTensor, DeepLearningTensor) {
             let gates = self.wi.forward(x).add(&self.wh.forward(h));
             let h_size = self.hidden_size;
             let batch = x.shape[0];
@@ -10512,11 +10571,11 @@ pub mod deep_learning {
                     new_h[b * h_size + i] = og * new_c[b * h_size + i].tanh();
                 }
             }
-            (Tensor::new(new_h, vec![batch, h_size]), Tensor::new(new_c, vec![batch, h_size]))
+            (DeepLearningTensor::new(new_h, vec![batch, h_size]), DeepLearningTensor::new(new_c, vec![batch, h_size]))
         }
     }
 
-    pub struct GRUCell {
+    pub struct DeepLearningGRUCell {
         pub input_size: usize,
         pub hidden_size: usize,
         wir: Linear,
@@ -10524,11 +10583,11 @@ pub mod deep_learning {
         win: Linear,
         whn: Linear,
     }
-    impl GRUCell {
+    impl DeepLearningGRUCell {
         pub fn new(input_size: usize, hidden_size: usize, rng: &mut u64) -> Self {
             Self { input_size, hidden_size, wir: Linear::new(input_size, 2 * hidden_size, rng), whr: Linear::new(hidden_size, 2 * hidden_size, rng), win: Linear::new(input_size, hidden_size, rng), whn: Linear::new(hidden_size, hidden_size, rng) }
         }
-        pub fn forward(&self, x: &Tensor, h: &Tensor) -> Tensor {
+        pub fn forward(&self, x: &DeepLearningTensor, h: &DeepLearningTensor) -> DeepLearningTensor {
             let gates = self.wir.forward(x).add(&self.whr.forward(h));
             let h_size = self.hidden_size;
             let batch = x.shape[0];
@@ -10543,7 +10602,7 @@ pub mod deep_learning {
                     new_h[b * h_size + i] = (1.0 - z) * n + z * h.data[b * h_size + i];
                 }
             }
-            Tensor::new(new_h, vec![batch, h_size])
+            DeepLearningTensor::new(new_h, vec![batch, h_size])
         }
     }
 
@@ -10551,17 +10610,17 @@ pub mod deep_learning {
         pub in_channels: usize,
         pub out_channels: usize,
         pub kernel_size: usize,
-        pub weights: Tensor,
-        pub bias: Tensor,
+        pub weights: DeepLearningTensor,
+        pub bias: DeepLearningTensor,
     }
     impl Conv1D {
         pub fn new(in_ch: usize, out_ch: usize, kernel: usize, rng: &mut u64) -> Self {
             let scale = (2.0 / (in_ch * kernel) as f64).sqrt();
-            let weights = Tensor::randn(vec![out_ch, in_ch, kernel], rng).scale(scale);
-            let bias = Tensor::zeros(vec![out_ch]);
+            let weights = DeepLearningTensor::randn(vec![out_ch, in_ch, kernel], rng).scale(scale);
+            let bias = DeepLearningTensor::zeros(vec![out_ch]);
             Self { in_channels: in_ch, out_channels: out_ch, kernel_size: kernel, weights, bias }
         }
-        pub fn forward(&self, x: &Tensor) -> Tensor {
+        pub fn forward(&self, x: &DeepLearningTensor) -> DeepLearningTensor {
             let batch = x.shape[0];
             let seq_len = x.shape[1];
             let out_len = seq_len - self.kernel_size + 1;
@@ -10579,7 +10638,7 @@ pub mod deep_learning {
                     }
                 }
             }
-            Tensor::new(result, vec![batch, out_len, self.out_channels])
+            DeepLearningTensor::new(result, vec![batch, out_len, self.out_channels])
         }
     }
 
@@ -10592,8 +10651,8 @@ pub mod deep_learning {
         pub fn new(dim: usize, rng: &mut u64) -> Self {
             Self { layer1: Linear::new(dim, dim, rng), layer2: Linear::new(dim, dim, rng), norm: LayerNorm::new(dim) }
         }
-        pub fn forward(&self, x: &Tensor) -> Tensor {
-            let h = activate(&self.layer1.forward(x), Activation::ReLU);
+        pub fn forward(&self, x: &DeepLearningTensor) -> DeepLearningTensor {
+            let h = activate(&self.layer1.forward(x), DeepActivation::ReLU);
             let out = self.layer2.forward(&h);
             self.norm.forward(&x.add(&out))
         }
@@ -10605,7 +10664,7 @@ pub mod deep_learning {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 pub mod optimization {
-    pub struct Adam {
+    pub struct AdamOptimizer {
         pub lr: f64,
         pub beta1: f64,
         pub beta2: f64,
@@ -10614,9 +10673,9 @@ pub mod optimization {
         v: Vec<f64>,
         t: usize,
     }
-    impl Adam {
-        pub fn new(n_params: usize, lr: f64) -> Self {
-            Self { lr, beta1: 0.9, beta2: 0.999, eps: 1e-8, m: vec![0.0; n_params], v: vec![0.0; n_params], t: 0 }
+    impl AdamOptimizer {
+        pub fn new(n_params: usize, lr: f64) -> AdamOptimizer {
+            AdamOptimizer { lr, beta1: 0.9, beta2: 0.999, eps: 1e-8, m: vec![0.0; n_params], v: vec![0.0; n_params], t: 0 }
         }
         pub fn step(&mut self, params: &mut [f64], grads: &[f64]) {
             self.t += 1;
@@ -11051,14 +11110,14 @@ pub mod probabilistic {
         pub fn n_clusters(&self) -> usize { self.clusters.len() }
     }
 
-    pub struct HiddenMarkovModel {
+    pub struct ProbabilisticHiddenMarkovModel {
         pub n_states: usize,
         pub n_obs: usize,
         pub initial: Vec<f64>,
         pub transition: Vec<Vec<f64>>,
         pub emission: Vec<Vec<f64>>,
     }
-    impl HiddenMarkovModel {
+    impl ProbabilisticHiddenMarkovModel {
         pub fn new(n_states: usize, n_obs: usize) -> Self {
             let initial = vec![1.0 / n_states as f64; n_states];
             let transition = vec![vec![1.0 / n_states as f64; n_states]; n_states];
@@ -11360,7 +11419,7 @@ mod tests {
         }).collect();
         let ts = TimeSeries::from_values("test", &values, Frequency::Monthly);
 
-        let mut hw = HoltWinters::new(0.3, 0.1, 0.1, 12, TrendType::Additive, SeasonalType::Additive);
+        let mut hw = HoltWinters::new(0.3, 0.1, 0.1, 12, TrendType::TrendAdditive, SeasonalType::SeasonAdditive);
         hw.fit(&ts);
 
         assert!(hw.fitted);

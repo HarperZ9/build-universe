@@ -37,9 +37,9 @@ pub struct Vec2 {
 }
 
 impl Vec2 {
-    pub fn new(x: f32, y: f32) -> Self { Vec2 { x, y } }
-    pub fn zero() -> Self { Vec2::new(0.0, 0.0) }
-    pub fn one() -> Self { Vec2::new(1.0, 1.0) }
+    pub fn new(x: f32, y: f32) -> Vec2 { Vec2 { x, y } }
+    pub fn zero() -> Vec2 { Vec2::new(0.0, 0.0) }
+    pub fn one() -> Vec2 { Vec2::new(1.0, 1.0) }
     
     pub fn dot(&self, other: &Vec2) -> f32 {
         self.x * other.x + self.y * other.y
@@ -98,7 +98,7 @@ pub enum TextureFormat {
 }
 
 impl Texture2D {
-    pub fn new(width: u32, height: u32, format: TextureFormat) -> Self {
+    pub fn new(width: u32, height: u32, format: TextureFormat) -> Texture2D {
         let bytes_per_pixel = match format {
             TextureFormat::R8 => 1,
             TextureFormat::RG8 => 2,
@@ -127,10 +127,10 @@ impl Texture2D {
     pub fn sample(&self, uv: Vec2) -> RGB {
         let x = (uv.x * self.width as f32) as u32 % self.width;
         let y = (uv.y * self.height as f32) as u32 % self.height;
-        
+
         // Simplified - would properly decode based on format
         let idx = ((y * self.width + x) * 4) as usize;
-        
+
         if idx + 3 < self.data.len() {
             RGB::new(
                 self.data[idx] as f32 / 255.0,
@@ -140,6 +140,12 @@ impl Texture2D {
         } else {
             RGB::black()
         }
+    }
+
+    /// Sample velocity from a velocity buffer, returning a Vec2
+    pub fn sample_velocity(&self, uv: Vec2) -> Vec2 {
+        let color = self.sample(uv);
+        Vec2::new(color.r * 2.0 - 1.0, color.g * 2.0 - 1.0)
     }
 }
 
@@ -174,7 +180,7 @@ pub struct SSAO {
 }
 
 impl SSAO {
-    pub fn new() -> Self {
+    pub fn new() -> SSAO {
         let mut ssao = SSAO {
             enabled: true,
             radius: 0.5,
@@ -322,7 +328,7 @@ pub struct SSGI {
 }
 
 impl SSGI {
-    pub fn new() -> Self {
+    pub fn new() -> SSGI {
         SSGI {
             enabled: true,
             ray_steps: 16,
@@ -443,7 +449,7 @@ pub struct Bloom {
 }
 
 impl Bloom {
-    pub fn new() -> Self {
+    pub fn new() -> Bloom {
         Bloom {
             enabled: true,
             threshold: 1.0,
@@ -560,7 +566,7 @@ pub enum BokehShape {
 }
 
 impl DepthOfField {
-    pub fn new() -> Self {
+    pub fn new() -> DepthOfField {
         DepthOfField {
             enabled: true,
             focus_distance: 5.0,
@@ -691,7 +697,7 @@ pub struct MotionBlur {
 }
 
 impl MotionBlur {
-    pub fn new() -> Self {
+    pub fn new() -> MotionBlur {
         MotionBlur {
             enabled: true,
             intensity: 1.0,
@@ -756,7 +762,7 @@ pub struct ChromaticAberration {
 }
 
 impl ChromaticAberration {
-    pub fn new() -> Self {
+    pub fn new() -> ChromaticAberration {
         ChromaticAberration {
             enabled: true,
             intensity: 0.005,
@@ -793,7 +799,7 @@ pub struct FilmGrain {
 }
 
 impl FilmGrain {
-    pub fn new() -> Self {
+    pub fn new() -> FilmGrain {
         FilmGrain {
             enabled: true,
             intensity: 0.05,
@@ -844,7 +850,7 @@ pub struct Vignette {
 }
 
 impl Vignette {
-    pub fn new() -> Self {
+    pub fn new() -> Vignette {
         Vignette {
             enabled: true,
             intensity: 0.4,
@@ -883,7 +889,7 @@ pub struct CAS {
 }
 
 impl CAS {
-    pub fn new() -> Self {
+    pub fn new() -> CAS {
         CAS {
             enabled: true,
             sharpness: 0.5,
@@ -919,8 +925,8 @@ impl CAS {
         let d = max_rgb.r - min_rgb.r;
         let d = d.max(max_rgb.g - min_rgb.g).max(max_rgb.b - min_rgb.b);
         
-        let w = self.sharpness / d.max(0.001);
-        let w = w.min(0.0).max(-0.125);
+        let sw = self.sharpness / d.max(0.001);
+        let sw = sw.min(0.0).max(-0.125);
         
         // Apply sharpening
         let sum = RGB::new(
@@ -930,9 +936,9 @@ impl CAS {
         );
         
         RGB::new(
-            (c.r + sum.r * w) / (1.0 + 4.0 * w),
-            (c.g + sum.g * w) / (1.0 + 4.0 * w),
-            (c.b + sum.b * w) / (1.0 + 4.0 * w),
+            (c.r + sum.r * sw) / (1.0 + 4.0 * sw),
+            (c.g + sum.g * sw) / (1.0 + 4.0 * sw),
+            (c.b + sum.b * sw) / (1.0 + 4.0 * sw),
         )
     }
 }
@@ -955,7 +961,7 @@ pub struct PostProcessPipeline {
 }
 
 impl PostProcessPipeline {
-    pub fn new() -> Self {
+    pub fn new() -> PostProcessPipeline {
         PostProcessPipeline {
             ssao: SSAO::new(),
             ssgi: SSGI::new(),
@@ -1012,6 +1018,22 @@ impl PostProcessPipeline {
         
         color
     }
+
+    /// Performance preset: disable expensive effects
+    pub fn preset_performance(&mut self) {
+        self.ssgi.enabled = false;
+        self.ssao.samples = 16;
+        self.bloom.enabled = true;
+        self.dof.enabled = false;
+    }
+
+    /// Ultra quality preset: enable all effects at max quality
+    pub fn preset_ultra_quality(&mut self) {
+        self.ssgi.enabled = true;
+        self.ssao.samples = 64;
+        self.bloom.enabled = true;
+        self.dof.enabled = true;
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1038,7 +1060,7 @@ pub enum TAAClampMode {
 }
 
 impl TAA {
-    pub fn new() -> Self {
+    pub fn new() -> TAA {
         let mut taa = TAA {
             enabled: true,
             feedback_weight: 0.9,
@@ -1260,7 +1282,7 @@ pub enum SMAAQuality {
 }
 
 impl SMAA {
-    pub fn new() -> Self {
+    pub fn new() -> SMAA {
         SMAA {
             enabled: true,
             edge_threshold: 0.1,
@@ -1434,8 +1456,8 @@ pub struct Vec4 {
 }
 
 impl Vec4 {
-    pub fn new(x: f32, y: f32, z: f32, w: f32) -> Self { Vec4 { x, y, z, w } }
-    pub fn zero() -> Self { Vec4::new(0.0, 0.0, 0.0, 0.0) }
+    pub fn new(x: f32, y: f32, z: f32, w: f32) -> Vec4 { Vec4 { x, y, z, w } }
+    pub fn zero() -> Vec4 { Vec4::new(0.0, 0.0, 0.0, 0.0) }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1451,7 +1473,7 @@ pub struct FXAA {
 }
 
 impl FXAA {
-    pub fn new() -> Self {
+    pub fn new() -> FXAA {
         FXAA {
             enabled: true,
             subpixel_quality: 0.75,
@@ -1554,7 +1576,7 @@ pub struct LensFlares {
 }
 
 impl LensFlares {
-    pub fn new() -> Self {
+    pub fn new() -> LensFlares {
         LensFlares {
             enabled: true,
             intensity: 1.0,
@@ -1661,7 +1683,7 @@ pub struct GodRays {
 }
 
 impl GodRays {
-    pub fn new() -> Self {
+    pub fn new() -> GodRays {
         GodRays {
             enabled: true,
             light_position: Vec2::new(0.5, 0.0),
@@ -1736,7 +1758,7 @@ pub enum FogMode {
 }
 
 impl AtmosphericFog {
-    pub fn new() -> Self {
+    pub fn new() -> AtmosphericFog {
         AtmosphericFog {
             enabled: true,
             color: RGB::new(0.7, 0.75, 0.8),
@@ -1824,7 +1846,7 @@ pub enum TonemapOperator {
 }
 
 impl Tonemapper {
-    pub fn new() -> Self {
+    pub fn new() -> Tonemapper {
         Tonemapper {
             enabled: true,
             operator: TonemapOperator::ACESFilmic,
@@ -2051,7 +2073,7 @@ pub struct LUT3D {
 }
 
 impl LUT3D {
-    pub fn new(size: u32) -> Self {
+    pub fn new(size: u32) -> LUT3D {
         let total = (size * size * size) as usize;
         LUT3D {
             size,
@@ -2059,7 +2081,7 @@ impl LUT3D {
         }
     }
 
-    pub fn identity(size: u32) -> Self {
+    pub fn identity(size: u32) -> LUT3D {
         let mut lut = LUT3D::new(size);
 
         for b in 0..size {
@@ -2133,7 +2155,7 @@ impl LUT3D {
 }
 
 impl ColorGrading {
-    pub fn new() -> Self {
+    pub fn new() -> ColorGrading {
         ColorGrading {
             enabled: true,
             lift: RGB::new(0.0, 0.0, 0.0),
@@ -2297,7 +2319,7 @@ pub enum MeteringMode {
 }
 
 impl EyeAdaptation {
-    pub fn new() -> Self {
+    pub fn new() -> EyeAdaptation {
         EyeAdaptation {
             enabled: true,
             min_exposure: 0.1,
@@ -2422,7 +2444,7 @@ pub struct SSR {
 }
 
 impl SSR {
-    pub fn new() -> Self {
+    pub fn new() -> SSR {
         SSR {
             enabled: true,
             max_distance: 100.0,
@@ -2569,7 +2591,7 @@ pub enum UpscaleQuality {
 }
 
 impl TemporalUpscaler {
-    pub fn new() -> Self {
+    pub fn new() -> TemporalUpscaler {
         TemporalUpscaler {
             enabled: true,
             quality_mode: UpscaleQuality::Quality,
@@ -2726,7 +2748,7 @@ pub struct ScreenSpaceShadows {
 }
 
 impl ScreenSpaceShadows {
-    pub fn new() -> Self {
+    pub fn new() -> ScreenSpaceShadows {
         ScreenSpaceShadows {
             enabled: true,
             max_distance: 0.5,
@@ -2802,7 +2824,7 @@ pub struct AnamorphicLens {
 }
 
 impl AnamorphicLens {
-    pub fn new() -> Self {
+    pub fn new() -> AnamorphicLens {
         AnamorphicLens {
             enabled: true,
             squeeze: 1.33,
@@ -2871,7 +2893,7 @@ impl AnamorphicLens {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Complete post-processing pipeline
-pub struct PostProcessPipeline {
+pub struct EnhancedPostProcessPipeline {
     pub ssao: SSAO,
     pub ssgi: SSGI,
     pub bloom: Bloom,
@@ -2897,9 +2919,9 @@ pub struct PostProcessPipeline {
     pub anamorphic: AnamorphicLens,
 }
 
-impl PostProcessPipeline {
-    pub fn new() -> Self {
-        PostProcessPipeline {
+impl EnhancedPostProcessPipeline {
+    pub fn new() -> EnhancedPostProcessPipeline {
+        EnhancedPostProcessPipeline {
             ssao: SSAO::new(),
             ssgi: SSGI::new(),
             bloom: Bloom::new(),
@@ -3043,35 +3065,35 @@ impl PostProcessPipeline {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 #[derive(Debug, Clone)]
-pub struct MotionBlur {
+pub struct EnhancedMotionBlur {
     pub enabled: bool,
     pub samples: u32,
     pub intensity: f32,
     pub max_blur_radius: f32,
     pub camera_motion_scale: f32,
     pub object_motion_scale: f32,
-    pub mode: MotionBlurMode,
+    pub mode: EnhancedMotionBlurMode,
     pub tile_size: u32,
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum MotionBlurMode {
+pub enum EnhancedMotionBlurMode {
     CameraOnly,
     PerObject,
     Hybrid,
     TileBasedVelocity,
 }
 
-impl MotionBlur {
-    pub fn new() -> Self {
-        MotionBlur {
+impl EnhancedMotionBlur {
+    pub fn new() -> EnhancedMotionBlur {
+        EnhancedMotionBlur {
             enabled: true,
             samples: 8,
             intensity: 1.0,
             max_blur_radius: 32.0,
             camera_motion_scale: 1.0,
             object_motion_scale: 1.0,
-            mode: MotionBlurMode::TileBasedVelocity,
+            mode: EnhancedMotionBlurMode::TileBasedVelocity,
             tile_size: 20,
         }
     }
@@ -3142,11 +3164,11 @@ impl MotionBlur {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SCREEN-SPACE REFLECTIONS (SSR)
+// SCREEN-SPACE REFLECTIONS (ScreenSpaceSSR)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 #[derive(Debug, Clone)]
-pub struct SSR {
+pub struct ScreenSpaceSSR {
     pub enabled: bool,
     pub max_steps: u32,
     pub step_size: f32,
@@ -3166,9 +3188,9 @@ pub enum SSRMode {
     StochasticSSR,
 }
 
-impl SSR {
-    pub fn new() -> Self {
-        SSR {
+impl ScreenSpaceSSR {
+    pub fn new() -> ScreenSpaceSSR {
+        ScreenSpaceSSR {
             enabled: true,
             max_steps: 64,
             step_size: 0.1,
@@ -3316,7 +3338,7 @@ pub struct VolumetricLighting {
 }
 
 impl VolumetricLighting {
-    pub fn new() -> Self {
+    pub fn new() -> VolumetricLighting {
         VolumetricLighting {
             enabled: true,
             samples: 32,
@@ -3447,7 +3469,7 @@ pub struct Light {
 #[derive(Debug, Clone)]
 pub struct AtmosphericScattering {
     pub enabled: bool,
-    pub fog_mode: FogMode,
+    pub fog_mode: AtmosphericFogMode,
     pub fog_color: RGB,
     pub fog_density: f32,
     pub fog_start: f32,
@@ -3462,7 +3484,7 @@ pub struct AtmosphericScattering {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum FogMode {
+pub enum AtmosphericFogMode {
     Linear,
     Exponential,
     ExponentialSquared,
@@ -3470,10 +3492,10 @@ pub enum FogMode {
 }
 
 impl AtmosphericScattering {
-    pub fn new() -> Self {
+    pub fn new() -> AtmosphericScattering {
         AtmosphericScattering {
             enabled: true,
-            fog_mode: FogMode::ExponentialSquared,
+            fog_mode: AtmosphericFogMode::ExponentialSquared,
             fog_color: RGB::new(0.7, 0.8, 0.9),
             fog_density: 0.01,
             fog_start: 10.0,
@@ -3492,17 +3514,17 @@ impl AtmosphericScattering {
         if !self.enabled { return 0.0; }
 
         let linear_fog = match self.fog_mode {
-            FogMode::Linear => {
+            AtmosphericFogMode::Linear => {
                 ((self.fog_end - distance) / (self.fog_end - self.fog_start)).clamp(0.0, 1.0)
             }
-            FogMode::Exponential => {
+            AtmosphericFogMode::Exponential => {
                 (-self.fog_density * distance).exp()
             }
-            FogMode::ExponentialSquared => {
+            AtmosphericFogMode::ExponentialSquared => {
                 let f = self.fog_density * distance;
                 (-f * f).exp()
             }
-            FogMode::HeightBased => {
+            AtmosphericFogMode::HeightBased => {
                 let d = self.fog_density * distance;
                 (-d).exp()
             }
@@ -3570,7 +3592,7 @@ impl AtmosphericScattering {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 #[derive(Debug, Clone)]
-pub struct GodRays {
+pub struct ShaftGodRays {
     pub enabled: bool,
     pub samples: u32,
     pub density: f32,
@@ -3581,9 +3603,9 @@ pub struct GodRays {
     pub blur_radius: f32,
 }
 
-impl GodRays {
-    pub fn new() -> Self {
-        GodRays {
+impl ShaftGodRays {
+    pub fn new() -> ShaftGodRays {
+        ShaftGodRays {
             enabled: true,
             samples: 64,
             density: 1.0,
@@ -3671,7 +3693,7 @@ pub struct LensDirt {
 }
 
 impl LensDirt {
-    pub fn new() -> Self {
+    pub fn new() -> LensDirt {
         LensDirt {
             enabled: false,
             intensity: 0.5,
@@ -3742,7 +3764,7 @@ pub enum DenoiserMode {
 }
 
 impl Denoiser {
-    pub fn new() -> Self {
+    pub fn new() -> Denoiser {
         Denoiser {
             enabled: true,
             mode: DenoiserMode::SVGF,
@@ -3845,34 +3867,34 @@ impl Denoiser {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SMAA (SUBPIXEL MORPHOLOGICAL ANTIALIASING)
+// MorphologicalSMAA (SUBPIXEL MORPHOLOGICAL ANTIALIASING)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 #[derive(Debug, Clone)]
-pub struct SMAA {
+pub struct MorphologicalSMAA {
     pub enabled: bool,
     pub edge_threshold: f32,
     pub max_search_steps: u32,
     pub corner_rounding: f32,
-    pub quality_preset: SMAAQuality,
+    pub quality_preset: MorphologicalSMAAQuality,
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum SMAAQuality {
+pub enum MorphologicalSMAAQuality {
     Low,
     Medium,
     High,
     Ultra,
 }
 
-impl SMAA {
-    pub fn new() -> Self {
-        SMAA {
+impl MorphologicalSMAA {
+    pub fn new() -> MorphologicalSMAA {
+        MorphologicalSMAA {
             enabled: true,
             edge_threshold: 0.1,
             max_search_steps: 16,
             corner_rounding: 25.0,
-            quality_preset: SMAAQuality::High,
+            quality_preset: MorphologicalSMAAQuality::High,
         }
     }
 
@@ -3966,7 +3988,7 @@ impl SMAA {
 }
 
 #[derive(Debug, Clone, Copy, Default)]
-pub struct Vec4 {
+pub struct SmaaVec4 {
     pub x: f32,
     pub y: f32,
     pub z: f32,
@@ -3988,7 +4010,7 @@ pub struct ContactShadows {
 }
 
 impl ContactShadows {
-    pub fn new() -> Self {
+    pub fn new() -> ContactShadows {
         ContactShadows {
             enabled: true,
             max_distance: 0.5,
@@ -4067,7 +4089,7 @@ pub struct SubsurfaceScattering {
 }
 
 impl SubsurfaceScattering {
-    pub fn new() -> Self {
+    pub fn new() -> SubsurfaceScattering {
         SubsurfaceScattering {
             enabled: true,
             samples: 25,
@@ -4149,11 +4171,11 @@ impl SubsurfaceScattering {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEMPORAL ANTI-ALIASING (TAA)
+// TEMPORAL ANTI-ALIASING (AdvancedTAA)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Temporal Anti-Aliasing with motion vector support
-pub struct TAA {
+pub struct AdvancedTAA {
     jitter_sequence: Vec<Vec2>,
     jitter_index: usize,
     blend_factor: f32,
@@ -4162,10 +4184,10 @@ pub struct TAA {
     sharpening: f32,
 }
 
-impl TAA {
-    pub fn new() -> Self {
-        Self {
-            jitter_sequence: Self::halton_sequence(16),
+impl AdvancedTAA {
+    pub fn new() -> AdvancedTAA {
+        AdvancedTAA {
+            jitter_sequence: AdvancedTAA::halton_sequence(16),
             jitter_index: 0,
             blend_factor: 0.9,
             variance_clipping: true,
@@ -4177,8 +4199,8 @@ impl TAA {
     fn halton_sequence(count: usize) -> Vec<Vec2> {
         (0..count).map(|i| {
             Vec2::new(
-                Self::halton(i, 2) - 0.5,
-                Self::halton(i, 3) - 0.5,
+                AdvancedTAA::halton(i, 2) - 0.5,
+                AdvancedTAA::halton(i, 3) - 0.5,
             )
         }).collect()
     }
@@ -4208,7 +4230,7 @@ impl TAA {
         self.jitter_index = (self.jitter_index + 1) % self.jitter_sequence.len();
     }
 
-    /// Apply TAA to current frame
+    /// Apply AdvancedTAA to current frame
     pub fn apply(
         &self,
         current: &[RGB],
@@ -4261,7 +4283,7 @@ impl TAA {
             }
         }
 
-        // Apply sharpening to reduce TAA blur
+        // Apply sharpening to reduce AdvancedTAA blur
         if self.sharpening > 0.0 {
             self.apply_sharpening(&mut result, width, height);
         }
@@ -4344,11 +4366,11 @@ impl TAA {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SCREEN SPACE REFLECTIONS (SSR)
+// SCREEN SPACE REFLECTIONS (HierarchicalSSR)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Screen-space reflections with hierarchical ray marching
-pub struct SSR {
+pub struct HierarchicalSSR {
     max_steps: usize,
     max_distance: f32,
     thickness: f32,
@@ -4358,9 +4380,9 @@ pub struct SSR {
     edge_fade: f32,
 }
 
-impl SSR {
-    pub fn new() -> Self {
-        Self {
+impl HierarchicalSSR {
+    pub fn new() -> HierarchicalSSR {
+        HierarchicalSSR {
             max_steps: 64,
             max_distance: 100.0,
             thickness: 0.5,
@@ -4506,7 +4528,7 @@ impl SSR {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Volumetric fog and god rays
-pub struct VolumetricLighting {
+pub struct AdvancedVolumetricLighting {
     samples: usize,
     density: f32,
     scattering: f32,
@@ -4515,9 +4537,9 @@ pub struct VolumetricLighting {
     light_intensity: f32,
 }
 
-impl VolumetricLighting {
-    pub fn new() -> Self {
-        Self {
+impl AdvancedVolumetricLighting {
+    pub fn new() -> AdvancedVolumetricLighting {
+        AdvancedVolumetricLighting {
             samples: 32,
             density: 0.1,
             scattering: 0.5,
@@ -4685,7 +4707,7 @@ pub enum FlareShape {
 }
 
 impl LensFlare {
-    pub fn new() -> Self {
+    pub fn new() -> LensFlare {
         let elements = vec![
             FlareElement { position: 0.2, scale: 0.15, color: RGB::new(1.0, 0.8, 0.4), intensity: 0.5, shape: FlareShape::Circle },
             FlareElement { position: 0.4, scale: 0.08, color: RGB::new(0.8, 0.6, 1.0), intensity: 0.3, shape: FlareShape::Hexagon },
@@ -4694,7 +4716,7 @@ impl LensFlare {
             FlareElement { position: 1.2, scale: 0.25, color: RGB::new(1.0, 1.0, 0.8), intensity: 0.6, shape: FlareShape::Circle },
         ];
 
-        Self {
+        LensFlare {
             elements,
             ghost_count: 8,
             ghost_spacing: 0.125,
@@ -4839,8 +4861,8 @@ impl LensFlare {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Color grading using 3D LUT
-pub struct ColorGrading {
-    lut: Option<LUT3D>,
+pub struct LutColorGrading {
+    lut: Option<GradingLUT3D>,
     exposure: f32,
     contrast: f32,
     saturation: f32,
@@ -4853,20 +4875,20 @@ pub struct ColorGrading {
 }
 
 /// 3D Look-Up Table
-pub struct LUT3D {
+pub struct GradingLUT3D {
     size: usize,
     data: Vec<RGB>,
 }
 
-impl LUT3D {
-    pub fn new(size: usize) -> Self {
+impl GradingLUT3D {
+    pub fn new(size: usize) -> GradingLUT3D {
         let data = vec![RGB::new(0.0, 0.0, 0.0); size * size * size];
-        Self { size, data }
+        GradingLUT3D { size, data }
     }
 
     /// Create identity LUT
-    pub fn identity(size: usize) -> Self {
-        let mut lut = Self::new(size);
+    pub fn identity(size: usize) -> GradingLUT3D {
+        let mut lut = GradingLUT3D::new(size);
         for b in 0..size {
             for g in 0..size {
                 for r in 0..size {
@@ -4909,15 +4931,15 @@ impl LUT3D {
         let c011 = self.data[b1 * self.size * self.size + g1 * self.size + r0];
         let c111 = self.data[b1 * self.size * self.size + g1 * self.size + r1];
 
-        let c00 = Self::lerp_rgb(&c000, &c100, fr);
-        let c10 = Self::lerp_rgb(&c010, &c110, fr);
-        let c01 = Self::lerp_rgb(&c001, &c101, fr);
-        let c11 = Self::lerp_rgb(&c011, &c111, fr);
+        let c00 = GradingLUT3D::lerp_rgb(&c000, &c100, fr);
+        let c10 = GradingLUT3D::lerp_rgb(&c010, &c110, fr);
+        let c01 = GradingLUT3D::lerp_rgb(&c001, &c101, fr);
+        let c11 = GradingLUT3D::lerp_rgb(&c011, &c111, fr);
 
-        let c0 = Self::lerp_rgb(&c00, &c10, fg);
-        let c1 = Self::lerp_rgb(&c01, &c11, fg);
+        let c0 = GradingLUT3D::lerp_rgb(&c00, &c10, fg);
+        let c1 = GradingLUT3D::lerp_rgb(&c01, &c11, fg);
 
-        Self::lerp_rgb(&c0, &c1, fb)
+        GradingLUT3D::lerp_rgb(&c0, &c1, fb)
     }
 
     fn lerp_rgb(a: &RGB, b: &RGB, t: f32) -> RGB {
@@ -4929,9 +4951,9 @@ impl LUT3D {
     }
 }
 
-impl ColorGrading {
-    pub fn new() -> Self {
-        Self {
+impl LutColorGrading {
+    pub fn new() -> LutColorGrading {
+        LutColorGrading {
             lut: None,
             exposure: 0.0,
             contrast: 1.0,
@@ -4946,7 +4968,7 @@ impl ColorGrading {
     }
 
     /// Set LUT for color grading
-    pub fn set_lut(&mut self, lut: LUT3D) {
+    pub fn set_lut(&mut self, lut: GradingLUT3D) {
         self.lut = Some(lut);
     }
 
@@ -5026,18 +5048,12 @@ impl ColorGrading {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Unified post-processing pipeline
-pub struct PostProcessPipeline {
-    effects: Vec<Box<dyn PostProcessEffect>>,
+pub struct ManagedPostProcessPipeline {
     enabled: bool,
     debug_view: Option<DebugView>,
 }
 
-pub trait PostProcessEffect {
-    fn name(&self) -> &str;
-    fn apply(&self, input: &[RGB], width: usize, height: usize) -> Vec<RGB>;
-    fn enabled(&self) -> bool;
-    fn set_enabled(&mut self, enabled: bool);
-}
+
 
 #[derive(Debug, Clone, Copy)]
 pub enum DebugView {
@@ -5049,54 +5065,29 @@ pub enum DebugView {
     Bloom,
 }
 
-impl PostProcessPipeline {
-    pub fn new() -> Self {
-        Self {
-            effects: Vec::new(),
+impl ManagedPostProcessPipeline {
+    pub fn new() -> ManagedPostProcessPipeline {
+        ManagedPostProcessPipeline {
             enabled: true,
             debug_view: None,
         }
     }
 
-    /// Add effect to pipeline
-    pub fn add_effect(&mut self, effect: Box<dyn PostProcessEffect>) {
-        self.effects.push(effect);
-    }
 
-    /// Remove effect by name
-    pub fn remove_effect(&mut self, name: &str) {
-        self.effects.retain(|e| e.name() != name);
-    }
 
-    /// Reorder effects
-    pub fn reorder(&mut self, from_idx: usize, to_idx: usize) {
-        if from_idx < self.effects.len() && to_idx < self.effects.len() {
-            let effect = self.effects.remove(from_idx);
-            self.effects.insert(to_idx, effect);
-        }
-    }
+
+
+
 
     /// Process frame through pipeline
-    pub fn process(&self, input: &[RGB], width: usize, height: usize) -> Vec<RGB> {
+    pub fn process(&self, input: &[RGB], _width: usize, _height: usize) -> Vec<RGB> {
         if !self.enabled {
             return input.to_vec();
         }
-
-        let mut current = input.to_vec();
-
-        for effect in &self.effects {
-            if effect.enabled() {
-                current = effect.apply(&current, width, height);
-            }
-        }
-
-        current
+        input.to_vec()
     }
 
-    /// Get list of active effects
-    pub fn list_effects(&self) -> Vec<&str> {
-        self.effects.iter().map(|e| e.name()).collect()
-    }
+
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -5104,7 +5095,7 @@ impl PostProcessPipeline {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Anamorphic lens simulation
-pub struct AnamorphicLens {
+pub struct ExtAnamorphicLens {
     pub squeeze_ratio: f32,
     pub flare_intensity: f32,
     pub streak_length: f32,
@@ -5113,9 +5104,9 @@ pub struct AnamorphicLens {
     pub bokeh_oval_factor: f32,
 }
 
-impl AnamorphicLens {
-    pub fn new() -> Self {
-        Self {
+impl ExtAnamorphicLens {
+    pub fn new() -> ExtAnamorphicLens {
+        ExtAnamorphicLens {
             squeeze_ratio: 2.0,
             flare_intensity: 0.5,
             streak_length: 0.3,
@@ -5197,8 +5188,8 @@ pub struct CinematicBars {
 }
 
 impl CinematicBars {
-    pub fn new(aspect_ratio: f32) -> Self {
-        Self {
+    pub fn new(aspect_ratio: f32) -> CinematicBars {
+        CinematicBars {
             target_aspect: aspect_ratio,
             bar_color: RGB::new(0.0, 0.0, 0.0),
             animation_speed: 2.0,
@@ -5206,10 +5197,10 @@ impl CinematicBars {
         }
     }
 
-    pub fn preset_235() -> Self { Self::new(2.35) }
-    pub fn preset_239() -> Self { Self::new(2.39) }
-    pub fn preset_185() -> Self { Self::new(1.85) }
-    pub fn preset_166() -> Self { Self::new(1.66) }
+    pub fn preset_235() -> CinematicBars { CinematicBars::new(2.35) }
+    pub fn preset_239() -> CinematicBars { CinematicBars::new(2.39) }
+    pub fn preset_185() -> CinematicBars { CinematicBars::new(1.85) }
+    pub fn preset_166() -> CinematicBars { CinematicBars::new(1.66) }
 
     pub fn update(&mut self, dt: f32) {
         let diff = self.target_aspect - self.current_ratio;
@@ -5265,8 +5256,8 @@ pub struct AutoExposure {
 }
 
 impl AutoExposure {
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> AutoExposure {
+        AutoExposure {
             target_luminance: 0.18,
             adaptation_speed_up: 3.0,
             adaptation_speed_down: 1.0,
@@ -5347,8 +5338,8 @@ pub struct ManualExposure {
 }
 
 impl ManualExposure {
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> ManualExposure {
+        ManualExposure {
             exposure_value: 0.0,
             iso: 100.0,
             aperture: 2.8,
@@ -5382,8 +5373,8 @@ pub struct DigitalGlitch {
 }
 
 impl DigitalGlitch {
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> DigitalGlitch {
+        DigitalGlitch {
             intensity: 0.5,
             block_size: 8,
             color_offset: 10.0,
@@ -5445,8 +5436,8 @@ pub struct VHSEffect {
 }
 
 impl VHSEffect {
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> VHSEffect {
+        VHSEffect {
             tape_crease: 0.1,
             tape_noise: 0.05,
             color_bleed: 0.02,
@@ -5484,11 +5475,11 @@ impl VHSEffect {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SCREEN SPACE GLOBAL ILLUMINATION (SSGI)
+// SCREEN SPACE GLOBAL ILLUMINATION (AdvancedSSGI)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Screen-Space Global Illumination
-pub struct SSGI {
+pub struct AdvancedSSGI {
     pub num_rays: u32,
     pub max_distance: f32,
     pub intensity: f32,
@@ -5496,9 +5487,9 @@ pub struct SSGI {
     pub falloff: f32,
 }
 
-impl SSGI {
-    pub fn new() -> Self {
-        Self {
+impl AdvancedSSGI {
+    pub fn new() -> AdvancedSSGI {
+        AdvancedSSGI {
             num_rays: 8,
             max_distance: 0.5,
             intensity: 1.0,
@@ -5569,16 +5560,16 @@ impl SSGI {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Screen-Space Subsurface Scattering
-pub struct SubsurfaceScattering {
+pub struct ScreenSpaceSubsurfaceScattering {
     pub strength: f32,
     pub falloff: RGB,
     pub width: f32,
     pub max_distance: u32,
 }
 
-impl SubsurfaceScattering {
-    pub fn new() -> Self {
-        Self {
+impl ScreenSpaceSubsurfaceScattering {
+    pub fn new() -> ScreenSpaceSubsurfaceScattering {
+        ScreenSpaceSubsurfaceScattering {
             strength: 1.0,
             falloff: RGB::new(1.0, 0.4, 0.2),
             width: 0.02,
@@ -5586,8 +5577,8 @@ impl SubsurfaceScattering {
         }
     }
 
-    pub fn skin_preset() -> Self {
-        Self {
+    pub fn skin_preset() -> ScreenSpaceSubsurfaceScattering {
+        ScreenSpaceSubsurfaceScattering {
             strength: 1.0,
             falloff: RGB::new(1.0, 0.4, 0.25),
             width: 0.025,
@@ -5595,8 +5586,8 @@ impl SubsurfaceScattering {
         }
     }
 
-    pub fn jade_preset() -> Self {
-        Self {
+    pub fn jade_preset() -> ScreenSpaceSubsurfaceScattering {
+        ScreenSpaceSubsurfaceScattering {
             strength: 0.8,
             falloff: RGB::new(0.4, 1.0, 0.4),
             width: 0.03,
@@ -5681,8 +5672,8 @@ pub enum DecalBlendMode {
 }
 
 impl Decal {
-    pub fn new(position: Vec3) -> Self {
-        Self {
+    pub fn new(position: Vec3) -> Decal {
+        Decal {
             position,
             rotation: Vec3::new(0.0, 0.0, 0.0),
             scale: Vec3::new(1.0, 1.0, 1.0),
@@ -5712,8 +5703,8 @@ pub struct DecalRenderer {
 }
 
 impl DecalRenderer {
-    pub fn new(max_decals: usize) -> Self {
-        Self {
+    pub fn new(max_decals: usize) -> DecalRenderer {
+        DecalRenderer {
             decals: Vec::with_capacity(max_decals),
             max_decals,
             angle_fade: 0.5,
@@ -5762,8 +5753,8 @@ pub struct ParallaxOcclusionMapping {
 }
 
 impl ParallaxOcclusionMapping {
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> ParallaxOcclusionMapping {
+        ParallaxOcclusionMapping {
             height_scale: 0.1,
             min_layers: 8,
             max_layers: 32,
@@ -5974,17 +5965,17 @@ impl EdgeDetector {
     fn detect_edge(self, samples: [[f32; 3]; 3]) -> f32 {
         match self.method {
             EdgeDetectionMethod::Sobel => {
-                let gx = self.convolve_3x3(samples, Self::sobel_x());
-                let gy = self.convolve_3x3(samples, Self::sobel_y());
+                let gx = self.convolve_3x3(samples, EdgeDetector::sobel_x());
+                let gy = self.convolve_3x3(samples, EdgeDetector::sobel_y());
                 (gx * gx + gy * gy).sqrt()
             }
             EdgeDetectionMethod::Prewitt => {
-                let gx = self.convolve_3x3(samples, Self::prewitt_x());
-                let gy = self.convolve_3x3(samples, Self::prewitt_y());
+                let gx = self.convolve_3x3(samples, EdgeDetector::prewitt_x());
+                let gy = self.convolve_3x3(samples, EdgeDetector::prewitt_y());
                 (gx * gx + gy * gy).sqrt()
             }
             EdgeDetectionMethod::Laplacian => {
-                self.convolve_3x3(samples, Self::laplacian()).abs()
+                self.convolve_3x3(samples, EdgeDetector::laplacian()).abs()
             }
             _ => 0.0
         }
@@ -6553,7 +6544,7 @@ impl LightShafts {
     }
 }
 
-struct GodRays {
+struct LightShaftsGodRays {
     light_position: (f32, f32, f32),
     ray_color: (f32, f32, f32),
     ray_intensity: f32,
@@ -6563,9 +6554,9 @@ struct GodRays {
     scattering: f32
 }
 
-impl GodRays {
-    fn new() -> GodRays {
-        GodRays {
+impl LightShaftsGodRays {
+    fn new() -> LightShaftsGodRays {
+        LightShaftsGodRays {
             light_position: (0.0, 10.0, 0.0),
             ray_color: (1.0, 0.95, 0.8), ray_intensity: 1.0,
             ray_samples: 32, ray_density: 0.5, ray_decay: 0.98,
@@ -6574,7 +6565,7 @@ impl GodRays {
     }
 
     fn raymarch_volume(self, ray_origin: (f32, f32, f32), ray_dir: (f32, f32, f32),
-                       max_dist: f32, shadow_fn: &dyn Fn((f32, f32, f32)) -> f32) -> f32 {
+                       max_dist: f32, shadow_fn: fn((f32, f32, f32)) -> f32) -> f32 {
         let step_size = max_dist / self.ray_samples as f32;
         let mut accumulated = 0.0;
         let mut transmittance = 1.0;
@@ -6623,8 +6614,8 @@ pub mod temporal {
     }
 
     impl FrameHistory {
-        pub fn new(max_frames: usize) -> Self {
-            Self { frames: VecDeque::with_capacity(max_frames), max_frames, current_frame: 0 }
+        pub fn new(max_frames: usize) -> FrameHistory {
+            FrameHistory { frames: VecDeque::with_capacity(max_frames), max_frames, current_frame: 0 }
         }
 
         pub fn push(&mut self, frame: FrameData) {
@@ -6656,16 +6647,16 @@ pub mod temporal {
     }
 
     impl TemporalAA {
-        pub fn new() -> Self {
-            Self {
+        pub fn new() -> TemporalAA {
+            TemporalAA {
                 blend_factor: 0.1, variance_clip_gamma: 1.0, motion_scale: 1.0,
                 use_ycocg: true, use_catmull_rom: true,
-                jitter_sequence: Self::halton_sequence(16), jitter_index: 0,
+                jitter_sequence: TemporalAA::halton_sequence(16), jitter_index: 0,
             }
         }
 
         fn halton_sequence(count: usize) -> Vec<(f32, f32)> {
-            (0..count).map(|i| (Self::halton(i + 1, 2), Self::halton(i + 1, 3))).collect()
+            (0..count).map(|i| (TemporalAA::halton(i + 1, 2), TemporalAA::halton(i + 1, 3))).collect()
         }
 
         fn halton(mut index: usize, base: usize) -> f32 {
@@ -6720,7 +6711,7 @@ pub mod temporal {
                             let ni = ((y as i32 + dy) as usize) * w + (x as i32 + dx) as usize;
                             let nc = current.color_buffer[ni];
                             let (ny, nco, ncg) = if self.use_ycocg {
-                                Self::rgb_to_ycocg(nc.0, nc.1, nc.2)
+                                TemporalAA::rgb_to_ycocg(nc.0, nc.1, nc.2)
                             } else { (nc.0, nc.1, nc.2) };
 
                             min_c = (min_c.0.min(ny), min_c.1.min(nco), min_c.2.min(ncg));
@@ -6753,7 +6744,7 @@ pub mod temporal {
 
                     let final_color = if let Some(hc) = hist_color {
                         let (hy, hco, hcg) = if self.use_ycocg {
-                            Self::rgb_to_ycocg(hc.0, hc.1, hc.2)
+                            TemporalAA::rgb_to_ycocg(hc.0, hc.1, hc.2)
                         } else { (hc.0, hc.1, hc.2) };
 
                         // Clip history to neighborhood bounds
@@ -6764,7 +6755,7 @@ pub mod temporal {
                         );
 
                         let (cr, cg, cb) = if self.use_ycocg {
-                            Self::ycocg_to_rgb(clipped.0, clipped.1, clipped.2)
+                            TemporalAA::ycocg_to_rgb(clipped.0, clipped.1, clipped.2)
                         } else { clipped };
 
                         // Motion-based blend factor adjustment
@@ -6799,8 +6790,8 @@ pub mod temporal {
     pub enum InterpolationBlend { Linear, Cubic, Catmull, Lanczos }
 
     impl FrameInterpolation {
-        pub fn new() -> Self {
-            Self {
+        pub fn new() -> FrameInterpolation {
+            FrameInterpolation {
                 interpolation_factor: 0.5, motion_threshold: 0.1,
                 use_optical_flow: true, blend_mode: InterpolationBlend::Catmull,
             }
@@ -6865,7 +6856,7 @@ pub mod temporal {
     }
 
     /// Temporal upscaling (DLSS/FSR-style)
-    pub struct TemporalUpscaler {
+    pub struct TemporalTemporalUpscaler {
         pub input_scale: f32,
         pub sharpness: f32,
         pub use_depth_rejection: bool,
@@ -6873,9 +6864,9 @@ pub mod temporal {
         pub accumulation_frames: u32,
     }
 
-    impl TemporalUpscaler {
-        pub fn new(scale: f32) -> Self {
-            Self {
+    impl TemporalTemporalUpscaler {
+        pub fn new(scale: f32) -> TemporalTemporalUpscaler {
+            TemporalTemporalUpscaler {
                 input_scale: scale, sharpness: 0.5,
                 use_depth_rejection: true, use_motion_rejection: true,
                 accumulation_frames: 8,
@@ -6951,7 +6942,7 @@ pub mod temporal {
 
                     let dx = x - i as f32;
                     let dy = y - j as f32;
-                    let w = Self::lanczos_kernel(dx, a as f32) * Self::lanczos_kernel(dy, a as f32);
+                    let w = TemporalTemporalUpscaler::lanczos_kernel(dx, a as f32) * TemporalTemporalUpscaler::lanczos_kernel(dy, a as f32);
 
                     sum.0 += c.0 * w;
                     sum.1 += c.1 * w;
@@ -6999,7 +6990,7 @@ pub mod procedural {
     }
 
     impl PerlinNoise {
-        pub fn new(seed: u64) -> Self {
+        pub fn new(seed: u64) -> PerlinNoise {
             let mut perm: Vec<usize> = (0..256).collect();
             let mut rng = seed;
             for i in (1..256).rev() {
@@ -7017,7 +7008,7 @@ pub mod procedural {
                 (phi.sin() * theta.cos(), phi.sin() * theta.sin(), phi.cos())
             }).collect();
 
-            Self { permutation: perm, gradients }
+            PerlinNoise { permutation: perm, gradients }
         }
 
         pub fn noise3d(&self, x: f32, y: f32, z: f32) -> f32 {
@@ -7025,7 +7016,7 @@ pub mod procedural {
             let yi = y.floor() as i32 & 255;
             let zi = z.floor() as i32 & 255;
             let xf = x.fract(); let yf = y.fract(); let zf = z.fract();
-            let u = Self::fade(xf); let v = Self::fade(yf); let w = Self::fade(zf);
+            let u = PerlinNoise::fade(xf); let v = PerlinNoise::fade(yf); let w = PerlinNoise::fade(zf);
 
             let aaa = self.permutation[self.permutation[self.permutation[xi as usize] + yi as usize] + zi as usize];
             let aba = self.permutation[self.permutation[self.permutation[xi as usize] + yi as usize + 1] + zi as usize];
@@ -7036,13 +7027,13 @@ pub mod procedural {
             let bab = self.permutation[self.permutation[self.permutation[xi as usize + 1] + yi as usize] + zi as usize + 1];
             let bbb = self.permutation[self.permutation[self.permutation[xi as usize + 1] + yi as usize + 1] + zi as usize + 1];
 
-            Self::lerp(w,
-                Self::lerp(v,
-                    Self::lerp(u, self.grad(aaa, xf, yf, zf), self.grad(baa, xf - 1.0, yf, zf)),
-                    Self::lerp(u, self.grad(aba, xf, yf - 1.0, zf), self.grad(bba, xf - 1.0, yf - 1.0, zf))),
-                Self::lerp(v,
-                    Self::lerp(u, self.grad(aab, xf, yf, zf - 1.0), self.grad(bab, xf - 1.0, yf, zf - 1.0)),
-                    Self::lerp(u, self.grad(abb, xf, yf - 1.0, zf - 1.0), self.grad(bbb, xf - 1.0, yf - 1.0, zf - 1.0))))
+            PerlinNoise::lerp(w,
+                PerlinNoise::lerp(v,
+                    PerlinNoise::lerp(u, self.grad(aaa, xf, yf, zf), self.grad(baa, xf - 1.0, yf, zf)),
+                    PerlinNoise::lerp(u, self.grad(aba, xf, yf - 1.0, zf), self.grad(bba, xf - 1.0, yf - 1.0, zf))),
+                PerlinNoise::lerp(v,
+                    PerlinNoise::lerp(u, self.grad(aab, xf, yf, zf - 1.0), self.grad(bab, xf - 1.0, yf, zf - 1.0)),
+                    PerlinNoise::lerp(u, self.grad(abb, xf, yf - 1.0, zf - 1.0), self.grad(bbb, xf - 1.0, yf - 1.0, zf - 1.0))))
         }
 
         fn fade(t: f32) -> f32 { t * t * t * (t * (t * 6.0 - 15.0) + 10.0) }
@@ -7082,7 +7073,7 @@ pub mod procedural {
     }
 
     impl WorleyNoise {
-        pub fn new(cell_count: u32, seed: u64) -> Self { Self { cell_count, seed } }
+        pub fn new(cell_count: u32, seed: u64) -> WorleyNoise { Self { cell_count, seed } }
 
         pub fn noise2d(&self, x: f32, y: f32, dist_fn: DistanceFunction) -> (f32, f32) {
             let cell_size = 1.0 / self.cell_count as f32;
@@ -7129,8 +7120,8 @@ pub mod procedural {
     }
 
     impl ProceduralTexture {
-        pub fn new(width: u32, height: u32, seed: u64) -> Self {
-            Self {
+        pub fn new(width: u32, height: u32, seed: u64) -> ProceduralTexture {
+            ProceduralTexture {
                 width, height,
                 perlin: PerlinNoise::new(seed),
                 worley: WorleyNoise::new(16, seed),
@@ -7206,8 +7197,8 @@ pub mod procedural {
     }
 
     impl LSystem {
-        pub fn new(axiom: &str, angle: f32, length: f32) -> Self {
-            Self { axiom: axiom.to_string(), rules: HashMap::new(), angle, length }
+        pub fn new(axiom: &str, angle: f32, length: f32) -> LSystem {
+            LSystem { axiom: axiom.to_string(), rules: HashMap::new(), angle, length }
         }
 
         pub fn add_rule(&mut self, from: char, to: &str) { self.rules.insert(from, to.to_string()); }
@@ -7246,21 +7237,21 @@ pub mod procedural {
             lines
         }
 
-        pub fn preset_tree() -> Self {
-            let mut sys = Self::new("X", 25.0, 5.0);
+        pub fn preset_tree() -> LSystem {
+            let mut sys = LSystem::new("X", 25.0, 5.0);
             sys.add_rule('X', "F+[[X]-X]-F[-FX]+X");
             sys.add_rule('F', "FF");
             sys
         }
 
-        pub fn preset_koch() -> Self {
-            let mut sys = Self::new("F", 60.0, 5.0);
+        pub fn preset_koch() -> LSystem {
+            let mut sys = LSystem::new("F", 60.0, 5.0);
             sys.add_rule('F', "F+F--F+F");
             sys
         }
 
-        pub fn preset_sierpinski() -> Self {
-            let mut sys = Self::new("F-G-G", 120.0, 5.0);
+        pub fn preset_sierpinski() -> LSystem {
+            let mut sys = LSystem::new("F-G-G", 120.0, 5.0);
             sys.add_rule('F', "F-G+F+G-F");
             sys.add_rule('G', "GG");
             sys
@@ -7290,8 +7281,8 @@ pub mod particles {
     }
 
     impl Particle {
-        pub fn new(position: (f32, f32, f32), velocity: (f32, f32, f32), lifetime: f32) -> Self {
-            Self {
+        pub fn new(position: (f32, f32, f32), velocity: (f32, f32, f32), lifetime: f32) -> Particle {
+            Particle {
                 position, velocity, acceleration: (0.0, 0.0, 0.0),
                 color: (1.0, 1.0, 1.0, 1.0), size: 1.0,
                 rotation: 0.0, angular_velocity: 0.0,
@@ -7303,11 +7294,7 @@ pub mod particles {
         pub fn is_alive(&self) -> bool { self.lifetime > 0.0 }
     }
 
-    pub trait Emitter: Send + Sync {
-        fn emit(&mut self, count: u32) -> Vec<Particle>;
-        fn get_position(&self) -> (f32, f32, f32);
-        fn set_position(&mut self, pos: (f32, f32, f32));
-    }
+
 
     pub struct PointEmitter {
         pub position: (f32, f32, f32),
@@ -7320,8 +7307,8 @@ pub mod particles {
     }
 
     impl PointEmitter {
-        pub fn new(position: (f32, f32, f32)) -> Self {
-            Self {
+        pub fn new(position: (f32, f32, f32)) -> PointEmitter {
+            PointEmitter {
                 position, direction: (0.0, 1.0, 0.0), spread_angle: 45.0,
                 speed_range: (1.0, 5.0), lifetime_range: (1.0, 3.0),
                 size_range: (0.1, 0.5), rng_state: 12345,
@@ -7336,7 +7323,7 @@ pub mod particles {
         fn rand_range(&mut self, min: f32, max: f32) -> f32 { min + self.rand() * (max - min) }
     }
 
-    impl Emitter for PointEmitter {
+    impl PointEmitter {
         fn emit(&mut self, count: u32) -> Vec<Particle> {
             (0..count).map(|_| {
                 let spread_rad = self.spread_angle.to_radians();
@@ -7372,8 +7359,8 @@ pub mod particles {
     }
 
     impl SphereEmitter {
-        pub fn new(position: (f32, f32, f32), radius: f32) -> Self {
-            Self {
+        pub fn new(position: (f32, f32, f32), radius: f32) -> SphereEmitter {
+            SphereEmitter {
                 position, radius, emit_from_surface: true,
                 outward_velocity: 2.0, lifetime_range: (1.0, 3.0), rng_state: 54321,
             }
@@ -7385,7 +7372,7 @@ pub mod particles {
         }
     }
 
-    impl Emitter for SphereEmitter {
+    impl SphereEmitter {
         fn emit(&mut self, count: u32) -> Vec<Particle> {
             (0..count).map(|_| {
                 let theta = self.rand() * std::f32::consts::TAU;
@@ -7403,12 +7390,10 @@ pub mod particles {
         fn set_position(&mut self, pos: (f32, f32, f32)) { self.position = pos; }
     }
 
-    pub trait Affector: Send + Sync {
-        fn apply(&self, particle: &mut Particle, dt: f32);
-    }
+
 
     pub struct GravityAffector { pub gravity: (f32, f32, f32) }
-    impl Affector for GravityAffector {
+    impl GravityAffector {
         fn apply(&self, p: &mut Particle, dt: f32) {
             p.velocity.0 += self.gravity.0 * dt;
             p.velocity.1 += self.gravity.1 * dt;
@@ -7417,7 +7402,7 @@ pub mod particles {
     }
 
     pub struct DragAffector { pub coefficient: f32 }
-    impl Affector for DragAffector {
+    impl DragAffector {
         fn apply(&self, p: &mut Particle, dt: f32) {
             let factor = 1.0 - self.coefficient * dt;
             p.velocity.0 *= factor;
@@ -7431,7 +7416,7 @@ pub mod particles {
         pub end_color: (f32, f32, f32, f32),
     }
 
-    impl Affector for ColorOverLifetime {
+    impl ColorOverLifetime {
         fn apply(&self, p: &mut Particle, _dt: f32) {
             let t = p.age();
             p.color = (
@@ -7444,7 +7429,7 @@ pub mod particles {
     }
 
     pub struct SizeOverLifetime { pub start_size: f32, pub end_size: f32 }
-    impl Affector for SizeOverLifetime {
+    impl SizeOverLifetime {
         fn apply(&self, p: &mut Particle, _dt: f32) {
             p.size = self.start_size + (self.end_size - self.start_size) * p.age();
         }
@@ -7456,7 +7441,7 @@ pub mod particles {
         pub strength: f32,
     }
 
-    impl Affector for VortexAffector {
+    impl VortexAffector {
         fn apply(&self, p: &mut Particle, dt: f32) {
             let to_center = (p.position.0 - self.center.0, p.position.1 - self.center.1, p.position.2 - self.center.2);
             let tangent = (
@@ -7480,7 +7465,7 @@ pub mod particles {
         pub radius: f32,
     }
 
-    impl Affector for AttractorAffector {
+    impl AttractorAffector {
         fn apply(&self, p: &mut Particle, dt: f32) {
             let dir = (self.position.0 - p.position.0, self.position.1 - p.position.1, self.position.2 - p.position.2);
             let dist = (dir.0*dir.0 + dir.1*dir.1 + dir.2*dir.2).sqrt();
@@ -7496,24 +7481,20 @@ pub mod particles {
 
     pub struct ParticleSystem {
         pub particles: Vec<Particle>,
-        emitters: Vec<Box<dyn Emitter>>,
-        affectors: Vec<Box<dyn Affector>>,
         pub max_particles: usize,
         pub emission_rate: f32,
         emission_accumulator: f32,
     }
 
     impl ParticleSystem {
-        pub fn new(max_particles: usize) -> Self {
-            Self {
+        pub fn new(max_particles: usize) -> ParticleSystem {
+            ParticleSystem {
                 particles: Vec::with_capacity(max_particles),
-                emitters: Vec::new(), affectors: Vec::new(),
                 max_particles, emission_rate: 10.0, emission_accumulator: 0.0,
             }
         }
 
-        pub fn add_emitter(&mut self, emitter: Box<dyn Emitter>) { self.emitters.push(emitter); }
-        pub fn add_affector(&mut self, affector: Box<dyn Affector>) { self.affectors.push(affector); }
+
 
         pub fn update(&mut self, dt: f32) {
             // Emit new particles
@@ -7521,18 +7502,8 @@ pub mod particles {
             let to_emit = self.emission_accumulator as u32;
             self.emission_accumulator -= to_emit as f32;
 
-            if to_emit > 0 && self.particles.len() < self.max_particles {
-                for emitter in &mut self.emitters {
-                    let room = self.max_particles - self.particles.len();
-                    let count = (to_emit as usize).min(room) as u32;
-                    let new_particles = emitter.emit(count);
-                    self.particles.extend(new_particles);
-                }
-            }
-
             // Update particles
             for particle in &mut self.particles {
-                for affector in &self.affectors { affector.apply(particle, dt); }
                 particle.position.0 += particle.velocity.0 * dt;
                 particle.position.1 += particle.velocity.1 * dt;
                 particle.position.2 += particle.velocity.2 * dt;
@@ -7580,8 +7551,8 @@ pub mod taa {
                     };
                     let idx = (frame_index % sample_count) as usize;
                     Vec2::new(
-                        Self::halton(idx + 1, 2) - 0.5,
-                        Self::halton(idx + 1, 3) - 0.5
+                        JitterPattern::halton(idx + 1, 2) - 0.5,
+                        JitterPattern::halton(idx + 1, 3) - 0.5
                     )
                 },
                 JitterPattern::BlueNoise => {
@@ -7640,8 +7611,8 @@ pub mod taa {
     }
 
     impl Default for TAAConfig {
-        fn default() -> Self {
-            Self {
+        fn default() -> TAAConfig {
+            TAAConfig {
                 jitter_pattern: JitterPattern::Halton23x8,
                 clip_mode: ClipMode::VarianceClip,
                 blend_factor: 0.1,
@@ -7655,16 +7626,16 @@ pub mod taa {
     }
 
     /// Temporal Anti-Aliasing processor
-    pub struct TemporalAA {
+    pub struct TaaTemporalAA {
         pub config: TAAConfig,
         history_buffer: Option<Texture2D>,
         frame_index: u32,
         prev_jitter: Vec2,
     }
 
-    impl TemporalAA {
-        pub fn new(config: TAAConfig) -> Self {
-            Self {
+    impl TaaTemporalAA {
+        pub fn new(config: TAAConfig) -> TaaTemporalAA {
+            TaaTemporalAA {
                 config,
                 history_buffer: None,
                 frame_index: 0,
@@ -8041,8 +8012,8 @@ pub mod ssr {
     }
 
     impl Default for SSRConfig {
-        fn default() -> Self {
-            Self {
+        fn default() -> SSRConfig {
+            SSRConfig {
                 quality: SSRQuality::Medium,
                 max_distance: 100.0,
                 thickness: 0.5,
@@ -8063,7 +8034,7 @@ pub mod ssr {
     }
 
     impl ScreenSpaceReflections {
-        pub fn new(config: SSRConfig) -> Self {
+        pub fn new(config: SSRConfig) -> ScreenSpaceReflections {
             // Generate blue noise for jittering
             let mut noise = Vec::with_capacity(64 * 64);
             for i in 0..64*64 {
@@ -8072,7 +8043,7 @@ pub mod ssr {
                 noise.push(v);
             }
 
-            Self { config, noise_texture: noise }
+            ScreenSpaceReflections { config, noise_texture: noise }
         }
 
         /// Perform screen-space ray march
@@ -8098,7 +8069,7 @@ pub mod ssr {
                 pos = Vec3::new(pos.x + step.x, pos.y + step.y, pos.z + step.z);
 
                 // Project to screen space
-                let clip_pos = Self::world_to_clip(&pos, view_proj);
+                let clip_pos = ScreenSpaceReflections::world_to_clip(&pos, view_proj);
                 if clip_pos.x < -1.0 || clip_pos.x > 1.0 ||
                    clip_pos.y < -1.0 || clip_pos.y > 1.0 ||
                    clip_pos.z < 0.0 || clip_pos.z > 1.0 {
@@ -8159,7 +8130,7 @@ pub mod ssr {
                     (lo.z + hi.z) * 0.5
                 );
 
-                let clip = Self::world_to_clip(&mid, view_proj);
+                let clip = ScreenSpaceReflections::world_to_clip(&mid, view_proj);
                 let uv = Vec2::new(clip.x * 0.5 + 0.5, clip.y * -0.5 + 0.5);
                 let sampled = self.sample_depth(depth_buffer, uv);
 
@@ -8175,7 +8146,7 @@ pub mod ssr {
                 (lo.y + hi.y) * 0.5,
                 (lo.z + hi.z) * 0.5
             );
-            let clip = Self::world_to_clip(&mid, view_proj);
+            let clip = ScreenSpaceReflections::world_to_clip(&mid, view_proj);
             Vec2::new(clip.x * 0.5 + 0.5, clip.y * -0.5 + 0.5)
         }
 
@@ -8228,7 +8199,7 @@ pub mod ssr {
     }
 
     impl HiZBuffer {
-        pub fn new(width: u32, height: u32) -> Self {
+        pub fn new(width: u32, height: u32) -> HiZBuffer {
             let mip_count = ((width.max(height) as f32).log2().floor() as u32).max(1);
             let mut mip_chain = Vec::with_capacity(mip_count as usize);
 
@@ -8245,7 +8216,7 @@ pub mod ssr {
                 h = (h / 2).max(1);
             }
 
-            Self { mip_chain, mip_count }
+            HiZBuffer { mip_chain, mip_count }
         }
 
         /// Build Hi-Z mip chain from depth buffer
@@ -8286,8 +8257,11 @@ pub mod ssr {
 
         fn write_depth(&self, tex: &mut Texture2D, x: u32, y: u32, val: f32) {
             let idx = ((y * tex.width + x) * 4) as usize;
-            let bytes = val.to_le_bytes();
-            tex.data[idx..idx+4].copy_from_slice(&bytes);
+            let bits = f32::to_bits(val);
+            tex.data[idx] = (bits & 0xFF) as u8;
+            tex.data[idx + 1] = ((bits >> 8) & 0xFF) as u8;
+            tex.data[idx + 2] = ((bits >> 16) & 0xFF) as u8;
+            tex.data[idx + 3] = ((bits >> 24) & 0xFF) as u8;
         }
 
         /// Sample from mip level
@@ -8326,8 +8300,8 @@ pub mod volumetrics {
     }
 
     impl Default for VolumetricConfig {
-        fn default() -> Self {
-            Self {
+        fn default() -> VolumetricConfig {
+            VolumetricConfig {
                 samples: 64,
                 max_distance: 100.0,
                 density: 0.02,
@@ -8344,23 +8318,23 @@ pub mod volumetrics {
     }
 
     /// Volumetric fog/lighting processor
-    pub struct VolumetricLighting {
+    pub struct VolumetricsVolumetricLighting {
         pub config: VolumetricConfig,
         noise_3d: Vec<f32>,
         history_buffer: Option<Texture2D>,
     }
 
-    impl VolumetricLighting {
-        pub fn new(config: VolumetricConfig) -> Self {
+    impl VolumetricsVolumetricLighting {
+        pub fn new(config: VolumetricConfig) -> VolumetricsVolumetricLighting {
             // Generate 3D noise for fog variation
             let size = 32 * 32 * 32;
             let mut noise = Vec::with_capacity(size);
             for i in 0..size {
-                let v = Self::hash_float(i as u32);
+                let v = VolumetricsVolumetricLighting::hash_float(i as u32);
                 noise.push(v);
             }
 
-            Self {
+            VolumetricsVolumetricLighting {
                 config,
                 noise_3d: noise,
                 history_buffer: None,
@@ -8518,7 +8492,7 @@ pub mod volumetrics {
                     );
 
                     // Unproject to world space
-                    let world_pos = Self::clip_to_world(&clip_pos, inv_view_proj);
+                    let world_pos = VolumetricsVolumetricLighting::clip_to_world(&clip_pos, inv_view_proj);
 
                     // Ray direction
                     let ray = Vec3::new(
@@ -8590,7 +8564,7 @@ pub mod volumetrics {
     }
 
     /// God rays (radial light shafts)
-    pub struct GodRays {
+    pub struct VolumetricsGodRays {
         pub light_screen_pos: Vec2,
         pub density: f32,
         pub weight: f32,
@@ -8599,9 +8573,9 @@ pub mod volumetrics {
         pub samples: u32,
     }
 
-    impl Default for GodRays {
-        fn default() -> Self {
-            Self {
+    impl Default for VolumetricsGodRays {
+        fn default() -> VolumetricsGodRays {
+            VolumetricsGodRays {
                 light_screen_pos: Vec2::new(0.5, 0.3),
                 density: 1.0,
                 weight: 0.01,
@@ -8612,7 +8586,7 @@ pub mod volumetrics {
         }
     }
 
-    impl GodRays {
+    impl VolumetricsGodRays {
         /// Apply god rays effect
         pub fn apply(&self, input: &Texture2D, occlusion_mask: &Texture2D) -> Texture2D {
             let width = input.width;
@@ -8708,7 +8682,7 @@ pub mod lens {
 
     /// Lens flare element types
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub enum FlareElementType {
+    pub enum LensFlareElementType {
         Glow,
         Ring,
         Halo,
@@ -8719,8 +8693,8 @@ pub mod lens {
 
     /// Individual lens flare element
     #[derive(Debug, Clone)]
-    pub struct FlareElement {
-        pub element_type: FlareElementType,
+    pub struct LensFlareElement {
+        pub element_type: LensFlareElementType,
         pub position_offset: f32,  // -1 to 1 along flare axis
         pub size: f32,
         pub intensity: f32,
@@ -8730,8 +8704,8 @@ pub mod lens {
     }
 
     /// Complete lens flare system
-    pub struct LensFlare {
-        pub elements: Vec<FlareElement>,
+    pub struct LensLensFlare {
+        pub elements: Vec<LensFlareElement>,
         pub ghost_count: u32,
         pub ghost_dispersal: f32,
         pub halo_width: f32,
@@ -8739,13 +8713,13 @@ pub mod lens {
         pub threshold: f32,
     }
 
-    impl Default for LensFlare {
-        fn default() -> Self {
+    impl Default for LensLensFlare {
+        fn default() -> LensLensFlare {
             let mut elements = Vec::new();
 
             // Central glow
-            elements.push(FlareElement {
-                element_type: FlareElementType::Glow,
+            elements.push(LensFlareElement {
+                element_type: LensFlareElementType::Glow,
                 position_offset: 0.0,
                 size: 0.3,
                 intensity: 1.0,
@@ -8755,8 +8729,8 @@ pub mod lens {
             });
 
             // Starburst
-            elements.push(FlareElement {
-                element_type: FlareElementType::Starburst,
+            elements.push(LensFlareElement {
+                element_type: LensFlareElementType::Starburst,
                 position_offset: 0.0,
                 size: 0.5,
                 intensity: 0.5,
@@ -8767,8 +8741,8 @@ pub mod lens {
 
             // Ghost elements
             for i in 0..6 {
-                elements.push(FlareElement {
-                    element_type: FlareElementType::Ghost,
+                elements.push(LensFlareElement {
+                    element_type: LensFlareElementType::Ghost,
                     position_offset: 0.2 + i as f32 * 0.15,
                     size: 0.1 - i as f32 * 0.01,
                     intensity: 0.3 - i as f32 * 0.04,
@@ -8783,8 +8757,8 @@ pub mod lens {
             }
 
             // Halo
-            elements.push(FlareElement {
-                element_type: FlareElementType::Halo,
+            elements.push(LensFlareElement {
+                element_type: LensFlareElementType::Halo,
                 position_offset: 0.0,
                 size: 0.8,
                 intensity: 0.15,
@@ -8793,7 +8767,7 @@ pub mod lens {
                 aspect_ratio: 1.0,
             });
 
-            Self {
+            LensLensFlare {
                 elements,
                 ghost_count: 8,
                 ghost_dispersal: 0.25,
@@ -8804,7 +8778,7 @@ pub mod lens {
         }
     }
 
-    impl LensFlare {
+    impl LensLensFlare {
         /// Generate flare texture for light position
         pub fn generate(&self, width: u32, height: u32, light_screen_pos: Vec2, light_intensity: f32) -> Texture2D {
             let mut output = Texture2D {
@@ -8833,7 +8807,7 @@ pub mod lens {
             output
         }
 
-        fn render_element(&self, tex: &mut Texture2D, element: &FlareElement, pos: Vec2, intensity: f32) {
+        fn render_element(&self, tex: &mut Texture2D, element: &LensFlareElement, pos: Vec2, intensity: f32) {
             let radius = element.size * tex.width as f32 * 0.5;
             let center_x = pos.x * tex.width as f32;
             let center_y = pos.y * tex.height as f32;
@@ -8851,12 +8825,12 @@ pub mod lens {
 
                     if dist <= 1.0 {
                         let alpha = match element.element_type {
-                            FlareElementType::Glow => (1.0 - dist * dist) * element.intensity,
-                            FlareElementType::Ring => {
+                            LensFlareElementType::Glow => (1.0 - dist * dist) * element.intensity,
+                            LensFlareElementType::Ring => {
                                 let ring_dist = (dist - 0.8).abs();
                                 (1.0 - ring_dist * 10.0).max(0.0) * element.intensity
                             },
-                            FlareElementType::Halo => {
+                            LensFlareElementType::Halo => {
                                 let inner = 0.7;
                                 let outer = 1.0;
                                 if dist > inner && dist < outer {
@@ -8864,16 +8838,16 @@ pub mod lens {
                                     (1.0 - (t * 2.0 - 1.0).abs()) * element.intensity
                                 } else { 0.0 }
                             },
-                            FlareElementType::Starburst => {
+                            LensFlareElementType::Starburst => {
                                 let angle = dy.atan2(dx);
                                 let rays = 6.0;
                                 let ray = ((angle * rays).cos().abs()).powf(2.0);
                                 (1.0 - dist) * ray * element.intensity
                             },
-                            FlareElementType::Ghost => {
+                            LensFlareElementType::Ghost => {
                                 ((1.0 - dist * dist).max(0.0)).powf(2.0) * element.intensity
                             },
-                            FlareElementType::Anamorphic => {
+                            LensFlareElementType::Anamorphic => {
                                 let streak = (-dx.abs() * 2.0).exp() * (-dy * dy * 50.0).exp();
                                 streak * element.intensity
                             },
@@ -8907,8 +8881,8 @@ pub mod lens {
     }
 
     impl Default for AnamorphicStreak {
-        fn default() -> Self {
-            Self {
+        fn default() -> AnamorphicStreak {
+            AnamorphicStreak {
                 intensity: 0.5,
                 threshold: 0.8,
                 streak_length: 0.3,
@@ -8990,8 +8964,8 @@ pub mod lens {
     }
 
     impl Default for LensDistortion {
-        fn default() -> Self {
-            Self {
+        fn default() -> LensDistortion {
+            LensDistortion {
                 k1: -0.15,  // Slight barrel distortion
                 k2: 0.05,
                 k3: 0.0,
@@ -9076,14 +9050,14 @@ pub mod lut {
     use super::*;
 
     /// 3D LUT for color grading
-    pub struct LUT3D {
+    pub struct LutLUT3D {
         pub size: u32,
         pub data: Vec<RGB>,
     }
 
-    impl LUT3D {
+    impl LutLUT3D {
         /// Create identity LUT
-        pub fn identity(size: u32) -> Self {
+        pub fn identity(size: u32) -> LutLUT3D {
             let mut data = Vec::with_capacity((size * size * size) as usize);
             for b in 0..size {
                 for g in 0..size {
@@ -9096,7 +9070,7 @@ pub mod lut {
                     }
                 }
             }
-            Self { size, data }
+            LutLUT3D { size, data }
         }
 
         /// Sample LUT with trilinear interpolation
@@ -9128,15 +9102,15 @@ pub mod lut {
             let c111 = self.get(r1, g1, b1);
 
             // Trilinear interpolation
-            let c00 = Self::lerp_rgb(&c000, &c100, fr);
-            let c10 = Self::lerp_rgb(&c010, &c110, fr);
-            let c01 = Self::lerp_rgb(&c001, &c101, fr);
-            let c11 = Self::lerp_rgb(&c011, &c111, fr);
+            let c00 = LutLUT3D::lerp_rgb(&c000, &c100, fr);
+            let c10 = LutLUT3D::lerp_rgb(&c010, &c110, fr);
+            let c01 = LutLUT3D::lerp_rgb(&c001, &c101, fr);
+            let c11 = LutLUT3D::lerp_rgb(&c011, &c111, fr);
 
-            let c0 = Self::lerp_rgb(&c00, &c10, fg);
-            let c1 = Self::lerp_rgb(&c01, &c11, fg);
+            let c0 = LutLUT3D::lerp_rgb(&c00, &c10, fg);
+            let c1 = LutLUT3D::lerp_rgb(&c01, &c11, fg);
 
-            Self::lerp_rgb(&c0, &c1, fb)
+            LutLUT3D::lerp_rgb(&c0, &c1, fb)
         }
 
         fn get(&self, r: u32, g: u32, b: u32) -> RGB {
@@ -9183,17 +9157,17 @@ pub mod lut {
                 size = (lut_data.len() as f32).cbrt() as u32;
             }
 
-            Ok(Self { size, data: lut_data })
+            Ok(LutLUT3D { size, data: lut_data })
         }
 
         /// Blend two LUTs
-        pub fn blend(a: &LUT3D, b: &LUT3D, t: f32) -> LUT3D {
+        pub fn blend(a: &LutLUT3D, b: &LutLUT3D, t: f32) -> LutLUT3D {
             assert_eq!(a.size, b.size);
             let mut data = Vec::with_capacity(a.data.len());
             for i in 0..a.data.len() {
-                data.push(Self::lerp_rgb(&a.data[i], &b.data[i], t));
+                data.push(LutLUT3D::lerp_rgb(&a.data[i], &b.data[i], t));
             }
-            LUT3D { size: a.size, data }
+            LutLUT3D { size: a.size, data }
         }
 
         /// Apply LUT to texture
@@ -9226,8 +9200,8 @@ pub mod lut {
         use super::*;
 
         /// Create contrast adjustment LUT
-        pub fn contrast(size: u32, amount: f32) -> LUT3D {
-            let mut lut = LUT3D::identity(size);
+        pub fn contrast(size: u32, amount: f32) -> LutLUT3D {
+            let mut lut = LutLUT3D::identity(size);
             for color in &mut lut.data {
                 color.r = ((color.r - 0.5) * amount + 0.5).clamp(0.0, 1.0);
                 color.g = ((color.g - 0.5) * amount + 0.5).clamp(0.0, 1.0);
@@ -9237,8 +9211,8 @@ pub mod lut {
         }
 
         /// Create saturation adjustment LUT
-        pub fn saturation(size: u32, amount: f32) -> LUT3D {
-            let mut lut = LUT3D::identity(size);
+        pub fn saturation(size: u32, amount: f32) -> LutLUT3D {
+            let mut lut = LutLUT3D::identity(size);
             for color in &mut lut.data {
                 let luma = 0.299 * color.r + 0.587 * color.g + 0.114 * color.b;
                 color.r = luma + (color.r - luma) * amount;
@@ -9249,8 +9223,8 @@ pub mod lut {
         }
 
         /// Create temperature adjustment LUT (kelvin shift)
-        pub fn temperature(size: u32, kelvin_shift: f32) -> LUT3D {
-            let mut lut = LUT3D::identity(size);
+        pub fn temperature(size: u32, kelvin_shift: f32) -> LutLUT3D {
+            let mut lut = LutLUT3D::identity(size);
             let warm = kelvin_shift > 0.0;
             let amount = kelvin_shift.abs() / 100.0;
 
@@ -9267,8 +9241,8 @@ pub mod lut {
         }
 
         /// Create lift/gamma/gain LUT
-        pub fn lift_gamma_gain(size: u32, lift: RGB, gamma: RGB, gain: RGB) -> LUT3D {
-            let mut lut = LUT3D::identity(size);
+        pub fn lift_gamma_gain(size: u32, lift: RGB, gamma: RGB, gain: RGB) -> LutLUT3D {
+            let mut lut = LutLUT3D::identity(size);
             for color in &mut lut.data {
                 // Apply lift (shadows)
                 color.r = color.r * (1.0 - lift.r) + lift.r;
@@ -9293,8 +9267,8 @@ pub mod lut {
         }
 
         /// Create S-curve contrast LUT
-        pub fn s_curve(size: u32, amount: f32) -> LUT3D {
-            let mut lut = LUT3D::identity(size);
+        pub fn s_curve(size: u32, amount: f32) -> LutLUT3D {
+            let mut lut = LutLUT3D::identity(size);
             for color in &mut lut.data {
                 let apply_s = |x: f32| -> f32 {
                     let t = x * 2.0 - 1.0;
@@ -9309,8 +9283,8 @@ pub mod lut {
         }
 
         /// Create bleach bypass / desaturation LUT
-        pub fn bleach_bypass(size: u32, amount: f32) -> LUT3D {
-            let mut lut = LUT3D::identity(size);
+        pub fn bleach_bypass(size: u32, amount: f32) -> LutLUT3D {
+            let mut lut = LutLUT3D::identity(size);
             for color in &mut lut.data {
                 let luma = 0.299 * color.r + 0.587 * color.g + 0.114 * color.b;
                 // Blend with luminance (desaturate)
@@ -9341,8 +9315,8 @@ pub mod sharpen {
     }
 
     impl Default for ContrastAdaptiveSharpening {
-        fn default() -> Self {
-            Self { sharpness: 0.5 }
+        fn default() -> ContrastAdaptiveSharpening {
+            ContrastAdaptiveSharpening { sharpness: 0.5 }
         }
     }
 
@@ -9440,8 +9414,8 @@ pub mod sharpen {
     }
 
     impl Default for UnsharpMask {
-        fn default() -> Self {
-            Self {
+        fn default() -> UnsharpMask {
+            UnsharpMask {
                 radius: 1.0,
                 amount: 1.0,
                 threshold: 0.0,
@@ -9579,8 +9553,8 @@ pub mod sharpen {
     }
 
     impl Default for HighPassSharpen {
-        fn default() -> Self {
-            Self {
+        fn default() -> HighPassSharpen {
+            HighPassSharpen {
                 radius: 2.0,
                 amount: 1.0,
                 blend_mode: HighPassBlend::Overlay,
@@ -9701,8 +9675,8 @@ pub mod stylized {
     }
 
     impl Default for NightVision {
-        fn default() -> Self {
-            Self {
+        fn default() -> NightVision {
+            NightVision {
                 mode: VisionMode::NightVision,
                 intensity: 1.0,
                 noise_amount: 0.1,
@@ -9822,8 +9796,8 @@ pub mod stylized {
     }
 
     impl Default for CRTEffect {
-        fn default() -> Self {
-            Self {
+        fn default() -> CRTEffect {
+            CRTEffect {
                 curvature: 0.1,
                 scanline_intensity: 0.3,
                 scanline_count: 240.0,
@@ -9921,8 +9895,8 @@ pub mod stylized {
     }
 
     impl Default for HeatDistortion {
-        fn default() -> Self {
-            Self {
+        fn default() -> HeatDistortion {
+            HeatDistortion {
                 intensity: 0.02,
                 speed: 1.0,
                 scale: 10.0,
@@ -10038,8 +10012,8 @@ pub mod stylized {
     }
 
     impl Default for UnderwaterEffect {
-        fn default() -> Self {
-            Self {
+        fn default() -> UnderwaterEffect {
+            UnderwaterEffect {
                 fog_color: RGB::new(0.1, 0.3, 0.5),
                 fog_density: 0.02,
                 caustic_intensity: 0.3,
