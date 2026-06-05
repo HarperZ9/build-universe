@@ -14,7 +14,7 @@ pub mod ffi;
 #[cfg(feature = "trace")]
 pub mod trace;
 
-pub use state::{DrawHazards, FrameState, RTV_SLOTS, SRV_SLOTS, UAV_SLOTS};
+pub use state::{DrawHazards, FrameState, Snapshot, RTV_SLOTS, SRV_SLOTS, UAV_SLOTS};
 
 use std::fmt;
 
@@ -65,6 +65,82 @@ pub enum Stage {
     Gs,
     Hs,
     Ds,
+}
+
+impl Stage {
+    /// Deterministic index Vs=0..Ds=5, for ordered/serializable snapshots.
+    pub fn index(self) -> u8 {
+        match self {
+            Stage::Vs => 0,
+            Stage::Ps => 1,
+            Stage::Cs => 2,
+            Stage::Gs => 3,
+            Stage::Hs => 4,
+            Stage::Ds => 5,
+        }
+    }
+    /// Inverse of index (out-of-range maps to Vs).
+    pub fn from_index(i: u8) -> Stage {
+        match i {
+            1 => Stage::Ps,
+            2 => Stage::Cs,
+            3 => Stage::Gs,
+            4 => Stage::Hs,
+            5 => Stage::Ds,
+            _ => Stage::Vs,
+        }
+    }
+}
+
+/// A specific bindable location, for restore-verify reporting.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum BindPoint {
+    Srv { stage: Stage, slot: u32 },
+    Uav(u32),
+    Rtv(u32),
+    Dsv,
+}
+
+impl fmt::Display for BindPoint {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            BindPoint::Srv { stage, slot } => write!(f, "{:?} t{}", stage, slot),
+            BindPoint::Uav(s) => write!(f, "u{}", s),
+            BindPoint::Rtv(s) => write!(f, "rtv{}", s),
+            BindPoint::Dsv => write!(f, "dsv"),
+        }
+    }
+}
+
+/// One slot whose binding changed across a save/restore boundary: evidence the
+/// restore was NOT transparent to the host, so the game runs with corrupted
+/// state. The most expensive failure class, because the game did not cause it.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct RestoreLeak {
+    pub at: BindPoint,
+    pub saved: Option<ViewId>,
+    pub restored: Option<ViewId>,
+    pub saved_resource: Option<ResourceId>,
+    pub restored_resource: Option<ResourceId>,
+}
+
+impl fmt::Display for RestoreLeak {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fn side(v: Option<ViewId>, r: Option<ResourceId>) -> String {
+            match (v, r) {
+                (Some(v), Some(r)) => format!("res#{} (view#{})", r.0, v.0),
+                (Some(v), None) => format!("view#{}", v.0),
+                _ => "NULL".to_string(),
+            }
+        }
+        write!(
+            f,
+            "{} saved={} restored={}",
+            self.at,
+            side(self.saved, self.saved_resource),
+            side(self.restored, self.restored_resource)
+        )
+    }
 }
 
 /// Where a write binding lives, for hazard reporting.

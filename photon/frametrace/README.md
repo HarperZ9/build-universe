@@ -109,3 +109,24 @@ Hardened hook coverage: PS/VS/CS/GS/HS/DS SetShaderResources, CSSetUnorderedAcce
 OMSetRenderTargets, OMSetRenderTargetsAndUnorderedAccessViews (with KEEP guards),
 Draw/DrawIndexed/DrawInstanced/DrawIndexedInstanced/DrawAuto, Dispatch. Read-only
 DSV is detected via GetDesc (D3D11_DSV_READ_ONLY_DEPTH) and excluded from hazards.
+
+## Restore-verify (Tier-1: is an effect transparent to the host?)
+
+An effect (or any mid-frame dispatch) saves the context state, does its work,
+and restores. The invariant: restore is transparent -- after it, every slot
+holds what the game set. A forgotten slot (the classic "left SSR bound to t27")
+runs the game with state it never set: host corruption, and the most expensive
+failure because the game did not cause it.
+
+    let saved = fs.snapshot();      // before the effect
+    ... effect binds/draws/restores ...
+    let restored = fs.snapshot();   // after the restore
+    for leak in saved.diff_restore(&restored) {
+        // e.g. "Ps t27 saved=res#21042 (view#10) restored=NULL"
+    }
+
+cargo run --example restore_verify demonstrates it. C ABI: ft_snapshot /
+ft_restore_leak_count / ft_restore_first_leak -- a RAW effect calls these around
+its D3D11StateBackup save/restore so non-transparency becomes a logged witness,
+not a guess. (RestoreUnobserved -- a restore via a path the membrane does not
+hook -- is the hook-coverage half, flagged where the boundary is wired.)

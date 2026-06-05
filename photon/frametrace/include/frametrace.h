@@ -31,6 +31,14 @@ int      ft_hazard_kind(const FrameState*, size_t i); /* 0=ReadWrite 1=WriteWrit
 const char* ft_hazard_kind_name(const FrameState*, size_t i); /* "ReadWrite"|"WriteWrite"|"none" */
 uint64_t ft_hazard_resource(const FrameState*, size_t i);
 
+/* Restore-verify: diff a SAVED vs a RESTORED snapshot; nonzero leak count means
+   the effect was not transparent to the host (slots it never set are corrupted). */
+typedef struct Snapshot Snapshot;
+Snapshot* ft_snapshot(const FrameState*);
+void      ft_snapshot_free(Snapshot*);
+size_t    ft_restore_leak_count(const Snapshot* saved, const Snapshot* restored);
+size_t    ft_restore_first_leak(const Snapshot* saved, const Snapshot* restored, char* buf, size_t len);
+
 #ifdef __cplusplus
 }
 #endif

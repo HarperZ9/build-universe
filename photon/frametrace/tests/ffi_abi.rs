@@ -29,3 +29,25 @@ fn c_abi_detects_the_ssr_hazard() {
         ft_free(s);
     }
 }
+
+#[test]
+fn c_abi_restore_verify_detects_a_leak() {
+    unsafe {
+        let s: *mut FrameState = ft_new();
+        ft_register_view(s, 10, 100, 0); // game SRV, resource 100
+        let srvs = [10u64];
+        ft_set_shader_resources(s, 1, 27, srvs.as_ptr(), srvs.len());
+        let saved = ft_snapshot(s);
+        // effect unbinds t27 and never restores it
+        let nulls = [0u64];
+        ft_set_shader_resources(s, 1, 27, nulls.as_ptr(), nulls.len());
+        let restored = ft_snapshot(s);
+        assert_eq!(ft_restore_leak_count(saved, restored), 1);
+        let mut buf = [0 as std::os::raw::c_char; 128];
+        let n = ft_restore_first_leak(saved, restored, buf.as_mut_ptr(), buf.len());
+        assert!(n > 0);
+        ft_snapshot_free(saved);
+        ft_snapshot_free(restored);
+        ft_free(s);
+    }
+}

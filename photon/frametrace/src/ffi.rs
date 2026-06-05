@@ -7,7 +7,7 @@
 
 use std::os::raw::{c_char, c_int};
 
-use crate::{Event, FrameState, HazardKind, ResourceId, Stage, ViewId, ViewKind};
+use crate::{Event, FrameState, HazardKind, ResourceId, Snapshot, Stage, ViewId, ViewKind};
 
 fn view_opt(id: u64) -> Option<ViewId> {
     if id == 0 {
@@ -160,4 +160,58 @@ pub unsafe extern "C" fn ft_hazard_resource(state: *const FrameState, i: usize) 
         }
     }
     0
+}
+
+/// Capture the current bind state as a snapshot (free with ft_snapshot_free).
+#[no_mangle]
+pub unsafe extern "C" fn ft_snapshot(state: *const FrameState) -> *mut Snapshot {
+    match state.as_ref() {
+        Some(s) => Box::into_raw(Box::new(s.snapshot())),
+        None => std::ptr::null_mut(),
+    }
+}
+
+/// Free a snapshot from ft_snapshot.
+#[no_mangle]
+pub unsafe extern "C" fn ft_snapshot_free(snap: *mut Snapshot) {
+    if !snap.is_null() {
+        drop(Box::from_raw(snap));
+    }
+}
+
+/// Slots that differ between a SAVED and a RESTORED snapshot (0 = transparent).
+#[no_mangle]
+pub unsafe extern "C" fn ft_restore_leak_count(saved: *const Snapshot, restored: *const Snapshot) -> usize {
+    match (saved.as_ref(), restored.as_ref()) {
+        (Some(s), Some(r)) => s.diff_restore(r).len(),
+        _ => 0,
+    }
+}
+
+/// Write the first restore leak witness into buf (NUL-terminated); return bytes
+/// written (excluding NUL), or 0 if there is no leak.
+#[no_mangle]
+pub unsafe extern "C" fn ft_restore_first_leak(
+    saved: *const Snapshot,
+    restored: *const Snapshot,
+    buf: *mut c_char,
+    len: usize,
+) -> usize {
+    if buf.is_null() || len == 0 {
+        return 0;
+    }
+    let leaks = match (saved.as_ref(), restored.as_ref()) {
+        (Some(s), Some(r)) => s.diff_restore(r),
+        _ => Vec::new(),
+    };
+    let first = match leaks.first() {
+        Some(l) => l,
+        None => return 0,
+    };
+    let msg = format!("{}", first);
+    let bytes = msg.as_bytes();
+    let n = bytes.len().min(len - 1);
+    std::ptr::copy_nonoverlapping(bytes.as_ptr(), buf as *mut u8, n);
+    *buf.add(n) = 0;
+    n
 }

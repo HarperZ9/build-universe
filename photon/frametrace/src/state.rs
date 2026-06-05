@@ -1,7 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use crate::{
-    Event, Hazard, HazardKind, ReadSlot, ResourceId, Stage, ViewId, ViewKind, WriteSlot,
+    BindPoint, Event, Hazard, HazardKind, ReadSlot, ResourceId, RestoreLeak, Stage, ViewId,
+    ViewKind, WriteSlot,
 };
 
 /// Shader-resource slots per stage (D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT).
@@ -202,5 +203,96 @@ impl FrameState {
             }
         }
         hazards
+    }
+}
+
+impl FrameState {
+    fn bound(&self, view: ViewId) -> Bound {
+        Bound { view, resource: self.resolve(view).map(|(r, _)| r) }
+    }
+
+    /// Capture the current resource-binding state for restore-verification.
+    pub fn snapshot(&self) -> Snapshot {
+        let mut srv = BTreeMap::new();
+        for (stage, table) in &self.srv {
+            for (slot, view) in table {
+                srv.insert((stage.index(), *slot), self.bound(*view));
+            }
+        }
+        Snapshot {
+            srv,
+            uav: self.uav.iter().map(|(s, v)| (*s, self.bound(*v))).collect(),
+            rtv: self.rtv.iter().map(|(s, v)| (*s, self.bound(*v))).collect(),
+            dsv: self.dsv.map(|v| self.bound(v)),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+struct Bound {
+    view: ViewId,
+    resource: Option<ResourceId>,
+}
+
+/// An immutable capture of the resource-binding state at one instant. Diff a
+/// pre-effect SAVE against the post-effect RESTORE: any differing slot is a
+/// restore leak (the effect was not transparent to the host).
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
+pub struct Snapshot {
+    srv: BTreeMap<(u8, u32), Bound>,
+    uav: BTreeMap<u32, Bound>,
+    rtv: BTreeMap<u32, Bound>,
+    dsv: Option<Bound>,
+}
+
+fn view_of(b: Option<&Bound>) -> Option<ViewId> {
+    b.map(|x| x.view)
+}
+
+fn make_leak(at: BindPoint, s: Option<&Bound>, r: Option<&Bound>) -> RestoreLeak {
+    RestoreLeak {
+        at,
+        saved: s.map(|b| b.view),
+        restored: r.map(|b| b.view),
+        saved_resource: s.and_then(|b| b.resource),
+        restored_resource: r.and_then(|b| b.resource),
+    }
+}
+
+impl Snapshot {
+    /// Slots whose binding differs between this (SAVED) snapshot and the
+    /// RESTORED one. Empty = the restore was transparent. Deterministic order.
+    pub fn diff_restore(&self, restored: &Snapshot) -> Vec<RestoreLeak> {
+        let mut leaks = Vec::new();
+
+        let mut srv_keys: BTreeSet<(u8, u32)> = self.srv.keys().copied().collect();
+        srv_keys.extend(restored.srv.keys().copied());
+        for (si, slot) in srv_keys {
+            let s = self.srv.get(&(si, slot));
+            let r = restored.srv.get(&(si, slot));
+            if view_of(s) != view_of(r) {
+                leaks.push(make_leak(BindPoint::Srv { stage: Stage::from_index(si), slot }, s, r));
+            }
+        }
+        let mut uav_keys: BTreeSet<u32> = self.uav.keys().copied().collect();
+        uav_keys.extend(restored.uav.keys().copied());
+        for slot in uav_keys {
+            let (s, r) = (self.uav.get(&slot), restored.uav.get(&slot));
+            if view_of(s) != view_of(r) {
+                leaks.push(make_leak(BindPoint::Uav(slot), s, r));
+            }
+        }
+        let mut rtv_keys: BTreeSet<u32> = self.rtv.keys().copied().collect();
+        rtv_keys.extend(restored.rtv.keys().copied());
+        for slot in rtv_keys {
+            let (s, r) = (self.rtv.get(&slot), restored.rtv.get(&slot));
+            if view_of(s) != view_of(r) {
+                leaks.push(make_leak(BindPoint::Rtv(slot), s, r));
+            }
+        }
+        if view_of(self.dsv.as_ref()) != view_of(restored.dsv.as_ref()) {
+            leaks.push(make_leak(BindPoint::Dsv, self.dsv.as_ref(), restored.dsv.as_ref()));
+        }
+        leaks
     }
 }
