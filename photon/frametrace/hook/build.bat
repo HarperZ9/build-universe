@@ -1,4 +1,5 @@
 @echo off
+cargo build --locked || exit /b 1
 for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do set "VSPATH=%%i"
 if "%VSPATH%"=="" ( echo could not locate Visual Studio via vswhere & exit /b 1 )
 call "%VSPATH%\VC\Auxiliary\Build\vcvars64.bat" >nul
