@@ -5,7 +5,7 @@ A physics-inspired software ecosystem: programming language, operating system ke
 ## Modules
 
 ### Core
-- **QuantaLang** — Multi-paradigm systems language with algebraic effects, ownership, and 8 codegen backends
+- **QuantaLang** — Multi-paradigm systems language with algebraic effects, ownership, and a production C backend (HLSL/GLSL/LLVM/x86-64/ARM64/WASM/SPIR-V backends exist but are experimental and do not yet emit runnable artifacts)
 - **QuantaOS** — Hobby OS kernel (x86-64, ext2/4, context switching, memory management)
 - **Axiom** — Neural architecture search and differentiable program synthesis
 
@@ -40,7 +40,7 @@ A physics-inspired software ecosystem: programming language, operating system ke
 
 ## Status
 
-**Alpha.** The QuantaLang compiler (81K lines Rust, 599 tests passing) is the most mature component. The C backend produces correct native binaries. HLSL/GLSL produce clean shader output. Other backends are experimental. The .quanta modules demonstrate the language's capabilities across domains. See [quantaos/STATUS.md](quantaos/STATUS.md) for kernel implementation state.
+**Alpha.** The QuantaLang compiler (Rust; 755 test functions in tree) is the most mature component. The C backend produces correct native binaries. HLSL/GLSL produce clean shader output. Other backends are experimental. The .quanta modules demonstrate the language's capabilities across domains. See [quantaos/STATUS.md](quantaos/STATUS.md) for kernel implementation state.
 
 ## Caveats
 
@@ -48,6 +48,14 @@ A physics-inspired software ecosystem: programming language, operating system ke
 - **QuantaOS** is an educational hobby kernel, not a production OS. See [quantaos/STATUS.md](quantaos/STATUS.md).
 - **Axiom** is an experimental proof-of-concept for differentiable program synthesis.
 - The `.quanta` source files serve as both working code and language specification — demonstrating QuantaLang's syntax across domains.
+
+## Ground Truth
+
+This repo previously carried conflicting claims across README, ENGINEERING, and CHANGELOG. Authoritative per-module reality now lives in:
+
+- [STATUS.md](STATUS.md) — module maturity ledger (real vs scaffolding). Where any doc disagrees, STATUS.md is canonical.
+- [LINEAGE.md](LINEAGE.md) — the Quanta family tree and how the mixed-language pieces interlace.
+- [docs/HEATMAP-AND-ACTION-PLAN.md](docs/HEATMAP-AND-ACTION-PLAN.md) — engineering heatmap and prioritized plan.
 
 ## License
 

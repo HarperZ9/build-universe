@@ -46,3 +46,6 @@ Thumbs.db
 */lib.c
 tests/programs/*.c
 programs/*.c
+
+# safe_write pre-calibration archive
+.warden-safe-cache/
