@@ -20,12 +20,12 @@ use std::fmt;
 
 /// An underlying GPU resource (texture/buffer). In a live hook this is the
 /// ID3D11Resource pointer; in the model it is an opaque handle.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct ResourceId(pub u64);
 
 /// A view onto a resource (SRV/RTV/DSV/UAV). In a live hook this is the
 /// ID3D11View pointer; in the model it is an opaque handle.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct ViewId(pub u64);
 
 /// The kind of view, which determines whether a binding reads or writes the
@@ -197,6 +197,38 @@ impl fmt::Display for Hazard {
     }
 }
 
+/// A temporal (history ping-pong) invariant failure.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum TemporalFault {
+    /// A history member read and written in the same frame (feedback/aliasing).
+    WithinFrameFeedback,
+    /// The read buffer did not alternate from last frame: the ping-pong is stuck
+    /// (stale history -> ghosting). Unreachable from a single-frame capture.
+    SwapDesync,
+    /// A history member read before it was ever written or cleared (warmup bug).
+    UninitializedRead,
+}
+
+/// A temporal-pass invariant violation, witnessed at a frame boundary (Present).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct TemporalViolation {
+    pub frame: u64,
+    pub fault: TemporalFault,
+    pub pair: (ResourceId, ResourceId),
+    pub resource: ResourceId,
+}
+
+impl fmt::Display for TemporalViolation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let (a, b) = self.pair;
+        write!(
+            f,
+            "frame {} {:?} on history pair (res#{}, res#{}) member res#{}",
+            self.frame, self.fault, a.0, b.0, self.resource.0
+        )
+    }
+}
+
 /// A single recorded D3D11 immediate-context event. Unbinding is modelled as
 /// setting a slot to None: D3D11 unbinds by binding a null view.
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -231,4 +263,6 @@ pub enum Event {
     Draw,
     /// Dispatch/DispatchIndirect. A hazard checkpoint.
     Dispatch,
+    /// IDXGISwapChain::Present -- a frame boundary; drives temporal evaluation.
+    Present,
 }

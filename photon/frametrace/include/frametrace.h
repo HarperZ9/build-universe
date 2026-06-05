@@ -39,6 +39,12 @@ void      ft_snapshot_free(Snapshot*);
 size_t    ft_restore_leak_count(const Snapshot* saved, const Snapshot* restored);
 size_t    ft_restore_first_leak(const Snapshot* saved, const Snapshot* restored, char* buf, size_t len);
 
+/* Temporal (history ping-pong): declare the pair, call ft_present per frame. */
+void   ft_present(FrameState*);
+void   ft_declare_history_pair(FrameState*, uint64_t a, uint64_t b);
+size_t ft_temporal_violation_count(const FrameState*);
+size_t ft_temporal_witness(const FrameState*, size_t i, char* buf, size_t len);
+
 #ifdef __cplusplus
 }
 #endif
