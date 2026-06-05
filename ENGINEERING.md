@@ -1,21 +1,21 @@
 # Quanta Ecosystem — Engineering Runbook
 
-Last verified: 2026-04-04. 16/16 ecosystem modules compile. 64/65 programs MSVC-native clean. Compiler 604 tests green.
+Last verified: 2026-06-05. Each .quanta module transpiles to C individually; whole-ecosystem cross-module resolution is incomplete and self-hosting is not yet achieved. 56 native programs verified MSVC-clean (65 sources in programs/). Compiler: 755 test functions defined in tree (a full green pass count requires a local build and is not re-verified in this pass). See STATUS.md for per-module maturity.
 
 ## Quick Reference
 
 | Repo | Tests | CI | Release |
 |------|-------|----|---------|
-| quantalang | 604 Rust | clippy + fmt + test + e2e color self-check | v1.0.0 (quantac.exe, 16 bugs fixed) |
-| calibrate-pro | 297 Python | ruff + pytest (Ubuntu + Windows) | v1.0.0 (standalone exe) |
-| quanta-color | 457 Python | ruff + pytest | v1.0.0 |
+| quantalang | 755 test fns | clippy + fmt + test + e2e color self-check | v1.0.0 (quantac.exe, 16 bugs fixed) |
+| calibrate-pro | 228 Python | ruff + pytest (Ubuntu + Windows) | v1.0.0 (standalone exe) |
+| quanta-color | 281 Python | ruff + pytest | v1.0.0 |
 | quanta-universe | — | file validation | v1.0.0 |
 | quanta-finance | 142 Python | ruff + pytest | — |
 | quanta-oracle | 187 Python | ruff + pytest | — |
-| quanta-engine | 96 Python | ruff + pytest (stubs for cross-deps) | — |
+| quanta-engine | 173 Python | ruff + pytest (stubs for cross-deps) | — |
 | quanta-ui | 17 Python | ruff + pytest (needs libEGL on Linux) | — |
 | quanta-ecosystem | — | sdist build validation | — |
-| aurora | Lua | LUA_PATH set, Lua 5.1 compat | — |
+| aurora | no source | referenced only; no .lua source present locally | — |
 
 ## When CI Fails
 
