@@ -7,7 +7,7 @@
 
 use std::os::raw::{c_char, c_int};
 
-use crate::{Event, FrameState, HazardKind, ResourceId, Snapshot, Stage, ViewId, ViewKind};
+use crate::{Claim, Event, FrameState, HazardKind, ResourceId, Snapshot, Stage, Verdict, ViewId, ViewKind};
 
 fn view_opt(id: u64) -> Option<ViewId> {
     if id == 0 {
@@ -258,4 +258,31 @@ pub unsafe extern "C" fn ft_temporal_witness(state: *const FrameState, i: usize,
     std::ptr::copy_nonoverlapping(bytes.as_ptr(), buf as *mut u8, n);
     *buf.add(n) = 0;
     n
+}
+
+/// Adjudicate a claim string against observed state. Returns 0=Confirmed,
+/// 1=Contradicted, 2=Unresolvable; writes the witness into buf (NUL-terminated).
+#[no_mangle]
+pub unsafe extern "C" fn ft_adjudicate(state: *const FrameState, claim: *const c_char, buf: *mut c_char, len: usize) -> c_int {
+    let s = match state.as_ref() {
+        Some(s) => s,
+        None => return 2,
+    };
+    if claim.is_null() {
+        return 2;
+    }
+    let claim_str = std::ffi::CStr::from_ptr(claim).to_string_lossy().into_owned();
+    let verdict = s.adjudicate(&Claim::parse(&claim_str));
+    let (code, witness) = match &verdict {
+        Verdict::Confirmed => (0, String::new()),
+        Verdict::Contradicted { observed } => (1, observed.clone()),
+        Verdict::Unresolvable => (2, "not instrumented".to_string()),
+    };
+    if !buf.is_null() && len > 0 {
+        let b = witness.as_bytes();
+        let n = b.len().min(len - 1);
+        std::ptr::copy_nonoverlapping(b.as_ptr(), buf as *mut u8, n);
+        *buf.add(n) = 0;
+    }
+    code
 }

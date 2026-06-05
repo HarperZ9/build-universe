@@ -45,6 +45,10 @@ void   ft_declare_history_pair(FrameState*, uint64_t a, uint64_t b);
 size_t ft_temporal_violation_count(const FrameState*);
 size_t ft_temporal_witness(const FrameState*, size_t i, char* buf, size_t len);
 
+/* Agent-facing gate: adjudicate a claim string against observed state.
+   Returns 0=Confirmed 1=Contradicted 2=Unresolvable; writes the witness. */
+int ft_adjudicate(const FrameState*, const char* claim, char* buf, size_t len);
+
 #ifdef __cplusplus
 }
 #endif

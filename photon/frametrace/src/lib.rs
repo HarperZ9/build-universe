@@ -229,6 +229,101 @@ impl fmt::Display for TemporalViolation {
     }
 }
 
+/// Map a stage token (vs/ps/cs/gs/hs/ds) to a Stage.
+fn parse_stage(s: &str) -> Option<Stage> {
+    match s.to_ascii_lowercase().as_str() {
+        "vs" => Some(Stage::Vs),
+        "ps" => Some(Stage::Ps),
+        "cs" => Some(Stage::Cs),
+        "gs" => Some(Stage::Gs),
+        "hs" => Some(Stage::Hs),
+        "ds" => Some(Stage::Ds),
+        _ => None,
+    }
+}
+
+fn parse_res(x: &str) -> Option<ResourceId> {
+    if let Some(hex) = x.strip_prefix("0x") {
+        u64::from_str_radix(hex, 16).ok().map(ResourceId)
+    } else {
+        x.parse::<u64>().ok().map(ResourceId)
+    }
+}
+
+/// A claim the agent wants to assert about current runtime state. The membrane
+/// adjudicates it against what it actually observed, so a confident-but-wrong
+/// claim is blocked with a witness instead of escaping as prose.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum Claim {
+    /// "Stage S slot N is bound to resource R" (None = "is unbound").
+    SrvBinding { stage: Stage, slot: u32, resource: Option<ResourceId> },
+    /// "Resource R is bound as a render target."
+    IsRenderTarget { resource: ResourceId },
+    /// "Resource R is the depth-stencil."
+    IsDepthStencil { resource: ResourceId },
+    /// "Resource R is currently hazarded (read+write)."
+    IsHazarded { resource: ResourceId },
+    /// A claim about state the membrane does NOT instrument (blend, raster, ...).
+    Uninstrumented { what: String },
+}
+
+impl Claim {
+    /// Parse a claim from tokens; unrecognized forms become Uninstrumented so
+    /// every claim string gets a verdict.
+    ///   "srv ps 27 100" | "srv ps 27 none" | "rt 200" | "ds 300" | "hazard 100"
+    pub fn parse(s: &str) -> Claim {
+        let t: Vec<&str> = s.split_whitespace().collect();
+        let other = || Claim::Uninstrumented { what: s.to_string() };
+        match t.as_slice() {
+            ["srv", st, slot, r] => {
+                if let (Some(stage), Ok(slot)) = (parse_stage(st), slot.parse::<u32>()) {
+                    if r.eq_ignore_ascii_case("none") {
+                        return Claim::SrvBinding { stage, slot, resource: None };
+                    }
+                    if let Some(res) = parse_res(r) {
+                        return Claim::SrvBinding { stage, slot, resource: Some(res) };
+                    }
+                }
+                other()
+            }
+            ["rt", r] => parse_res(r).map(|resource| Claim::IsRenderTarget { resource }).unwrap_or_else(other),
+            ["ds", r] => parse_res(r).map(|resource| Claim::IsDepthStencil { resource }).unwrap_or_else(other),
+            ["hazard", r] => parse_res(r).map(|resource| Claim::IsHazarded { resource }).unwrap_or_else(other),
+            _ => other(),
+        }
+    }
+}
+
+/// The membrane verdict on a Claim. The gate passes Confirmed, BLOCKS
+/// Contradicted (the confident-but-wrong case), and marks Unresolvable.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum Verdict {
+    /// The membrane observed exactly the claimed state. Safe to assert.
+    Confirmed,
+    /// Instrumented for this state but did NOT observe the claim. The confident
+    /// claim is blocked; the membrane is authoritative. Witness = what is there.
+    Contradicted { observed: String },
+    /// Not instrumented. Assert neither true nor false: needs instrumentation.
+    Unresolvable,
+}
+
+impl Verdict {
+    /// Whether the agent may assert the claim as fact.
+    pub fn may_assert(&self) -> bool {
+        matches!(self, Verdict::Confirmed)
+    }
+}
+
+impl fmt::Display for Verdict {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Verdict::Confirmed => write!(f, "CONFIRMED"),
+            Verdict::Contradicted { observed } => write!(f, "CONTRADICTED (observed: {})", observed),
+            Verdict::Unresolvable => write!(f, "UNRESOLVABLE (not instrumented -- do not assert)"),
+        }
+    }
+}
+
 /// A single recorded D3D11 immediate-context event. Unbinding is modelled as
 /// setting a slot to None: D3D11 unbinds by binding a null view.
 #[derive(Clone, PartialEq, Eq, Debug)]
