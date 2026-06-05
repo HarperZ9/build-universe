@@ -90,3 +90,22 @@ staticlib, but its runtime is validated by injecting it into a live D3D11 proces
 (or renaming it to a proxy d3d11.dll), not in CI. View-to-resource mapping uses
 GetResource(). GS/HS/DS SRV stages and OMSetRenderTargetsAndUnorderedAccessViews
 are one-line additions following the same slot pattern.
+
+## RenderDoc adapter (offline trace from a capture)
+
+adapters/renderdoc_to_frametrace.py converts a RenderDoc .rdc capture into the
+JSON trace format, for replay without a live process:
+
+    python adapters/renderdoc_to_frametrace.py capture.rdc > trace.json
+    cargo run --example replay_trace -- trace.json
+
+It walks every draw/dispatch, reads the bound D3D11 views per stage, and assigns
+a distinct view id per (resource, kind) so a resource used as both SRV and RTV
+keeps its hazard. UNVERIFIED HERE: it targets the documented RenderDoc Python API
+but has not been run against a live capture in this environment (no RenderDoc);
+syntax is checked, API field names should be confirmed against your version.
+
+Hardened hook coverage: PS/VS/CS/GS/HS/DS SetShaderResources, CSSetUnorderedAccessViews,
+OMSetRenderTargets, OMSetRenderTargetsAndUnorderedAccessViews (with KEEP guards),
+Draw/DrawIndexed/DrawInstanced/DrawIndexedInstanced/DrawAuto, Dispatch. Read-only
+DSV is detected via GetDesc (D3D11_DSV_READ_ONLY_DEPTH) and excluded from hazards.
