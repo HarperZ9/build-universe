@@ -40,3 +40,25 @@ An LLM has no symbol table and no heap; it approximates inference over text, so
 it breaks exactly where state is mutated far from where it is read. The fix is
 not to make it reason harder about state but to make it observe ground truth.
 This crate is the observable substrate for the D3D11 frame.
+
+## C ABI (for the D3D11 hook)
+
+include/frametrace.h declares an extern "C" surface (ft_new, ft_register_view,
+ft_set_shader_resources, ft_set_render_targets, ft_draw, ft_hazard_count, ...)
+so a C or C++ D3D11 vtable hook can drive the Rust core across FFI. View and
+resource ids are the ID3D11 pointers cast to uint64; id 0 means null/unbound.
+
+Build the staticlib, then the C demo (Windows + MSVC):
+
+    cargo build
+    cmd /c c_demo\build.bat
+    c_demo\demo.exe
+
+c_demo/demo.c reproduces the SSR hazard through the C ABI and is verified to
+compile (MSVC) and run, linking target/debug/photon_frametrace.lib. The required
+native libs (kernel32 ntdll userenv ws2_32 dbghelp + msvcrt) come from
+cargo rustc --lib -- --print native-static-libs.
+
+Next: an ID3D11DeviceContext vtable hook (MinHook) that emits these events from a
+live process. That step needs a running D3D11 app to exercise, so it is built
+here but its runtime is validated against a target, not in CI.

@@ -8,3 +8,4 @@ license = "MIT"
 [lib]
 name = "photon_frametrace"
 path = "src/lib.rs"
+crate-type = ["rlib", "staticlib"]

@@ -10,6 +10,7 @@
 //! their head. There is no simulator underneath an LLM; this is one.
 
 mod state;
+pub mod ffi;
 
 pub use state::{DrawHazards, FrameState, RTV_SLOTS, SRV_SLOTS, UAV_SLOTS};
 
