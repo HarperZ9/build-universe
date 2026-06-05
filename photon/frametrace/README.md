@@ -150,3 +150,24 @@ ft_present per frame; three invariants are checked at each frame boundary:
 cargo run --example temporal_stuck demonstrates the stuck buffer firing on
 frame 2. C ABI: ft_declare_history_pair / ft_present / ft_temporal_violation_count
 / ft_temporal_witness. JSON traces carry a "present" op for frame boundaries.
+## NegativeLedger (Tier-5: the agent-facing gate -- instrument the model)
+
+The deepest organ: it instruments the one stateful system the others do not --
+the model's own confidence. A claim about runtime state is adjudicated against
+what the membrane OBSERVED, returning one of three verdicts:
+
+- CONFIRMED -- observed exactly the claim; safe to assert;
+- CONTRADICTED -- instrumented for this state but did not observe the claim; the
+  confident claim is BLOCKED with a witness (the membrane is authoritative, and
+  prose context never overrides the live observation);
+- UNRESOLVABLE -- not instrumented; assert neither true nor false.
+
+This converts the core failure (confidence does not track accuracy) into a gate:
+nothing about runtime state leaves as fact unless the membrane witnessed it.
+
+    let v = fs.adjudicate(&Claim::parse("srv ps 27 21042"));
+    if v.may_assert() { /* CONFIRMED */ } else { /* blocked: v carries the witness */ }
+
+cargo run --example adjudicate replays the SSR capture (which UNBINDS t27) and
+shows a confident "t27 is the SSR resource" claim being CONTRADICTED by the live
+state -- the sharpest test, on a real trace. C ABI: ft_adjudicate.

@@ -1,8 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use crate::{
-    BindPoint, Event, Hazard, HazardKind, ReadSlot, ResourceId, RestoreLeak, Stage,
-    TemporalFault, TemporalViolation, ViewId, ViewKind, WriteSlot,
+    BindPoint, Claim, Event, Hazard, HazardKind, ReadSlot, ResourceId, RestoreLeak, Stage,
+    TemporalFault, TemporalViolation, Verdict, ViewId, ViewKind, WriteSlot,
 };
 
 /// Shader-resource slots per stage (D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT).
@@ -437,5 +437,62 @@ impl FrameState {
         self.frame_written.clear();
         self.frame_cleared.clear();
         self.frame += 1;
+    }
+}
+
+impl FrameState {
+    /// Adjudicate a claim about current runtime state against what the membrane
+    /// actually OBSERVED. The agent-facing gate: a confident claim about an
+    /// unobserved or contradicted binding is blocked, not believed -- prose
+    /// context (a slot-map comment) never overrides the live observation.
+    pub fn adjudicate(&self, claim: &Claim) -> Verdict {
+        match claim {
+            Claim::SrvBinding { stage, slot, resource } => {
+                let observed = self.srv_at(*stage, *slot).and_then(|v| self.resolve(v)).map(|(r, _)| r);
+                if observed == *resource {
+                    Verdict::Confirmed
+                } else {
+                    Verdict::Contradicted {
+                        observed: match observed {
+                            Some(r) => format!("{:?} t{} = res#{}", stage, slot, r.0),
+                            None => format!("{:?} t{} unbound", stage, slot),
+                        },
+                    }
+                }
+            }
+            Claim::IsRenderTarget { resource } => {
+                let bound = self
+                    .render_targets()
+                    .iter()
+                    .filter_map(|(_, v)| self.resolve(*v).map(|(r, _)| r))
+                    .any(|r| r == *resource);
+                if bound {
+                    Verdict::Confirmed
+                } else {
+                    Verdict::Contradicted { observed: format!("res#{} is not a bound render target", resource.0) }
+                }
+            }
+            Claim::IsDepthStencil { resource } => {
+                let ds = self.depth_stencil().and_then(|v| self.resolve(v)).map(|(r, _)| r);
+                if ds == Some(*resource) {
+                    Verdict::Confirmed
+                } else {
+                    Verdict::Contradicted {
+                        observed: match ds {
+                            Some(r) => format!("depth-stencil is res#{}", r.0),
+                            None => "no depth-stencil bound".to_string(),
+                        },
+                    }
+                }
+            }
+            Claim::IsHazarded { resource } => {
+                if self.hazards().iter().any(|h| h.resource == *resource) {
+                    Verdict::Confirmed
+                } else {
+                    Verdict::Contradicted { observed: format!("res#{} is not currently hazarded", resource.0) }
+                }
+            }
+            Claim::Uninstrumented { .. } => Verdict::Unresolvable,
+        }
     }
 }
