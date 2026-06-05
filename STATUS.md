@@ -91,3 +91,15 @@ compile as a whole -- per-feature success does not imply whole-program self-host
 (2) Dev-env: cargo incremental builds are unreliable here (source mtimes are
 preserved by the IO layer); use `cargo clean -p quantalang` before each rebuild.
 (3) Native build helper: C:/Users/Zain/.cqtest/build.bat (vcvars -> cl -> run).
+
+## Verifiable tier (machine-checked)
+
+The load-bearing components are now machine-verifiable, not merely asserted in
+this file. Run:
+
+    python tools/verify_organism.py     (registry: tools/components.toml)
+
+It builds and tests every real component across languages and reports ground
+truth; the exit code is the failure count, so it is also a CI gate. Last run:
+5 passed / 0 failed -- frametrace (core, C ABI, hook, adapter) + quantalang.
+New real modules join the organism by registering in components.toml.
