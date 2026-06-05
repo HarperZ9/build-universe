@@ -22,3 +22,24 @@ disagree, do not trust the green.
 verify_organism.py maintains these witnesses automatically (records on PASS) and
 shows a freshness column, so "did my edit get verified" is a witnessed verdict.
 Witness records live in witness/ (git-ignored, per-machine build state).
+
+## compiler_oracle.py -- Compiler organ adjudicator
+
+The same gate, a third domain. Adjudicates a .quanta unit against the actual
+compiler AND the actual C compiler, not against reasoning about the lowering:
+- transpile: quantac emits C (exit 0);
+- codegen well-formed: the EMITTED C compiles (cl /c) -- catching "type-checks
+  but emits invalid C".
+
+  python tools/coherence/compiler_oracle.py adjudicate programs/color_test.quanta
+  python tools/coherence/compiler_oracle.py adjudicate spectrum   # a registry module
+
+Ground-truth finding (2026-06-05): the deep check showed "transpiles" (the
+shallow bar, quantac exit 0) is NOT "emits valid C". Self-contained programs
+color_test/wc/base64 are CONFIRMED (transpile + cl clean); programs/calc is
+CONTRADICTED at transpile (mutability mismatch, calc.quanta:120); library modules
+spectrum/delta transpile but their emitted C FAILS cl -- a name-prefixing codegen
+bug (typedef hdr_ColorPrimaries vs a bare ColorPrimaries field; BTreeMap in
+delta). The organism gate keeps "transpiles" as the module bar; this organ is the
+deeper, separate witness. quantac runs only locally, so this organ is local-only
+(absent quantac in CI -> UNRESOLVABLE).

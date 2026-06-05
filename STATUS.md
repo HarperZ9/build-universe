@@ -103,3 +103,17 @@ It builds and tests every real component across languages and reports ground
 truth; the exit code is the failure count, so it is also a CI gate. Last run:
 20 passed / 0 failed -- frametrace (core, C ABI, hook, adapter), quantalang, and 16 .quanta domain modules (verified by quantac transpile). CI runs it on windows-latest (.github/workflows/organism.yml).
 New real modules join the organism by registering in components.toml.
+
+## Compiler organ deep-codegen finding (2026-06-05)
+
+The Compiler organ (tools/coherence/compiler_oracle.py) adjudicates the deeper
+claim "the emitted C compiles", beyond the shallow "quantac exits 0":
+- Self-contained programs color_test, wc, base64: CONFIRMED (transpile + cl /c clean).
+- programs/calc: CONTRADICTED at transpile (mutability mismatch, calc.quanta:120).
+- Library modules spectrum, delta: transpile but the emitted C FAILS cl -- a real
+  name-prefixing codegen bug (typedef `hdr_ColorPrimaries` but a bare
+  `ColorPrimaries` field reference; same class for `BTreeMap` in delta).
+So "transpiles cleanly" (the 16 green .quanta modules in the organism check) does
+NOT imply "emits compilable C". The membrane surfaced this; the codegen prefixing
+fix is open quantalang work. The organism gate intentionally keeps "transpiles"
+as the module bar (a real if shallow check); the deep check is a separate witness.
