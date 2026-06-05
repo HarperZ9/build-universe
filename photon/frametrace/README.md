@@ -19,13 +19,15 @@ ground truth instead of reasoning about it:
 
 ## Status
 
-v0 core plus tests, verified under cargo. This machine has no C compiler, so the
-eventual C++ D3D11 hook layer is not built here; the Rust core exposes a surface
-a thin C ABI shim can call, which is how photon/refract will drive it.
+v1 core plus tests (13 tests, all passing under cargo). The Rust core exposes a
+surface a thin C ABI shim can call; the C++ D3D11 vtable hook that feeds it is
+the next step (MSVC is now available locally).
 
-Hazard model (v0): a resource bound as an SRV (read) and also as RTV/DSV/UAV
-(write) is reported. Read-only DSV and write-write (RTV plus UAV) conflicts are
-known gaps; DSV is treated conservatively as a write.
+Hazard model (v1): a resource bound as an SRV (read) and also as RTV/DSV/UAV
+(write) is a ReadWrite hazard; a resource bound through two or more distinct
+write views with no reader (e.g. RTV plus UAV) is a WriteWrite hazard. A
+read-only DSV is correctly treated as neither read nor write. Each draw/dispatch
+snapshots its hazards into a per-frame log (hazard_log / hazards_at).
 
 ## Run
 
