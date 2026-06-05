@@ -8,7 +8,7 @@ source audit: real, correct, extractable logic vs scaffolding/showcase.
 ## Canonical facts
 
 - Version: 1.0.0  |  License: MIT (see LICENSE)
-- Compiler: 755 test functions in tree; only the C backend is end-to-end.
+- Compiler: 612 tests pass / 0 fail on cargo test (755 #[test] annotations incl. ignored/multi-bin); only the C backend is end-to-end.
   HLSL/GLSL emit text; x86-64/ARM64/WASM/LLVM/SPIR-V emit output but have no
   linker/assembler integration (no runnable artifacts yet).
 - Each .quanta module transpiles to C individually. Whole-ecosystem cross-module
@@ -20,7 +20,7 @@ source audit: real, correct, extractable logic vs scaffolding/showcase.
 
 | Component | Score | What is real |
 |---|---|---|
-| quantalang compiler (C backend) | 6.5 | Full front-to-C pipeline; monomorphization, traits/vtables, one-shot effects; 755 test fns |
+| quantalang compiler (C backend) | 6.5 | Full front-to-C pipeline; monomorphization, traits/vtables, one-shot effects; 612 pass / 0 fail |
 | programs/ (56 MSVC exes) | 9.0 | qdb (SQL), qparse, qsed, grep, base64, calc, color_test 12/12 |
 | spectrum (color science) | 9.0 | sRGB/XYZ matrices, PQ/HLG EOTFs, 13 tonemappers, verified OKLab constants |
 | chromatic (perceptual color) | 8.0 | LAB/RGB with matrix inversion, gamut mapping via binary search |
@@ -60,3 +60,25 @@ be represented as implemented engineering.
 cli, config, runtime, repl, lsp, fmt, debug, test, profiler, bench, benchmarks,
 pkg, docs, universe, examples are scaffolding/glue for the ecosystem manifest,
 of mixed completeness. Treat as supporting tooling, not headline modules.
+
+## Compiler capabilities verified 2026-06-05 (Phase 1)
+
+Empirically re-tested by compiling minimal repros with quantac --target c. Several
+documented "limitations" are stale; the compiler is more capable than its docs claimed.
+
+- Works (was documented as a limitation): &self / &mut self receivers; &str params;
+  trait default methods calling self.method(); occurs-check on &Struct returning the
+  same struct literal; Self{...}, Self::method(), -> Self return type.
+- Fixed this session: bare Self / unit-struct name in value position
+  (fn new() -> Self { Self }) -- type-check + MIR lowering + portable C emission.
+  quantalang commit 8d83d74 on branch feat/phase1-generics; e2e regression
+  tests/programs/132_unit_self_constructor. Full suite 612 pass / 0 fail.
+- Type-check + C emission succeed (native execution NOT verified -- no local C
+  toolchain): generic methods returning Self, generic enum methods, heap types
+  (String) in enum variants.
+
+Caveats: (1) "compiles" = type-check + C emission, not verified native run.
+(2) The 231K-line self-hosted compiler in quantalang/src/ still does not compile as a
+whole -- per-feature success does not imply whole-program self-hosting.
+(3) Dev-env note: cargo incremental builds are unreliable here (source mtimes are
+preserved by the IO layer); use `cargo clean -p quantalang` before each rebuild.

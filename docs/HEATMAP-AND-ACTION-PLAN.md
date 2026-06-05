@@ -94,3 +94,20 @@ the compiler being real -- and it mostly is. The three generic-system fixes conv
 and can host its own compiler." Tier 3 is a distraction until the core can carry the
 stdlib. The verifiable kernels (Tier 1) are the proof-of-value to harden; the showcase
 modules are honesty-debt to label or cut.
+
+## Phase 1 outcome (2026-06-05)
+
+Phase 1 (compiler generic-system fixes) was started and largely re-scoped by
+empirical testing. Of the three target gaps, most documented limitations were
+already resolved on the current compiler:
+- &self / &mut self receivers, &str params, trait self-dispatch, occurs-check,
+  generic methods returning Self, and heap types in enum variants all compile.
+- One real defect found and fixed: bare Self / unit-struct value in value position
+  (fn new() -> Self { Self }). 3-layer fix + regression test; 612 tests pass.
+  See quantalang commit 8d83d74 (branch feat/phase1-generics) and STATUS.md.
+
+Revised guidance: the highest-leverage compiler work is NOT the documented
+generic-system list (mostly already done) but (a) finding the ACTUAL remaining
+self-hosting blockers by compiling the real quantalang/src/ tree, and (b) a local
+C toolchain so generated C can be execution-verified, not just emitted. STATUS.md
+is the canonical capability record.

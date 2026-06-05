@@ -1,12 +1,12 @@
 # Quanta Ecosystem — Engineering Runbook
 
-Last verified: 2026-06-05. Each .quanta module transpiles to C individually; whole-ecosystem cross-module resolution is incomplete and self-hosting is not yet achieved. 56 native programs verified MSVC-clean (65 sources in programs/). Compiler: 755 test functions defined in tree (a full green pass count requires a local build and is not re-verified in this pass). See STATUS.md for per-module maturity.
+Last verified: 2026-06-05. Each .quanta module transpiles to C individually; whole-ecosystem cross-module resolution is incomplete and self-hosting is not yet achieved. 56 native programs verified MSVC-clean (65 sources in programs/). Compiler: 612 tests pass / 0 fail on cargo test (755 #[test] annotations across binaries, incl. ignored/multi-bin). See STATUS.md for per-module maturity. No C toolchain is present locally, so native execution of generated C was not re-verified.
 
 ## Quick Reference
 
 | Repo | Tests | CI | Release |
 |------|-------|----|---------|
-| quantalang | 755 test fns | clippy + fmt + test + e2e color self-check | v1.0.0 (quantac.exe, 16 bugs fixed) |
+| quantalang | 612 pass / 0 fail | clippy + fmt + test + e2e color self-check | v1.0.0 (quantac.exe) |
 | calibrate-pro | 228 Python | ruff + pytest (Ubuntu + Windows) | v1.0.0 (standalone exe) |
 | quanta-color | 281 Python | ruff + pytest | v1.0.0 |
 | quanta-universe | — | file validation | v1.0.0 |
@@ -61,15 +61,21 @@ Last verified: 2026-06-05. Each .quanta module transpiles to C individually; who
 
 ## Known Limitations
 
-### Compiler — Active Limitations
+### Compiler — Active Limitations (not re-tested this pass)
 - **Forward references**: Methods must be defined before they're called within the same impl block.
-- **&str parameters**: Functions taking `&str` get the value by copy, not pointer. Avoid.
 - **DefId misresolution in large files**: In files with 1000+ types, the type checker occasionally resolves names to the wrong DefId. Root cause of many foundation cascading errors.
 - **Type variable scope leaks**: Generic type parameters (K, V) from one impl block can leak into unrelated functions in the same module.
 - **Struct literals in some contexts**: `Foo { field: value }` inside deeply nested expressions may be parsed as a block instead of a struct literal.
-- **Infinite type false positive**: Functions taking `&StructType` and returning a struct literal of the same type trigger an incorrect occurs-check. Workaround: pass by value instead of reference.
-- **Self as unit struct constructor**: `pub fn new() -> Self { Self }` doesn't compile for unit structs. Use the struct name directly.
-- **Trait method dispatch on self**: `self.method()` within a trait impl block may not find the trait's methods. Inline the value instead.
+
+### Compiler — Verified resolved / docs were stale (2026-06-05)
+Empirically re-tested by compiling minimal repros with `quantac --target c`. Each item below, previously listed as an active limitation, now compiles:
+- ~~&str parameters~~ — `&str` params compile with correct value semantics.
+- ~~Infinite type false positive~~ — a fn taking `&StructType` and returning a struct literal of that type compiles.
+- ~~Trait method dispatch on self~~ — default trait methods calling `self.method()` compile.
+- ~~Self as unit struct constructor~~ — **FIXED this session**: `fn new() -> Self { Self }` now type-checks and lowers to a valid unit construction `(T){0}` (previously emitted invalid C: `return Self;`). quantalang commit 8d83d74 (branch feat/phase1-generics); regression test `tests/programs/132_unit_self_constructor`.
+- Also verified to type-check and emit C (native run NOT verified — no local C toolchain): generic methods returning `Self`, generic enum methods, and heap types (`String`) in enum variants.
+
+Caveat: "compiles" here means type-check + C emission succeed; with no local C compiler, native execution of the emitted C was not verified.
 
 ### Compiler — RESOLVED (2026-04-04)
 - ~~Enum forward declarations~~ — Enums now forward-declared as `typedef struct` (MSVC compatible).
