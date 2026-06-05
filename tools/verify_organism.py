@@ -35,20 +35,33 @@ def has_msvc():
     return any(glob.glob(p) for p in pats)
 
 
+def has_quantac():
+    for sub in ("debug", "release"):
+        if os.path.isfile(os.path.join(REPO, "quantalang", "compiler", "target", sub, "quantac.exe")):
+            return True
+    return False
+
+
 def build_env():
     env = dict(os.environ)
-    cargo = os.path.expanduser("~/.cargo/bin")
-    if os.path.isdir(cargo):
-        env["PATH"] = cargo + os.pathsep + env.get("PATH", "")
+    extra = [
+        os.path.expanduser("~/.cargo/bin"),
+        os.path.join(REPO, "quantalang", "compiler", "target", "debug"),
+        os.path.join(REPO, "quantalang", "compiler", "target", "release"),
+    ]
+    paths = [p for p in extra if os.path.isdir(p)]
+    if paths:
+        env["PATH"] = os.pathsep.join(paths) + os.pathsep + env.get("PATH", "")
     return env
 
 
-def run_component(c, env, msvc, quick):
+def run_component(c, env, avail, quick):
     path = os.path.join(REPO, c["path"].replace("/", os.sep))
     if not os.path.isdir(path):
         return ("SKIP:absent", 0.0, [])
-    if c.get("requires") == "msvc" and not msvc:
-        return ("SKIP:no-msvc", 0.0, [])
+    req = c.get("requires")
+    if req and not avail.get(req):
+        return ("SKIP:no-" + req, 0.0, [])
     if c.get("heavy") and quick:
         return ("SKIP:quick", 0.0, [])
     start = time.monotonic()
@@ -69,11 +82,11 @@ def main():
 
     comps = load_manifest()
     env = build_env()
-    msvc = has_msvc()
+    avail = {"msvc": has_msvc(), "quantac": has_quantac()}
 
     results = []
     for c in comps:
-        status, dur, tail = run_component(c, env, msvc, args.quick)
+        status, dur, tail = run_component(c, env, avail, args.quick)
         results.append({
             "name": c["name"], "language": c.get("language", "?"),
             "tier": c.get("tier", "?"), "expect": c.get("expect", "tested"),

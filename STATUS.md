@@ -101,5 +101,5 @@ this file. Run:
 
 It builds and tests every real component across languages and reports ground
 truth; the exit code is the failure count, so it is also a CI gate. Last run:
-5 passed / 0 failed -- frametrace (core, C ABI, hook, adapter) + quantalang.
+20 passed / 0 failed -- frametrace (core, C ABI, hook, adapter), quantalang, and 16 .quanta domain modules (verified by quantac transpile). CI runs it on windows-latest (.github/workflows/organism.yml).
 New real modules join the organism by registering in components.toml.

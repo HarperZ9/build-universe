@@ -5,24 +5,20 @@
 # prose docs claim. New real (non-sketch) modules register here as they land,
 # which is how the organism grows cohesively instead of by assertion.
 #
-# Fields:
-#   name      unique id
-#   path      directory (relative to repo root) to run verify in
-#   language  rust | c | cpp | python | quanta
-#   tier      0 = foundational, 1 = load-bearing (see STATUS.md)
-#   verify    shell command; exit 0 means success
-#   expect    "tested" = runtime-verified (tests run and pass);
-#             "build"  = compile/link only (runtime verified against a target)
-#   requires  optional toolchain gate: "msvc"
-#   heavy     optional bool; skipped under --quick
-#   note      optional human note
+# Fields: name, path (relative to repo root), language, tier (0 foundational,
+# 1 load-bearing, 2/3 lower), verify (shell cmd; exit 0 = ok), expect
+# ("tested" = runtime-verified, "build" = compile/transpile only), requires
+# (toolchain gate: "msvc" | "quantac"), heavy (skipped under --quick), note.
+#
+# NOTE: .quanta modules that do NOT transpile standalone are intentionally not
+# registered: photon, quantum-finance, axiom, forge (known; see STATUS.md).
 
 [[component]]
 name = "frametrace-core"
 path = "photon/frametrace"
 language = "rust"
 tier = 1
-verify = "cargo test --offline"
+verify = "cargo test --locked"
 expect = "tested"
 note = "binding table + hazard model + C ABI + trace ingestion (18 tests)"
 
@@ -60,7 +56,170 @@ name = "quantalang"
 path = "quantalang/compiler"
 language = "rust"
 tier = 0
-verify = "cargo test --offline"
+verify = "cargo test --locked"
 expect = "tested"
 heavy = true
 note = "foundational compiler (separate repo; absent in CI). ~612 tests, ~20s."
+
+# --- QuantaLang domain modules (verify = transpile to C via quantac) ---
+
+[[component]]
+name = "spectrum"
+path = "spectrum"
+language = "quanta"
+tier = 1
+requires = "quantac"
+verify = "quantac lib.quanta --target c -o nul"
+expect = "build"
+note = "transpiles standalone to C"
+
+[[component]]
+name = "chromatic"
+path = "chromatic"
+language = "quanta"
+tier = 1
+requires = "quantac"
+verify = "quantac lib.quanta --target c -o nul"
+expect = "build"
+note = "transpiles standalone to C"
+
+[[component]]
+name = "delta"
+path = "delta"
+language = "quanta"
+tier = 1
+requires = "quantac"
+verify = "quantac lib.quanta --target c -o nul"
+expect = "build"
+note = "transpiles standalone to C"
+
+[[component]]
+name = "foundation"
+path = "foundation"
+language = "quanta"
+tier = 1
+requires = "quantac"
+verify = "quantac lib.quanta --target c -o nul"
+expect = "build"
+note = "transpiles standalone to C"
+
+[[component]]
+name = "oracle"
+path = "oracle"
+language = "quanta"
+tier = 2
+requires = "quantac"
+verify = "quantac lib.quanta --target c -o nul"
+expect = "build"
+note = "transpiles standalone to C"
+
+[[component]]
+name = "entropy"
+path = "entropy"
+language = "quanta"
+tier = 2
+requires = "quantac"
+verify = "quantac lib.quanta --target c -o nul"
+expect = "build"
+note = "transpiles standalone to C"
+
+[[component]]
+name = "field-tensor"
+path = "field-tensor"
+language = "quanta"
+tier = 2
+requires = "quantac"
+verify = "quantac lib.quanta --target c -o nul"
+expect = "build"
+note = "transpiles standalone to C"
+
+[[component]]
+name = "prism"
+path = "prism"
+language = "quanta"
+tier = 2
+requires = "quantac"
+verify = "quantac lib.quanta --target c -o nul"
+expect = "build"
+note = "transpiles standalone to C"
+
+[[component]]
+name = "calibrate"
+path = "calibrate"
+language = "quanta"
+tier = 2
+requires = "quantac"
+verify = "quantac lib.quanta --target c -o nul"
+expect = "build"
+note = "transpiles standalone to C"
+
+[[component]]
+name = "nova"
+path = "nova"
+language = "quanta"
+tier = 2
+requires = "quantac"
+verify = "quantac lib.quanta --target c -o nul"
+expect = "build"
+note = "transpiles standalone to C"
+
+[[component]]
+name = "entangle"
+path = "entangle"
+language = "quanta"
+tier = 2
+requires = "quantac"
+verify = "quantac lib.quanta --target c -o nul"
+expect = "build"
+note = "transpiles standalone to C"
+
+[[component]]
+name = "lumina"
+path = "lumina"
+language = "quanta"
+tier = 3
+requires = "quantac"
+verify = "quantac lib.quanta --target c -o nul"
+expect = "build"
+note = "transpiles standalone to C"
+
+[[component]]
+name = "neutrino"
+path = "neutrino"
+language = "quanta"
+tier = 3
+requires = "quantac"
+verify = "quantac lib.quanta --target c -o nul"
+expect = "build"
+note = "transpiles standalone to C"
+
+[[component]]
+name = "nexus"
+path = "nexus"
+language = "quanta"
+tier = 3
+requires = "quantac"
+verify = "quantac lib.quanta --target c -o nul"
+expect = "build"
+note = "transpiles standalone to C"
+
+[[component]]
+name = "refract"
+path = "refract"
+language = "quanta"
+tier = 3
+requires = "quantac"
+verify = "quantac lib.quanta --target c -o nul"
+expect = "build"
+note = "transpiles standalone to C"
+
+[[component]]
+name = "wavelength"
+path = "wavelength"
+language = "quanta"
+tier = 3
+requires = "quantac"
+verify = "quantac lib.quanta --target c -o nul"
+expect = "build"
+note = "transpiles standalone to C"
+

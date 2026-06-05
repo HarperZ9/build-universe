@@ -1,0 +1,28 @@
+name: Organism Health Check
+
+# Runs the verifiable-component health check (tools/verify_organism.py) as a
+# gate. windows-latest provides MSVC (VS 2022 + vswhere) for the C ABI and the
+# D3D11 hook builds. The compiler (quantalang) and the .quanta modules are a
+# separate repo, absent in CI, so they skip honestly; frametrace is verified.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  organism:
+    name: Verify organism components
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Verify organism
+        run: python tools/verify_organism.py --json
