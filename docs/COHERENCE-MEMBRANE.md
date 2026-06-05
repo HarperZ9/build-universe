@@ -455,3 +455,25 @@ half RAW lacks (binding ledger + hazard model + invariant asserts + deterministi
 ping-pong); frametrace owns state *assertion* (ledger, hazard, restore-verify, range, temporal);
 `raw_eyes` owns *values*. The four-part `MembraneRecord` (§4) is the single contract all three speak,
 joined on `(ResourceId pointer, checkpoint, frame)`.
+
+---
+
+## Implementation status (as built -- photon/frametrace)
+
+The GPU organ of the coherence membrane plus the agent-facing gate. 37 tests, all
+green, verified by the organism check + CI (.github/workflows/organism.yml) on
+every push. Each organ is model + C ABI + oracle tests + a runnable example.
+
+| Tier | Organ | Commit | Witness it emits |
+|------|-------|--------|------------------|
+| foundation | binding table + hazards (v0/v1), C ABI, D3D11 vtable-hook DLL, JSON trace replay, RenderDoc adapter | 112bf3b..0962c8f | ReadWrite/WriteWrite hazard on res#X |
+| 0 | trust roots: ABI-trinity single-source-of-truth (ft_hazard_kind_name); determinism (BTreeSet + Ord) | 5b7aea4 | (integrity floor) |
+| 1 | restore-verify: snapshot + diff_restore | fa87fd6 | Ps t27 saved=res#21042 restored=NULL |
+| 2 | temporal ping-pong: Present, declare_history_pair; wires the formerly-no-op Clear | 6219df4 | frame 2 SwapDesync ... member res#10 |
+| 5 | NegativeLedger: adjudicate(Claim) -> Verdict; the agent-facing gate | 917e215 | CONTRADICTED (observed: Ps t27 unbound) |
+
+Open: Tier 3 value channel (the eyes: range/NaN/%black) -- blocked-honest, raw_eyes.py
+lives in the RAW sibling repo; needs a minimal in-tree value producer or RAW
+integration. Tier 4 liveness query surface. Live-hook wiring of Present (swapchain
+hook) and restore boundaries (RAW StateBackup) -- the build-verified pattern; runtime
+needs a target app.
