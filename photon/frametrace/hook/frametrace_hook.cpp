@@ -154,7 +154,7 @@ static void checkpoint(bool dispatch) {
     for (size_t i = 0; i < n; i++) {
         char buf[256];
         sprintf_s(buf, sizeof(buf), "[frametrace] %s hazard on resource 0x%llx",
-                  ft_hazard_kind(g_fs, i) == 0 ? "ReadWrite" : "WriteWrite",
+                  ft_hazard_kind_name(g_fs, i),
                   (unsigned long long)ft_hazard_resource(g_fs, i));
         OutputDebugStringA(buf);
     }

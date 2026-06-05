@@ -5,7 +5,7 @@
 //! ViewKind codes: 0=Srv 1=Rtv 2=Dsv 3=DsvReadOnly 4=Uav.
 //! Stage codes:    0=Vs  1=Ps  2=Cs  3=Gs 4=Hs 5=Ds.
 
-use std::os::raw::c_int;
+use std::os::raw::{c_char, c_int};
 
 use crate::{Event, FrameState, HazardKind, ResourceId, Stage, ViewId, ViewKind};
 
@@ -137,6 +137,18 @@ pub unsafe extern "C" fn ft_hazard_kind(state: *const FrameState, i: usize) -> c
         }
     }
     -1
+}
+
+/// Name of the i-th current hazard kind ("ReadWrite"/"WriteWrite"/"none").
+/// Single source of truth for the kind encoding so C/C++ callers never hardcode it.
+#[no_mangle]
+pub unsafe extern "C" fn ft_hazard_kind_name(state: *const FrameState, i: usize) -> *const c_char {
+    let s = match state.as_ref().and_then(|st| st.hazards().get(i).map(|h| h.kind)) {
+        Some(HazardKind::ReadWrite) => c"ReadWrite",
+        Some(HazardKind::WriteWrite) => c"WriteWrite",
+        None => c"none",
+    };
+    s.as_ptr()
 }
 
 /// Resource id of the i-th current hazard, or 0 if out of range.

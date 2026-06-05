@@ -28,6 +28,7 @@ void ft_dispatch(FrameState*);
 
 size_t   ft_hazard_count(const FrameState*);
 int      ft_hazard_kind(const FrameState*, size_t i); /* 0=ReadWrite 1=WriteWrite -1=none */
+const char* ft_hazard_kind_name(const FrameState*, size_t i); /* "ReadWrite"|"WriteWrite"|"none" */
 uint64_t ft_hazard_resource(const FrameState*, size_t i);
 
 #ifdef __cplusplus
