@@ -19,6 +19,8 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 MANIFEST = os.path.join(HERE, "components.toml")
+sys.path.insert(0, os.path.join(HERE, "coherence"))
+import freshness  # noqa: E402
 
 
 def load_manifest():
@@ -81,16 +83,24 @@ def main():
     args = ap.parse_args()
 
     comps = load_manifest()
+    by_name = {c["name"]: c for c in comps}
     env = build_env()
     avail = {"msvc": has_msvc(), "quantac": has_quantac()}
 
     results = []
     for c in comps:
+        cdir = os.path.join(REPO, c["path"].replace("/", os.sep))
+        fresh = "-"
+        if os.path.isdir(cdir):
+            fcode, _w = freshness.adjudicate(c["name"], by_name)
+            fresh = {0: "fresh", 1: "STALE", 2: "new"}[fcode]
         status, dur, tail = run_component(c, env, avail, args.quick)
+        if status == "PASS":
+            freshness.record(c["name"], by_name)
         results.append({
             "name": c["name"], "language": c.get("language", "?"),
             "tier": c.get("tier", "?"), "expect": c.get("expect", "tested"),
-            "status": status, "seconds": round(dur, 1), "tail": tail,
+            "status": status, "seconds": round(dur, 1), "tail": tail, "fresh": fresh,
         })
 
     failures = sum(1 for r in results if r["status"] == "FAIL")
@@ -106,14 +116,15 @@ def main():
     print("Quanta organism -- verifiable components (ground truth)")
     print("")
     width = max(len(r["name"]) for r in results)
-    header = "  " + "component".ljust(width) + "  lang    tier  expect   result        time"
+    header = "  " + "component".ljust(width) + "  lang    tier  expect   result        fresh  time"
     print(header)
     print("  " + "-" * (width + 44))
     for r in results:
         secs = (str(r["seconds"]) + "s").rjust(6) if r["seconds"] else "   -  "
         line = ("  " + r["name"].ljust(width) + "  "
                 + str(r["language"]).ljust(6) + "  T" + str(r["tier"]).ljust(3) + "  "
-                + str(r["expect"]).ljust(7) + "  " + r["status"].ljust(12) + "  " + secs)
+                + str(r["expect"]).ljust(7) + "  " + r["status"].ljust(12) + "  "
+                + str(r.get("fresh", "-")).ljust(5) + "  " + secs)
         print(line)
     for r in results:
         if r["tail"]:

@@ -49,3 +49,6 @@ programs/*.c
 
 # safe_write pre-calibration archive
 .warden-safe-cache/
+
+# coherence-membrane build-state witnesses (per-machine)
+tools/coherence/witness/
