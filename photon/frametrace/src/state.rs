@@ -1,6 +1,8 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use crate::{Event, Hazard, ReadSlot, ResourceId, Stage, ViewId, ViewKind, WriteSlot};
+use crate::{
+    Event, Hazard, HazardKind, ReadSlot, ResourceId, Stage, ViewId, ViewKind, WriteSlot,
+};
 
 /// Shader-resource slots per stage (D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT).
 pub const SRV_SLOTS: u32 = 128;
@@ -9,18 +11,19 @@ pub const RTV_SLOTS: u32 = 8;
 /// UAV slots (D3D11_1_UAV_SLOT_COUNT).
 pub const UAV_SLOTS: u32 = 64;
 
-const STAGES: [Stage; 6] = [
-    Stage::Vs,
-    Stage::Ps,
-    Stage::Cs,
-    Stage::Gs,
-    Stage::Hs,
-    Stage::Ds,
-];
+const STAGES: [Stage; 6] = [Stage::Vs, Stage::Ps, Stage::Cs, Stage::Gs, Stage::Hs, Stage::Ds];
+
+/// The hazards observed at one draw/dispatch checkpoint.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct DrawHazards {
+    /// The checkpoint index (1-based, monotonic).
+    pub checkpoint: u64,
+    /// Hazards present in the binding state at that checkpoint.
+    pub hazards: Vec<Hazard>,
+}
 
 /// The live binding state of a D3D11 immediate context: a symbol table for the
-/// GPU frame. Apply events in order, then query the binding tables or detect
-/// hazards at any point. Slot maps are sparse (only bound slots are stored).
+/// GPU frame. Apply events in order, then query bindings or detect hazards.
 #[derive(Default)]
 pub struct FrameState {
     views: HashMap<ViewId, (ResourceId, ViewKind)>,
@@ -30,6 +33,7 @@ pub struct FrameState {
     dsv: Option<ViewId>,
     timeline: Vec<Event>,
     checkpoint: u64,
+    log: Vec<DrawHazards>,
 }
 
 impl FrameState {
@@ -37,7 +41,8 @@ impl FrameState {
         Self::default()
     }
 
-    /// Apply one event, updating the binding tables and recording it.
+    /// Apply one event, updating the binding tables and recording it. At each
+    /// draw/dispatch the current hazards are snapshotted into the hazard log.
     pub fn apply(&mut self, event: Event) {
         match &event {
             Event::RegisterView { view, resource, kind } => {
@@ -48,12 +53,8 @@ impl FrameState {
                 for (i, v) in views.iter().enumerate() {
                     let slot = start_slot + i as u32;
                     match v {
-                        Some(view) => {
-                            table.insert(slot, *view);
-                        }
-                        None => {
-                            table.remove(&slot);
-                        }
+                        Some(view) => { table.insert(slot, *view); }
+                        None => { table.remove(&slot); }
                     }
                 }
             }
@@ -61,17 +62,12 @@ impl FrameState {
                 for (i, v) in views.iter().enumerate() {
                     let slot = start_slot + i as u32;
                     match v {
-                        Some(view) => {
-                            self.uav.insert(slot, *view);
-                        }
-                        None => {
-                            self.uav.remove(&slot);
-                        }
+                        Some(view) => { self.uav.insert(slot, *view); }
+                        None => { self.uav.remove(&slot); }
                     }
                 }
             }
             Event::SetRenderTargets { rtvs, dsv } => {
-                // OMSetRenderTargets replaces the entire RTV array and the DSV.
                 self.rtv.clear();
                 for (i, v) in rtvs.iter().enumerate() {
                     if let Some(view) = v {
@@ -80,14 +76,18 @@ impl FrameState {
                 }
                 self.dsv = *dsv;
             }
-            Event::ClearRenderTargetView { .. } | Event::ClearDepthStencilView { .. } => {
-                // Clears do not change bindings; recorded for the timeline.
-            }
+            Event::ClearRenderTargetView { .. } | Event::ClearDepthStencilView { .. } => {}
             Event::Draw | Event::Dispatch => {
                 self.checkpoint += 1;
             }
         }
+        let is_checkpoint = matches!(event, Event::Draw | Event::Dispatch);
         self.timeline.push(event);
+        if is_checkpoint {
+            let hazards = self.hazards();
+            let checkpoint = self.checkpoint;
+            self.log.push(DrawHazards { checkpoint, hazards });
+        }
     }
 
     /// Apply a sequence of events in order.
@@ -132,40 +132,45 @@ impl FrameState {
         self.checkpoint
     }
 
-    /// Detect read/write hazards in the CURRENT binding state. A resource is
-    /// reported when it is bound as a shader-resource view (read) and also as a
-    /// render-target, depth-stencil, or unordered-access view (write). A lone
-    /// UAV is not a hazard (it has no separate reader). Write-write conflicts
-    /// (e.g. RTV plus UAV on one resource) are a known v0 gap.
+    /// The per-draw hazard log across the whole frame so far.
+    pub fn hazard_log(&self) -> &[DrawHazards] {
+        &self.log
+    }
+
+    /// Hazards recorded at a specific checkpoint, if that checkpoint exists.
+    pub fn hazards_at(&self, checkpoint: u64) -> Option<&[Hazard]> {
+        self.log.iter().find(|d| d.checkpoint == checkpoint).map(|d| d.hazards.as_slice())
+    }
+
+    /// Detect hazards in the CURRENT binding state. A resource read via an SRV
+    /// and also written (RTV/DSV/UAV) is ReadWrite; a resource written through
+    /// two or more distinct write views with no reader is WriteWrite. A
+    /// read-only DSV is neither read nor write; a lone UAV is not a hazard.
     pub fn hazards(&self) -> Vec<Hazard> {
         let mut reads: BTreeMap<u64, Vec<ReadSlot>> = BTreeMap::new();
         let mut writes: BTreeMap<u64, Vec<WriteSlot>> = BTreeMap::new();
 
-        // Reads: shader-resource views across every stage, in stage then slot order.
         for stage in STAGES {
             if let Some(table) = self.srv.get(&stage) {
                 for (slot, view) in table {
                     if let Some((res, kind)) = self.resolve(*view) {
                         if kind.reads() {
-                            reads
-                                .entry(res.0)
-                                .or_default()
-                                .push(ReadSlot { stage, slot: *slot });
+                            reads.entry(res.0).or_default().push(ReadSlot { stage, slot: *slot });
                         }
                     }
                 }
             }
         }
-
-        // Writes: render targets, depth-stencil, and unordered-access views.
         for (slot, view) in &self.rtv {
             if let Some((res, _)) = self.resolve(*view) {
                 writes.entry(res.0).or_default().push(WriteSlot::Rtv(*slot));
             }
         }
         if let Some(view) = self.dsv {
-            if let Some((res, _)) = self.resolve(view) {
-                writes.entry(res.0).or_default().push(WriteSlot::Dsv);
+            if let Some((res, kind)) = self.resolve(view) {
+                if kind == ViewKind::Dsv {
+                    writes.entry(res.0).or_default().push(WriteSlot::Dsv);
+                }
             }
         }
         for (slot, view) in &self.uav {
@@ -175,12 +180,23 @@ impl FrameState {
         }
 
         let mut hazards = Vec::new();
-        for (res, w) in &writes {
-            if let Some(r) = reads.get(res) {
+        let resources: BTreeSet<u64> = writes.keys().copied().collect();
+        for res in resources {
+            let w = writes.get(&res).cloned().unwrap_or_default();
+            if let Some(r) = reads.get(&res) {
                 hazards.push(Hazard {
-                    resource: ResourceId(*res),
+                    kind: HazardKind::ReadWrite,
+                    resource: ResourceId(res),
                     reads: r.clone(),
-                    writes: w.clone(),
+                    writes: w,
+                    at_checkpoint: self.checkpoint,
+                });
+            } else if w.len() >= 2 {
+                hazards.push(Hazard {
+                    kind: HazardKind::WriteWrite,
+                    resource: ResourceId(res),
+                    reads: Vec::new(),
+                    writes: w,
                     at_checkpoint: self.checkpoint,
                 });
             }

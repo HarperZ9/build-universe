@@ -2,12 +2,8 @@
 //!
 //! Records every Set/Clear/Unbind/Draw/Dispatch event, maintains the live
 //! binding table per shader stage and the output-merger, and detects
-//! read/write hazards: a resource bound as a shader-resource view (read) while
-//! it is also bound as a render-target, depth-stencil, or unordered-access
-//! view (write).
-//!
-//! The model is fed by a capture layer (a D3D11 vtable hook, or a RenderDoc/
-//! PIX/ETW trace) and answers ground-truth questions like
+//! read/write and write/write hazards. Fed by a capture layer (a D3D11 vtable
+//! hook, or a RenderDoc/PIX/ETW trace), it answers ground-truth questions like
 //!   "Is the SSR output still bound to t27 when the compositor samples it?"
 //!   "Was the DSV unbound before this draw to avoid a read/write hazard?"
 //! instead of forcing a human (or a model) to reason about frame state in
@@ -15,7 +11,7 @@
 
 mod state;
 
-pub use state::{FrameState, RTV_SLOTS, SRV_SLOTS, UAV_SLOTS};
+pub use state::{DrawHazards, FrameState, RTV_SLOTS, SRV_SLOTS, UAV_SLOTS};
 
 use std::fmt;
 
@@ -37,8 +33,11 @@ pub enum ViewKind {
     Srv,
     /// Render target view (write).
     Rtv,
-    /// Depth-stencil view (write, unless read-only; read-only DSV is a TODO).
+    /// Depth-stencil view (write).
     Dsv,
+    /// Read-only depth-stencil view: bound for the depth test but neither read
+    /// as a shader resource nor written, so it does not hazard against an SRV.
+    DsvReadOnly,
     /// Unordered access view (read/write).
     Uav,
 }
@@ -83,11 +82,23 @@ pub struct ReadSlot {
     pub slot: u32,
 }
 
-/// A detected read/write hazard: one resource reachable as both a read view
-/// and a write view at the same draw/dispatch.
+/// The category of a detected hazard.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum HazardKind {
+    /// One resource bound as a read (SRV) and a write (RTV/DSV/UAV) at once.
+    ReadWrite,
+    /// One resource bound through two or more distinct write views at once
+    /// (e.g. RTV and UAV), with no reader.
+    WriteWrite,
+}
+
+/// A detected hazard: one resource reachable through conflicting bindings at
+/// the same draw/dispatch.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Hazard {
-    /// The resource bound for both read and write.
+    /// The category of conflict.
+    pub kind: HazardKind,
+    /// The resource bound through conflicting views.
     pub resource: ResourceId,
     /// Every read binding that reaches the resource.
     pub reads: Vec<ReadSlot>,
@@ -101,8 +112,8 @@ impl fmt::Display for Hazard {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "resource {:?} bound read({:?}) + write({:?}) at checkpoint {}",
-            self.resource, self.reads, self.writes, self.at_checkpoint
+            "{:?} hazard on resource {:?}: read({:?}) write({:?}) at checkpoint {}",
+            self.kind, self.resource, self.reads, self.writes, self.at_checkpoint
         )
     }
 }
