@@ -107,13 +107,39 @@ New real modules join the organism by registering in components.toml.
 ## Compiler organ deep-codegen finding (2026-06-05)
 
 The Compiler organ (tools/coherence/compiler_oracle.py) adjudicates the deeper
-claim "the emitted C compiles", beyond the shallow "quantac exits 0":
-- Self-contained programs color_test, wc, base64: CONFIRMED (transpile + cl /c clean).
-- programs/calc: CONTRADICTED at transpile (mutability mismatch, calc.quanta:120).
-- Library modules spectrum, delta: transpile but the emitted C FAILS cl -- a real
-  name-prefixing codegen bug (typedef `hdr_ColorPrimaries` but a bare
-  `ColorPrimaries` field reference; same class for `BTreeMap` in delta).
-So "transpiles cleanly" (the 16 green .quanta modules in the organism check) does
-NOT imply "emits compilable C". The membrane surfaced this; the codegen prefixing
-fix is open quantalang work. The organism gate intentionally keeps "transpiles"
-as the module bar (a real if shallow check); the deep check is a separate witness.
+claim "the emitted C compiles", beyond the shallow "quantac exits 0". Ground
+truth below, re-scanned after two codegen fixes landed.
+
+Fixed (quantalang branch fix/codegen-module-prefix, commit 392ee5d):
+- Module forward-reference prefixing. A struct or enum field whose type was
+  declared later in the same inline module kept its bare name, so the emitted C
+  named an undefined identifier (a bare ColorPrimaries field where only
+  hdr_ColorPrimaries is defined). collect_inline_mod now forward-declares every
+  module type (bare to module-prefixed) before lowering any item body. Verified:
+  the spectrum field is now hdr_ColorPrimaries primaries.
+- Primitive tuple field typedefs. A tuple field carried as MirType::Tuple (e.g.
+  an xy chromaticity, Tuple_f32_f32) was referenced but never typedef-ed. Now
+  emitted, gated to all-primitive element tuples. Tuples of named structs still
+  need topological ordering (the typedef must follow the member struct full
+  definition) and are left as a known gap.
+- Regression: 337 codegen tests pass, 0 failed (incl. C-backend snapshots).
+
+Membrane-wide scan (compiler_oracle.py adjudicate-all, 16 .quanta modules): no
+module compiles standalone yet. The dominant blocker is single-module isolation:
+the oracle compiles each module in isolation (its lib.quanta alone), so
+cross-module and stdlib types are absent. Witnessed identifiers: Box (oracle,
+entropy), BTreeMap (delta), Vec2 (nova), Mat4 (lumina), XYZ (calibrate), Version
+(nexus), SnapshotId (entangle), ID3D11RenderTargetView (refract). This is the
+documented cross-module-resolution caveat, not a codegen defect. Other real
+blockers surfaced: spectrum declares pub mod harmony twice (enum redefinition, a
+source defect a stricter frontend would reject); field-tensor redefines
+Tuple_usize_usize; foundation applies == to QuantaString; prism, neutrino, and
+wavelength fail at transpile with mutability mismatches. Self-contained programs
+color_test, wc, base64 remain CONFIRMED.
+
+Conclusion (truth-over-approval): "transpiles cleanly" (the 16 green modules in
+the organism check) does NOT imply "compiles standalone". The organism gate keeps
+transpile as the module bar (a real if shallow check); the compiler organ is the
+separate, deeper witness. Reaching CONFIRMED requires cross-module linking
+(architectural), per-module source dedup, and the mutability fixes -- tracked
+here, not yet done.
