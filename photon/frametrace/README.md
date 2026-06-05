@@ -75,3 +75,18 @@ set_render_targets, set_uav, clear_rtv, clear_dsv, draw, dispatch. Ids are u64
 (0 means null/unbound). FrameState::replay_json applies the whole trace; then
 query hazard_log / hazards_at for the per-draw verdict. For a dependency-free
 core, build with --no-default-features (drops serde and trace ingestion).
+
+## D3D11 hook (live capture) -- build-verified
+
+hook/frametrace_hook.cpp is a proxy / injected DLL that hooks the shared
+ID3D11DeviceContext vtable (pointer swap, no MinHook needed) and feeds every
+Set/Draw/Dispatch to the C ABI, surfacing live hazards via OutputDebugString.
+
+    cargo build
+    cmd /c hook\build.bat     (produces hook/frametrace_hook.dll)
+
+BUILD-VERIFIED ONLY: it compiles and links against d3d11.lib and the frametrace
+staticlib, but its runtime is validated by injecting it into a live D3D11 process
+(or renaming it to a proxy d3d11.dll), not in CI. View-to-resource mapping uses
+GetResource(). GS/HS/DS SRV stages and OMSetRenderTargetsAndUnorderedAccessViews
+are one-line additions following the same slot pattern.
