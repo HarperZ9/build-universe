@@ -215,3 +215,47 @@ pub unsafe extern "C" fn ft_restore_first_leak(
     *buf.add(n) = 0;
     n
 }
+
+/// Mark a frame boundary (Present); evaluates temporal invariants for the frame.
+#[no_mangle]
+pub unsafe extern "C" fn ft_present(state: *mut FrameState) {
+    if let Some(s) = state.as_mut() {
+        s.apply(Event::Present);
+    }
+}
+
+/// Declare two resources (ID3D11Resource pointers as u64) as a history pair.
+#[no_mangle]
+pub unsafe extern "C" fn ft_declare_history_pair(state: *mut FrameState, a: u64, b: u64) {
+    if let Some(s) = state.as_mut() {
+        s.declare_history_pair(ResourceId(a), ResourceId(b));
+    }
+}
+
+/// Number of temporal violations witnessed so far.
+#[no_mangle]
+pub unsafe extern "C" fn ft_temporal_violation_count(state: *const FrameState) -> usize {
+    state.as_ref().map(|s| s.temporal_violations().len()).unwrap_or(0)
+}
+
+/// Write the i-th temporal violation witness into buf; return bytes written.
+#[no_mangle]
+pub unsafe extern "C" fn ft_temporal_witness(state: *const FrameState, i: usize, buf: *mut c_char, len: usize) -> usize {
+    if buf.is_null() || len == 0 {
+        return 0;
+    }
+    let s = match state.as_ref() {
+        Some(s) => s,
+        None => return 0,
+    };
+    let v = match s.temporal_violations().get(i) {
+        Some(v) => v,
+        None => return 0,
+    };
+    let msg = format!("{}", v);
+    let bytes = msg.as_bytes();
+    let n = bytes.len().min(len - 1);
+    std::ptr::copy_nonoverlapping(bytes.as_ptr(), buf as *mut u8, n);
+    *buf.add(n) = 0;
+    n
+}

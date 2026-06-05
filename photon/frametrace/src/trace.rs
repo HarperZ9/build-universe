@@ -50,6 +50,7 @@ enum RawEvent {
     ClearDsv { dsv: u64 },
     Draw,
     Dispatch,
+    Present,
 }
 
 /// An error parsing a trace.
@@ -121,6 +122,7 @@ impl From<RawEvent> for Event {
             RawEvent::ClearDsv { dsv } => Event::ClearDepthStencilView { dsv: ViewId(dsv) },
             RawEvent::Draw => Event::Draw,
             RawEvent::Dispatch => Event::Dispatch,
+            RawEvent::Present => Event::Present,
         }
     }
 }

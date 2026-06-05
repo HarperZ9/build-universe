@@ -1,8 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use crate::{
-    BindPoint, Event, Hazard, HazardKind, ReadSlot, ResourceId, RestoreLeak, Stage, ViewId,
-    ViewKind, WriteSlot,
+    BindPoint, Event, Hazard, HazardKind, ReadSlot, ResourceId, RestoreLeak, Stage,
+    TemporalFault, TemporalViolation, ViewId, ViewKind, WriteSlot,
 };
 
 /// Shader-resource slots per stage (D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT).
@@ -35,6 +35,14 @@ pub struct FrameState {
     timeline: Vec<Event>,
     checkpoint: u64,
     log: Vec<DrawHazards>,
+    history_pairs: Vec<(ResourceId, ResourceId)>,
+    frame: u64,
+    frame_read: BTreeSet<ResourceId>,
+    frame_written: BTreeSet<ResourceId>,
+    frame_cleared: BTreeSet<ResourceId>,
+    prev_read: BTreeSet<ResourceId>,
+    warmed: BTreeSet<ResourceId>,
+    temporal_violations: Vec<TemporalViolation>,
 }
 
 impl FrameState {
@@ -81,6 +89,12 @@ impl FrameState {
             Event::Draw | Event::Dispatch => {
                 self.checkpoint += 1;
             }
+            Event::Present => {
+                self.evaluate_temporal();
+            }
+        }
+        if !self.history_pairs.is_empty() {
+            self.track_temporal(&event);
         }
         let is_checkpoint = matches!(event, Event::Draw | Event::Dispatch);
         self.timeline.push(event);
@@ -294,5 +308,134 @@ impl Snapshot {
             leaks.push(make_leak(BindPoint::Dsv, self.dsv.as_ref(), restored.dsv.as_ref()));
         }
         leaks
+    }
+}
+
+impl FrameState {
+    /// Declare two resources as a temporal ping-pong (history) pair. Temporal
+    /// invariants are then checked at each Present. No pairs = zero cost.
+    pub fn declare_history_pair(&mut self, a: ResourceId, b: ResourceId) {
+        self.history_pairs.push((a, b));
+    }
+
+    /// The current frame index (incremented at each Present).
+    pub fn frame_index(&self) -> u64 {
+        self.frame
+    }
+
+    /// All temporal violations witnessed so far.
+    pub fn temporal_violations(&self) -> &[TemporalViolation] {
+        &self.temporal_violations
+    }
+
+    fn member_resource(&self, view: ViewId) -> Option<ResourceId> {
+        let r = self.resolve(view).map(|(res, _)| res)?;
+        if self.history_pairs.iter().any(|&(a, b)| a == r || b == r) {
+            Some(r)
+        } else {
+            None
+        }
+    }
+
+    fn track_temporal(&mut self, event: &Event) {
+        match event {
+            Event::SetShaderResources { views, .. } => {
+                for v in views.iter().flatten() {
+                    if let Some(r) = self.member_resource(*v) {
+                        self.frame_read.insert(r);
+                    }
+                }
+            }
+            Event::SetUnorderedAccessViews { views, .. } => {
+                for v in views.iter().flatten() {
+                    if let Some(r) = self.member_resource(*v) {
+                        self.frame_written.insert(r);
+                    }
+                }
+            }
+            Event::SetRenderTargets { rtvs, dsv } => {
+                for v in rtvs.iter().flatten() {
+                    if let Some(r) = self.member_resource(*v) {
+                        self.frame_written.insert(r);
+                    }
+                }
+                if let Some(v) = dsv {
+                    if let Some(r) = self.member_resource(*v) {
+                        self.frame_written.insert(r);
+                    }
+                }
+            }
+            Event::ClearRenderTargetView { rtv } => {
+                if let Some(r) = self.member_resource(*rtv) {
+                    self.frame_cleared.insert(r);
+                }
+            }
+            Event::ClearDepthStencilView { dsv } => {
+                if let Some(r) = self.member_resource(*dsv) {
+                    self.frame_cleared.insert(r);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Evaluate temporal invariants for the frame just completed, then roll
+    /// per-frame state. Three faults: within-frame feedback (a member read AND
+    /// written this frame), swap-desync (read did not alternate from last frame:
+    /// stuck buffer), uninitialized-read (read before any write/clear: warmup).
+    fn evaluate_temporal(&mut self) {
+        let frame = self.frame;
+        let fr = self.frame_read.clone();
+        let fw = self.frame_written.clone();
+        let pr_prev = self.prev_read.clone();
+        let mut warmed_now = self.warmed.clone();
+        warmed_now.extend(fw.iter().copied());
+        warmed_now.extend(self.frame_cleared.iter().copied());
+
+        for (a, b) in self.history_pairs.clone() {
+            let members = [a, b];
+            let inpair = |s: &BTreeSet<ResourceId>| -> BTreeSet<ResourceId> {
+                members.iter().copied().filter(|r| s.contains(r)).collect()
+            };
+            let read = inpair(&fr);
+            let written = inpair(&fw);
+            let prev_read = inpair(&pr_prev);
+
+            for r in read.intersection(&written) {
+                self.temporal_violations.push(TemporalViolation {
+                    frame,
+                    fault: TemporalFault::WithinFrameFeedback,
+                    pair: (a, b),
+                    resource: *r,
+                });
+            }
+            for r in &read {
+                if !warmed_now.contains(r) {
+                    self.temporal_violations.push(TemporalViolation {
+                        frame,
+                        fault: TemporalFault::UninitializedRead,
+                        pair: (a, b),
+                        resource: *r,
+                    });
+                }
+            }
+            if !read.is_empty() && read == prev_read {
+                for r in &read {
+                    self.temporal_violations.push(TemporalViolation {
+                        frame,
+                        fault: TemporalFault::SwapDesync,
+                        pair: (a, b),
+                        resource: *r,
+                    });
+                }
+            }
+        }
+
+        self.warmed = warmed_now;
+        self.prev_read = fr;
+        self.frame_read.clear();
+        self.frame_written.clear();
+        self.frame_cleared.clear();
+        self.frame += 1;
     }
 }

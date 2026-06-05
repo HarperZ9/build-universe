@@ -130,3 +130,23 @@ ft_restore_leak_count / ft_restore_first_leak -- a RAW effect calls these around
 its D3D11StateBackup save/restore so non-transparency becomes a logged witness,
 not a guess. (RestoreUnobserved -- a restore via a path the membrane does not
 hook -- is the hook-coverage half, flagged where the boundary is wired.)
+## Temporal ping-pong (Tier-2: the most-stateful, user-shipping failure)
+
+History-buffer effects (TAA, temporal accumulation, reprojection) read frame
+N-1 and write frame N, alternating two buffers. Declare the pair and call
+ft_present per frame; three invariants are checked at each frame boundary:
+
+- within-frame feedback -- a buffer read AND written the same frame (aliasing);
+- swap-desync -- the read buffer did not alternate from last frame: the ping-pong
+  is stuck (stale history -> ghosting). PROVABLY unreachable by a single-frame
+  capture, because it is a frame-N-vs-N-1 property;
+- uninitialized-read -- a buffer read before any write/clear (warmup bug); this
+  is where Clear stops being a no-op and becomes a warmup witness.
+
+    fs.declare_history_pair(res_a, res_b);
+    ... per frame: read one, write the other, Event::Present ...
+    for v in fs.temporal_violations() { /* "frame 2 SwapDesync ... member res#10" */ }
+
+cargo run --example temporal_stuck demonstrates the stuck buffer firing on
+frame 2. C ABI: ft_declare_history_pair / ft_present / ft_temporal_violation_count
+/ ft_temporal_witness. JSON traces carry a "present" op for frame boundaries.
