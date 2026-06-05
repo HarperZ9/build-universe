@@ -63,22 +63,31 @@ of mixed completeness. Treat as supporting tooling, not headline modules.
 
 ## Compiler capabilities verified 2026-06-05 (Phase 1)
 
-Empirically re-tested by compiling minimal repros with quantac --target c. Several
-documented "limitations" are stale; the compiler is more capable than its docs claimed.
+A local C toolchain is now available (MSVC -- Visual Studio 18 Community / 2022
+BuildTools via vcvars64.bat), so generated C is now NATIVELY compiled and run,
+not just emitted. This immediately corrected several emission-only conclusions.
 
-- Works (was documented as a limitation): &self / &mut self receivers; &str params;
-  trait default methods calling self.method(); occurs-check on &Struct returning the
-  same struct literal; Self{...}, Self::method(), -> Self return type.
-- Fixed this session: bare Self / unit-struct name in value position
-  (fn new() -> Self { Self }) -- type-check + MIR lowering + portable C emission.
-  quantalang commit 8d83d74 on branch feat/phase1-generics; e2e regression
-  tests/programs/132_unit_self_constructor. Full suite 612 pass / 0 fail.
-- Type-check + C emission succeed (native execution NOT verified -- no local C
-  toolchain): generic methods returning Self, generic enum methods, heap types
-  (String) in enum variants.
+- Works (was documented as a stale limitation): &self / &mut self receivers; &str
+  params; trait default methods calling self.method(); occurs-check on &Struct
+  returning the same struct literal; Self{...}, Self::method().
+- FIXED + native-verified: the non-generic constructor pattern
+  fn new() -> Self { ... } with let x = T::new() called from a free function.
+  Emission alone hid a real bug: the call result was typed as the literal Self
+  (invalid C; method dispatch fell back to a bare name). Root cause was an
+  impl-collect forward-declaration that did not resolve Self -> concrete type.
+  Fixed in quantalang 8d83d74 + 2e9296f. e2e regressions tests/programs/132
+  (prints 42) and 133 (prints 5) now compile with MSVC cl and run. Rust suite
+  612 pass / 0 fail.
+- KNOWN OPEN (native LINK failure): GENERIC impl methods returning Self, e.g.
+  Wrap<T>::new() -> Self -- the monomorphized constructor/method are not emitted
+  (unresolved external symbol). This is the next real blocker (generic
+  monomorphization). Correction: an earlier note claimed generic methods
+  returning Self "compile"; that was emission-only and is FALSE at native link.
+- Heap types (String) in enum variants and generic enum methods: type-check +
+  emit only; not yet individually native-checked.
 
-Caveats: (1) "compiles" = type-check + C emission, not verified native run.
-(2) The 231K-line self-hosted compiler in quantalang/src/ still does not compile as a
-whole -- per-feature success does not imply whole-program self-hosting.
-(3) Dev-env note: cargo incremental builds are unreliable here (source mtimes are
+Caveats: (1) The 231K-line self-hosted compiler in quantalang/src/ still does not
+compile as a whole -- per-feature success does not imply whole-program self-hosting.
+(2) Dev-env: cargo incremental builds are unreliable here (source mtimes are
 preserved by the IO layer); use `cargo clean -p quantalang` before each rebuild.
+(3) Native build helper: C:/Users/Zain/.cqtest/build.bat (vcvars -> cl -> run).
