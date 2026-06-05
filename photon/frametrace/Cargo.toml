@@ -9,3 +9,11 @@ license = "MIT"
 name = "photon_frametrace"
 path = "src/lib.rs"
 crate-type = ["rlib", "staticlib"]
+
+[dependencies]
+serde = { version = "=1.0.228", features = ["derive"], optional = true }
+serde_json = { version = "=1.0.149", optional = true }
+
+[features]
+default = ["trace"]
+trace = ["dep:serde", "dep:serde_json"]

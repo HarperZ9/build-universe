@@ -11,6 +11,8 @@
 
 mod state;
 pub mod ffi;
+#[cfg(feature = "trace")]
+pub mod trace;
 
 pub use state::{DrawHazards, FrameState, RTV_SLOTS, SRV_SLOTS, UAV_SLOTS};
 

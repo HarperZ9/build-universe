@@ -62,3 +62,16 @@ cargo rustc --lib -- --print native-static-libs.
 Next: an ID3D11DeviceContext vtable hook (MinHook) that emits these events from a
 live process. That step needs a running D3D11 app to exercise, so it is built
 here but its runtime is validated against a target, not in CI.
+
+## Trace ingestion (offline capture analysis)
+
+The trace feature (on by default) ingests a normalized JSON trace -- what a
+RenderDoc / PIX / ETW adapter emits -- and replays it into a FrameState:
+
+    cargo run --example replay_trace -- tests/data/ssr_trace.json
+
+A trace is a JSON array of op-tagged events: register_view, set_shader_resources,
+set_render_targets, set_uav, clear_rtv, clear_dsv, draw, dispatch. Ids are u64
+(0 means null/unbound). FrameState::replay_json applies the whole trace; then
+query hazard_log / hazards_at for the per-draw verdict. For a dependency-free
+core, build with --no-default-features (drops serde and trace ingestion).
