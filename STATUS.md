@@ -310,3 +310,24 @@ module-specific compiler edge-cases (prism/refract field lowering, field-tensor
 truncation) that each need dedicated investigation. The committed milestone
 intentionally trades 3 modules from false-green transpile (passing while emitting
 broken C) to honest transpile-failure.
+
+## Cross-module compilation -- oracle mechanism (2026-06-06, quanta-universe 05d8d7d)
+
+The compiler organ can now compile a module WITH its transitive dependencies:
+`python tools/coherence/compiler_oracle.py adjudicate-deps[-all]`. It builds a
+module-name index (module <Name> decls across */lib.quanta, dir-name fallback),
+resolves transitive `use <Mod>::...` deps, concatenates them ahead of the target,
+and adjudicates the combined unit.
+
+Ground truth (adjudicate-deps-all): cross-module linking RESOLVES the cross-module
+type-reference class. Modules that pulled deps advanced from undefined-identifier
+errors to deeper ones in the combined unit: calibrate XYZ -> "no field white";
+nova Vec2 -> "no field title"; lumina Mat4 -> "no method scale"; wavelength ->
+non-exhaustive match. No module compiles-with-deps yet -- residual blockers are
+deeper type mismatches and the dependency modules' OWN source defects (e.g.
+spectrum's duplicate mods). Modules with no resolvable cross-module import show
+[+0 deps]; their blockers are source phantoms / duplicate definitions, not
+cross-module. Mechanism validated: a clean dep+user concatenation emits C that cl
+compiles (type-ordered). Kept oracle-side (observation); a compiler-side port
+(quantac resolving cross-module directly) is deferred until the deeper issues and
+dep source defects are cleared, since modules cannot compile-with-deps until then.

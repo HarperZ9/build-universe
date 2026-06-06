@@ -43,3 +43,14 @@ bug (typedef hdr_ColorPrimaries vs a bare ColorPrimaries field; BTreeMap in
 delta). The organism gate keeps "transpiles" as the module bar; this organ is the
 deeper, separate witness. quantac runs only locally, so this organ is local-only
 (absent quantac in CI -> UNRESOLVABLE).
+
+## Cross-module adjudication (adjudicate-deps)
+
+  python tools/coherence/compiler_oracle.py adjudicate-deps <module>
+  python tools/coherence/compiler_oracle.py adjudicate-deps-all
+
+Compiles a module WITH its transitive `use <Mod>::...` dependencies: builds a
+module-name index, concatenates dep sources ahead of the target, then transpiles
+and compiles the combined unit. The deeper, cross-module witness beyond the
+single-module adjudicate. Resolution works; modules still carry deeper type
+issues and dependency source defects (see STATUS.md).
