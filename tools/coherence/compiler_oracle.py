@@ -101,6 +101,114 @@ def components():
         return {c["name"]: c for c in tomllib.load(f).get("component", [])}
 
 
+# --- Cross-module adjudication: compile a module WITH its transitive deps ---
+# Resolves `use <Mod>::...` to the sibling module that declares `module <Mod>`,
+# concatenates the dependency sources, and adjudicates the combined unit. This
+# answers the cross-module question the single-module check cannot.
+
+STD_MODS = ('std', 'core', 'self', 'super', 'crate', 'alloc')
+
+
+def build_module_index():
+    index = {}
+    for d in sorted(os.listdir(REPO)):
+        lib = os.path.join(REPO, d, 'lib.quanta')
+        if not os.path.isfile(lib):
+            continue
+        index.setdefault(d, lib)
+        try:
+            txt = open(lib, encoding='utf-8', errors='replace').read()
+        except Exception:
+            continue
+        for line in txt.splitlines():
+            st = line.strip()
+            if st.startswith('module '):
+                nm = ''
+                for ch in st[7:]:
+                    if ch.isalnum() or ch == '_':
+                        nm += ch
+                    else:
+                        break
+                if nm:
+                    index.setdefault(nm, lib)
+                break
+    return index
+
+
+def module_deps(txt):
+    out = []
+    for line in txt.splitlines():
+        st = line.strip()
+        if not st.startswith('use '):
+            continue
+        rest = st[4:].strip()
+        seg = ''
+        for ch in rest:
+            if ch.isalnum() or ch == '_':
+                seg += ch
+            else:
+                break
+        if seg and seg not in STD_MODS and rest[len(seg):len(seg) + 2] == '::':
+            out.append(seg)
+    return out
+
+
+def resolve_transitive_deps(target_path, index):
+    seen = set()
+    seen.add(os.path.normcase(os.path.abspath(target_path)))
+    order = []
+    visited = set()
+    def read(pth):
+        return open(pth, encoding='utf-8', errors='replace').read()
+    work = list(module_deps(read(target_path)))
+    while work:
+        mod = work.pop(0)
+        if mod in visited:
+            continue
+        visited.add(mod)
+        path = index.get(mod)
+        if not path:
+            continue
+        ap = os.path.normcase(os.path.abspath(path))
+        if ap in seen:
+            continue
+        seen.add(ap)
+        order.append(path)
+        for d in module_deps(read(path)):
+            if d not in visited:
+                work.append(d)
+    return order
+
+
+def adjudicate_with_deps(name, comps):
+    quantac = find_quantac()
+    if not quantac:
+        return 2, 'UNRESOLVABLE no quantac built', []
+    src = module_path(name, comps)
+    if not src or not os.path.isfile(src):
+        return 2, 'UNRESOLVABLE module source not found: ' + str(name), []
+    index = build_module_index()
+    deps = resolve_transitive_deps(src, index)
+    depnames = [os.path.basename(os.path.dirname(d)) for d in deps]
+    parts = [open(dp, 'rb').read() for dp in deps]
+    parts.append(open(src, 'rb').read())
+    sep = (chr(10) + chr(10)).encode('utf-8')
+    combined = sep.join(parts)
+    tmp = tempfile.mkdtemp(prefix='cocx_')
+    in_q = os.path.join(tmp, 'unit.quanta')
+    open(in_q, 'wb').write(combined)
+    out_c = os.path.join(tmp, 'unit.c')
+    rc, out = transpile(quantac, in_q, out_c)
+    if rc != 0:
+        return 1, 'CONTRADICTED transpile fails: ' + first_error(out), depnames
+    vcvars = find_vcvars()
+    if not vcvars:
+        return 0, 'CONFIRMED transpiles with deps (no C compiler)', depnames
+    crc, cout = compile_c(vcvars, out_c)
+    if crc != 0:
+        return 1, 'CONTRADICTED emitted C fails: ' + first_error(cout), depnames
+    return 0, 'CONFIRMED compiles with deps', depnames
+
 def main():
     if len(sys.argv) < 2:
         sys.exit("usage: compiler_oracle.py adjudicate <module|component> | adjudicate-all")
@@ -117,6 +225,21 @@ def main():
                 continue
             code, w = adjudicate(name, comps)
             print(name.ljust(16), w)
+            if code == 1:
+                worst = 1
+        sys.exit(worst)
+    if cmd == 'adjudicate-deps':
+        code, w, deps = adjudicate_with_deps(sys.argv[2], comps)
+        tag = '  [deps: ' + (', '.join(deps) if deps else 'none') + ']'
+        print(w + tag)
+        sys.exit(code)
+    if cmd == 'adjudicate-deps-all':
+        worst = 0
+        for nm, c in comps.items():
+            if c.get('language') != 'quanta':
+                continue
+            code, w, deps = adjudicate_with_deps(nm, comps)
+            print(nm.ljust(16), w, '[+' + str(len(deps)) + ' deps]')
             if code == 1:
                 worst = 1
         sys.exit(worst)
