@@ -270,3 +270,43 @@ REVERTED to avoid a net regression (the organism transpile gate going red for 5
 modules without delivering working generic methods). The false-green is itself a
 truth gap: those modules "transpile" but emit broken C and use unsupported
 features. Tracked here for a scoped feature effort.
+
+## Generic/method emission -- core implemented (2026-06-06, quantalang 1641c97)
+
+Supersedes the prior "investigation (NOT shipped)" note: the compiler-side core
+is now implemented and committed (612 tests pass throughout):
+- Parser: parse_type_bounds consumes Fn-trait sugar `Fn(A,B) -> C` (covers generic
+  bounds and, via the shared bound parser, dyn/impl Trait). Fixes the silent impl
+  truncation that leaked post-generic methods as free functions (bare name +
+  unresolved Self* receiver).
+- Typecheck: a call on a generic type parameter (or &/&mut of a param/var) is
+  callable (fresh var, deferred to monomorphization); bodies of generic functions
+  and of methods in a generic impl are no longer strict-checked abstractly.
+
+Verified on clean code (repro: an impl with a closure-bounded generic method
+followed by another method now emits Type_method(T* self) for both). Recovered to
+correct transpile/emission: calibrate, neutrino, entropy, field-tensor (partial),
+wavelength.
+
+Current ground truth (adjudicate/transpile, 16 modules): 13 transpile, 3 fail. The
+remaining tail is partly NOT compiler-fixable:
+- oracle FAIL -- DefId<?T> collision in ConformalPredictor, caused by oracle's
+  duplicate `mod`s (changepoint x2, ensemble x3). Source de-dup, not a compiler bug.
+- entangle (78 residual Self*) -- MALFORMED SOURCE: a `pub fn route_task` is spliced
+  into the middle of another method's `match` expression (a botched "// Stubbed"
+  edit). Parser error-recovery leaks subsequent methods. Source defect.
+- prism / refract FAIL -- `new()` returns `()` vs the struct type; a typecheck issue
+  lowering struct fields of type Option<Box<dyn Fn(...) + Send + Sync>> (the field in
+  isolation lowers fine, so it is a module-specific interaction). Compiler-side,
+  needs deeper work.
+- field-tensor (13 residual Self*) -- a module-specific impl truncation not yet
+  pinned; its map<F: Fn(f64)->f64> is byte-identical to a working repro, so the
+  trigger is elsewhere in that impl.
+
+Conclusion: the generic/method-emission core works for clean code and is committed.
+Full per-module completion is blocked by (a) source defects in oracle/entangle
+(de-dup / malformed-stub cleanup -- source side) and (b) a long tail of
+module-specific compiler edge-cases (prism/refract field lowering, field-tensor
+truncation) that each need dedicated investigation. The committed milestone
+intentionally trades 3 modules from false-green transpile (passing while emitting
+broken C) to honest transpile-failure.
