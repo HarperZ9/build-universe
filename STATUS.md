@@ -143,3 +143,73 @@ transpile as the module bar (a real if shallow check); the compiler organ is the
 separate, deeper witness. Reaching CONFIRMED requires cross-module linking
 (architectural), per-module source dedup, and the mutability fixes -- tracked
 here, not yet done.
+
+
+## Compiler organ -- second codegen pass (2026-06-05, session continuation)
+
+A second adjudication-driven pass landed five verified compiler fixes on the
+quantalang branch fix/codegen-module-prefix. Each was diagnosed against the
+compiler organ (tools/coherence/compiler_oracle.py), implemented, then verified
+by rebuild plus the full compiler test suite (612 pass / 0 failed) and the
+337-test codegen slice. Method discipline held throughout: every fix was
+confirmed by re-adjudication (observe, never simulate), and the generated C was
+read, not reasoned about.
+
+Fixes (inner-repo commits on fix/codegen-module-prefix):
+- e844bda -- Tuple typedefs were emitted twice (for a tuple that is both a
+  struct-field type and a registered type definition); once de-duplicated, a
+  tuple used by value was emitted after its user. The pre-emit step now skips
+  already-declared tuples, and the topological emitter records a dependency on a
+  tuple's own typedef. field-tensor's C2011 redefinition and the follow-on C2079
+  ordering both clear.
+- aab75e7 -- Impl methods returning a tuple of named structs never registered the
+  tuple's type definition (only free functions did), so the C referenced an
+  undeclared Tuple_RGB_RGB. Registration is now mirrored into both impl-method
+  lowering paths. (Roadmap item 4: tuple-of-named-struct ordering. lumina and
+  refract now emit and correctly order these tuples.)
+- 9d387fe -- Indexing a Vec<T> typed every element as i32 (the element-type match
+  lacked a Vec arm), selecting the wrong runtime getter and defeating string
+  equality. foundation's QuantaString '==' (C2088) clears and now lowers to a
+  string compare.
+- 09ec158 -- Box/Rc/Arc and BTreeMap were not lowered as intrinsics and emitted
+  undeclared C identifiers. Box/Rc/Arc now lower to a pointer and BTreeMap shares
+  the map machinery. (Roadmap item 2, stdlib half. delta's Box/BTreeMap clear;
+  oracle and entropy advance past Box. Honest caveat: BTreeMap aliases the
+  unordered string-keyed map and Box<dyn Trait> becomes a thin pointer, so
+  ordered/typed-key maps and trait-object dispatch remain separate gaps.)
+- 9f69b60 -- The type checker treated reference mutability as invariant at
+  argument positions, rejecting a &mut T argument where a &T parameter is
+  expected. A call-boundary coercion now accepts that sound reborrow while unify
+  stays invariant everywhere else. (Roadmap item 3. prism, neutrino, wavelength
+  now transpile.)
+
+Refreshed ground truth (adjudicate-all): all 16 modules remain CONTRADICTED, but
+the blockers moved deeper -- each module carries several stacked defects, and one
+layer was peeled per module. New first-blockers surfaced (field-tensor: a
+function-pointer field syntax; prism/neutrino: a char-before-bool enum emission;
+foundation: a map-iteration tuple assignment; oracle: dyn_Kernel; delta:
+DirectionalBarrierType). "Errors moved deeper" is the witnessed evidence the
+fixes landed; reaching CONFIRMED requires clearing the remaining layers and the
+items below.
+
+Remaining roadmap, by tractability:
+- DUPLICATE SIBLING DEFINITIONS (roadmap item 1, plus the nexus failure). Five
+  modules declare a top-level module name twice (spectrum: harmony, quantization;
+  delta: market_making; oracle: changepoint, ensemble; quantum-finance:
+  risk/oms/multi_asset/ml_signals; forge: tests), and nexus declares ModConflict
+  and ConflictType twice. The frontend accepts duplicates and emits both bodies,
+  producing the C redefinitions. The principled fix is a frontend rejection (as
+  Rust does), but it is entangled: it turns the organism transpile gate red for
+  the three registered files (spectrum, delta, oracle) and requires source
+  de-duplication to restore green -- and the duplicates genuinely differ
+  (spectrum's two harmony modules carry different variant sets), so they cannot be
+  auto-merged. This needs an authoring decision; it is not a single clean compiler
+  change. Held for direction.
+- CROSS-MODULE AND FFI RESOLUTION (roadmap item 2, cross-module half). nova,
+  calibrate, lumina, entangle, refract reference types defined in sibling modules
+  (titan_color = spectrum, Vec2/Mat4 = foundation) or external C (refract:
+  ID3D11RenderTargetView). Single-file compilation cannot resolve these; the clean
+  path is a project/registry build (a Quanta.toml dependency graph and a
+  module-name index) plus an opaque/extern type mechanism for FFI. Architectural;
+  deferred. entangle's SnapshotId is undefined anywhere -- a source defect inside
+  that envelope.
