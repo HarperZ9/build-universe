@@ -235,3 +235,38 @@ CROSS-MODULE incl. 6 ambiguous, 3 FFI, and codegen-side gaps). This draws the se
 source-authoring work (duplicate families, phantoms, cross-module ownership) on one
 side; remaining compiler work (cross-module linking, FFI extern types, generic and
 method emission) on the other.
+
+## Generic/method emission -- investigation (2026-06-05, witnessed; NOT shipped)
+
+Investigated the broad `Self*`-receiver leak (unresolved Self in emitted C across
+12 modules: prism 237, refract 230, entangle 78, calibrate 36, neutrino 27,
+oracle 26, field-tensor/nexus 20, ...). Findings, all witnessed:
+
+- The Inventory-2 CODEGEN-fn bucket (ColorTransform_new, ScriptEngine_new, etc.)
+  is CASCADE NOISE: those methods ARE emitted correctly; cl flagged them only
+  because earlier undefined types poisoned their signature lines.
+- The real defect: a PARSER bug. A generic method with an `Fn(...) -> T` bound
+  (e.g. `fn map<F: Fn(f64) -> f64>(&self, f: F)`) is mis-parsed -- parse_path
+  reads `Fn` and stops at `(`, leaving `(...) -> T` to derail the generic-param
+  list and silently TRUNCATE the impl block. Every method after it parses as a
+  top-level free function -> bare name + unresolved `Self*` receiver. Minimal
+  repro: `impl S { fn make()->S{...} fn apply<F: Fn(f64)->f64>(&self,f:F)->S{...}
+  fn doubled(&self)->S{...} }` emits `doubled(Self* self)` (top-level), not
+  `S_doubled`.
+- Fixing the parser (consume the Fn-sugar) is correct but UN-MASKS a cascade of
+  unsupported generic-system features that the truncation was hiding:
+  closure-type-param callability (`type F is not callable`), generic-method
+  return inference (`function returns () but expected DefId`), method-on-
+  type-param (`type T has no method shrink`). A parser+callability fix recovered
+  3 modules (entropy/field-tensor/wavelength, leak reduced) and kept 612 tests
+  green, but regressed 5 modules (oracle/prism/calibrate/neutrino/refract) from
+  false-green transpile to honest transpile-failure.
+
+Conclusion (truth-over-approval): completing generic/method emission is a major
+generic-system feature spanning parser + AST (retain Fn-bound signature) +
+typecheck (callability, return inference, associated-method resolution) +
+method-with-closure monomorphization -- not a clean fix. The partial fix was
+REVERTED to avoid a net regression (the organism transpile gate going red for 5
+modules without delivering working generic methods). The false-green is itself a
+truth gap: those modules "transpile" but emit broken C and use unsupported
+features. Tracked here for a scoped feature effort.
