@@ -6471,7 +6471,7 @@ pub mod hdr_metadata {
 // COLOR HARMONY
 
 /// Color harmony algorithms
-pub mod harmony {
+pub mod harmony_palette {
     use super::*;
 
     /// Harmony type
