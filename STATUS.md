@@ -357,3 +357,27 @@ malformed stubs -- source side) or this systemic lowering-inference weakness. Th
 highest-leverage remaining compiler work is hardening the lowering's type
 propagation (reduce the i32 defaults), which is a sizable, higher-risk change to a
 shared base -- not a clean per-site fix.
+
+## Lowering type-inference hardening -- begun (2026-06-06, quantalang dfaf158, 97e8179)
+
+Started driving out the codegen lowering's i32 defaults. New tool: infer_expr_type
+-- a best-effort static AST-expression type inferrer (literals, idents, free
+calls, collection method-calls map.get->V / vec.pop/first/last->T, struct
+literals, self.field via pointer-peel, if/match/block tails). Applied at two
+result-merge sites that previously guessed:
+- lower_match result type: was the enclosing function's return type (enum) or the
+  SCRUTINEE type otherwise; now inferred from the arm bodies. Verified:
+  `let p = match n { _ => Pt {..} }` types p as Pt (was scrutinee i64), p.x
+  compiles; `let p = match n { _ => self.pt }` resolves via the field type.
+- Some(x)/TupleStruct match-arm binding: infers from the scrutinee expression
+  when no tracked Option inner type exists, instead of the scrutinee local type.
+612 tests pass; each fix verified cl-clean on a focused repro.
+
+Note: this is real hardening but does NOT move the modules' single-module
+first-blockers, which are dominated by other classes (cross-module types,
+duplicate definitions, dyn_Fn, the Option/V mismatch). foundation specifically
+bottoms out in an anomaly where `match self.edges.get(node) { Some(edges) => }`
+types `edges` i32 even though the codegen emits the correct value-typed getter
+(quanta_hmap_get_val_QuantaVecHandle) -- the get-result local is typed i32 while
+the emitted getter knows it is a Vec, a contradiction that resists per-site fixing
+and needs deeper tracing of the get-result local typing. Tracked, not yet cracked.
