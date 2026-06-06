@@ -381,3 +381,32 @@ types `edges` i32 even though the codegen emits the correct value-typed getter
 (quanta_hmap_get_val_QuantaVecHandle) -- the get-result local is typed i32 while
 the emitted getter knows it is a Vec, a contradiction that resists per-site fixing
 and needs deeper tracing of the get-result local typing. Tracked, not yet cracked.
+
+## Source-side de-duplication pass (2026-06-06)
+
+Targeted the duplicate-sibling-definition blockers in spectrum, oracle, nexus.
+- spectrum: the second `pub mod harmony` (4 colliding inner defs) renamed to
+  harmony_palette -- conservative (no deletion); the harmony_HarmonyType C2365
+  redefinition is gone. spectrum advances to a separate pre-existing codegen bug
+  (C2059 '[' at module.c:3066). (quantization's two blocks are disjoint -> no
+  collision -> left as harmless concatenation.)
+- oracle: ConformalPredictor was defined twice -- a generic `<F: Fn..>` in
+  mod conformal (def+impl only, never constructed) plus a non-generic top-level
+  one with base_model. The generic's bare-name registration won resolution, so the
+  non-generic construction resolved to DefId<?T> (no base_model). Renamed the
+  unused generic to ConformalPredictorGeneric; oracle advances past 7512 to a
+  separate source issue (undefined `relu`). (CompositeKernel enum/struct name
+  clash remains latent, not the current blocker.)
+- nexus: NOT de-duped. It carries two FULL parallel implementations of 10 types
+  (ModConflict/ConflictType/ConflictSeverity/ModPackage/ProfileManager/
+  GameDetector/VirtualFileSystem/AssetRedirector/ModDependency/ModFile), each with
+  impls in BOTH clusters (e.g. impl ModPackage @199 and @4759), with different
+  field types (cluster1 ConflictType vs cluster2 ModConflictType -- the latter
+  undefined). Choosing which implementation is canonical is an authoring decision,
+  not a safe mechanical de-dup; deferred.
+
+Net: the de-dup cleared spectrum's and oracle's own duplicate-definition blockers
+(both advance to separate, non-dup issues). It did NOT make any module compile or
+immediately unblock the spectrum-dependents -- those fail earlier at transpile on
+their own API mismatches (calibrate .white, nova .title, lumina .scale), unrelated
+to the spectrum dup. nexus needs an operator decision on its two implementations.
