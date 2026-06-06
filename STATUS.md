@@ -331,3 +331,29 @@ cross-module. Mechanism validated: a clean dep+user concatenation emits C that c
 compiles (type-ordered). Kept oracle-side (observation); a compiler-side port
 (quantac resolving cross-module directly) is deferred until the deeper issues and
 dep source defects are cleared, since modules cannot compile-with-deps until then.
+
+## Codegen: Vec-of-aggregate indexing + the lowering type-inference root (2026-06-06, 26aac3e)
+
+Fixed (quantalang 26aac3e): indexing a Vec whose element is a struct/tuple selected
+the scalar i32 getter; aggregate elements now use the runtime generic
+quanta_vec_get(handle.inner, i) with cast+deref. Broad (any Vec<struct>/Vec<tuple>
+index). 337 codegen tests pass. foundation advanced past its Vec<tuple> access.
+
+Root-cause finding (foundation, a CLEAN module -- no dup-defs): its remaining
+blockers are a deep chain of LOWERING type-inference defaults-to-i32. Next was
+`let edges = <match/if with a map.get(node) branch>` -- the binding type defaulted
+to i32 instead of the value type (Vec). Traced: the let-binding type is
+type_of_value(init) (correct for direct calls), but for a CONDITIONAL/match init
+the merged result local defaults to i32, so the binding mis-types. This is a
+systemic weakness: the codegen lowering's own type inference (separate from the
+typechecker) falls back to i32 in several places (binding types, conditional-result
+merges, some collection-accessor returns). It is the recurring root behind the
+clean modules' residual codegen failures. A typechecker-side .get fix was tried and
+reverted -- ineffective, because the binding type comes from the lowering, not the
+typechecker.
+
+Assessment: per-module compilation bottoms out in either source defects (dup-defs /
+malformed stubs -- source side) or this systemic lowering-inference weakness. The
+highest-leverage remaining compiler work is hardening the lowering's type
+propagation (reduce the i32 defaults), which is a sizable, higher-risk change to a
+shared base -- not a clean per-site fix.
