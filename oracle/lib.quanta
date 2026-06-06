@@ -3257,13 +3257,13 @@ pub mod conformal {
     use super::*;
 
     /// Conformal predictor for prediction intervals
-    pub struct ConformalPredictor<F: Fn(&[f64], &[f64], f64) -> f64> {
+    pub struct ConformalPredictorGeneric<F: Fn(&[f64], &[f64], f64) -> f64> {
         nonconformity_fn: F,
         calibration_scores: Vec<f64>,
         coverage: f64,
     }
 
-    impl<F: Fn(&[f64], &[f64], f64) -> f64> ConformalPredictor<F> {
+    impl<F: Fn(&[f64], &[f64], f64) -> f64> ConformalPredictorGeneric<F> {
         pub fn new(nonconformity_fn: F, coverage: f64) -> Self {
             Self {
                 nonconformity_fn,
