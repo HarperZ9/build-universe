@@ -52,3 +52,6 @@ programs/*.c
 
 # coherence-membrane build-state witnesses (per-machine)
 tools/coherence/witness/
+# Python bytecode caches (global)
+__pycache__/
+*.pyc
