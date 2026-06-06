@@ -213,3 +213,25 @@ Remaining roadmap, by tractability:
   module-name index) plus an opaque/extern type mechanism for FFI. Architectural;
   deferred. entangle's SnapshotId is undefined anywhere -- a source defect inside
   that envelope.
+
+## Compiler organ -- third codegen pass (2026-06-05, seam continuation)
+
+Three further codegen fixes on quantalang fix/codegen-module-prefix, each verified
+by rebuild + the full suite (612 pass / 0 failed) and re-adjudication:
+- 9a90491 -- enum unit-variant placeholder "char _<Variant>;" is escaped against
+  reserved C identifiers (a variant named Bool produced _Bool, the C99 keyword;
+  C2632). prism and neutrino clear the enum emission.
+- a331f3f -- the C backend synthesizes typedefs for every tuple type referenced
+  anywhere (parameters, locals, fields), not just literals and return types.
+  Witnessed via cl-harvest: undefined Tuple_* identifiers 14 -> 0.
+- 7b54733 -- const identifiers used as fixed-array lengths now resolve
+  (try_const_eval gains an Ident/Path arm backed by a const_values pre-pass);
+  [usize; MAX_DIMS] no longer emits an illegal zero-sized array.
+
+Witnessed de-duplication inventory committed at docs/DEDUP-INVENTORY.md: 67
+duplicate-sibling-definition families (classified IDENTICAL / SUPERSET / DIFFERENT)
+plus the C-compiler-enumerated referenced-but-undefined set (7 SOURCE-PHANTOM, 25
+CROSS-MODULE incl. 6 ambiguous, 3 FFI, and codegen-side gaps). This draws the seam:
+source-authoring work (duplicate families, phantoms, cross-module ownership) on one
+side; remaining compiler work (cross-module linking, FFI extern types, generic and
+method emission) on the other.
