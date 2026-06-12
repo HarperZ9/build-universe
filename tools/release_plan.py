@@ -13,6 +13,7 @@ import json
 import pathlib
 import tomllib
 
+from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
@@ -20,6 +21,23 @@ from typing import Any, Dict, List
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 INDEX_PATH = REPO_ROOT / "tools" / "package-index.toml"
 DEFAULT_MARKDOWN_PATH = REPO_ROOT / "releases" / "release-candidates.md"
+SHOWCASE_PATH = REPO_ROOT / "tools" / "showcase.md"
+KNOWN_CATEGORIES = (
+    "core",
+    "rendering",
+    "trading",
+    "integration",
+    "ai",
+    "tools",
+)
+CATEGORY_TITLES = {
+    "ai": "AI",
+    "core": "Core",
+    "integration": "Integration",
+    "rendering": "Rendering",
+    "trading": "Trading",
+    "tools": "Tools",
+}
 
 
 def load_packages() -> List[Dict[str, Any]]:
@@ -93,6 +111,55 @@ def format_markdown(packages: List[Dict[str, Any]], title: str) -> str:
     return "\n".join(header + rows) + "\n"
 
 
+def format_showcase(packages: List[Dict[str, Any]]) -> str:
+    grouped: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for pkg in packages:
+        grouped[pkg.get("category", "unassigned")].append(pkg)
+
+    lines = [
+        "# Nested Module Showcase",
+        "",
+        f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%SZ')}",
+        "",
+        "These repositories are the split-repo publication surface.",
+        "Each row links the canonical GitHub target, slug, and source directory.",
+        "Lowercase-hyphenated slugs are the public package identifiers.",
+        "",
+    ]
+
+    for category in KNOWN_CATEGORIES:
+        packages = grouped.get(category, [])
+        if not packages:
+            continue
+        lines.append(f"## {CATEGORY_TITLES.get(category, category)}")
+        lines.append("")
+        lines.append("| Package | Slug | Language | Repository | Source | Readiness |")
+        lines.append("|---|---|---|---|---|---|")
+        for pkg in packages:
+            ready = "ready" if "publish:ready" in pkg["status"] else "blocked"
+            lines.append(
+                f"| {pkg['name']} | `{pkg['slug']}` | {pkg['language']} | "
+                f"{pkg['repository']} | `{pkg['source']}` | {ready} |"
+            )
+        lines.append("")
+
+    lines.extend(
+        [
+            "## Publish Surface",
+            "",
+            "| Step | Command |",
+            "|---|---|",
+            "| View all publish-ready modules | `python tools/release_plan.py --only-publish --json` |",
+            "| View one module | `python tools/release_plan.py --module <slug> --json` |",
+            "| Refresh release dashboard | `python tools/release_plan.py --only-publish --write-markdown` |",
+            "| Rebuild this showcase | `python tools/release_plan.py --only-publish --write-showcase` |",
+            "",
+            "For the compact JSON-ready list, use `python tools/release_plan.py --only-publish --json`.",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
 def cmd_plan(args: argparse.Namespace) -> int:
     packages = load_packages()
     records = [evaluate_package(pkg) for pkg in packages]
@@ -125,6 +192,11 @@ def cmd_plan(args: argparse.Namespace) -> int:
             title = f"Module Release Candidate: {args.module}"
         markdown_output.write_text(format_markdown(records, title), encoding="utf-8")
         print(f"wrote {markdown_output}")
+
+    if args.write_showcase:
+        SHOWCASE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        SHOWCASE_PATH.write_text(format_showcase(records), encoding="utf-8")
+        print(f"wrote {SHOWCASE_PATH}")
 
     return 0
 
@@ -159,6 +231,11 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "emit releases/release-candidates.md after planning."
         ),
+    )
+    parser.add_argument(
+        "--write-showcase",
+        action="store_true",
+        help="emit tools/showcase.md after planning.",
     )
     return parser
 

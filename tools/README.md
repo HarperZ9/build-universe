@@ -24,6 +24,7 @@ Each entry maps one repository-ready module to:
 
 Use this file to build release candidate checklists and public-facing module
 material (repo links, naming, and package ordering).
+`tools/showcase.md` is the generated outward-facing module surface.
 
 ## release_plan.py
 
@@ -33,8 +34,10 @@ This helper turns `package-index.toml` into an actionable release view:
     python tools/release_plan.py --only-publish --json
     python tools/release_plan.py --module axiom --json
 
-Use `--write-markdown` to refresh the release-candidate surface before packaging or
-social announcements.
+Use this command set before packaging or public announcements:
+
+    python tools/release_plan.py --only-publish --write-markdown
+    python tools/release_plan.py --only-publish --write-showcase
 
 ## verify_organism.py
 
