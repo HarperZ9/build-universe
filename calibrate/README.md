@@ -82,17 +82,17 @@ pip install ".[gui]"
 - numpy, scipy
 
 **Platform support:**
-- **Windows 10/11** — Full support (DWM 3D LUT, VCGT, DDC/CI, ICC, calibration guard)
-- **macOS** — Display detection (CoreGraphics), gamma ramps (CGSetDisplayTransferByTable), ICC profiles (ColorSync). Requires `pip install ".[macos]"` for pyobjc bindings.
-- **Linux** — Planned (xrandr/colord integration)
+- **Windows 10/11** - Full support (DWM 3D LUT, VCGT, DDC/CI, ICC, calibration guard)
+- **macOS** - Display detection (CoreGraphics), gamma ramps (CGSetDisplayTransferByTable), ICC profiles (ColorSync). Requires `pip install ".[macos]"` for pyobjc bindings.
+- **Linux** - Planned (xrandr/colord integration)
 
 **Recommended (Windows):**
-- [dwm_lut](https://github.com/ledoge/dwm_lut) — System-wide 3D LUT via DWM compositor. Calibrate Pro auto-launches it with elevation.
+- [dwm_lut](https://github.com/ledoge/dwm_lut) - System-wide 3D LUT via DWM compositor. Calibrate Pro auto-launches it with elevation.
 
 **Recommended (all platforms):**
-- PyQt6 — For the GUI (`pip install ".[gui]"`)
-- hidapi — For native i1Display3 driver (`pip install hidapi`)
-- pystray + Pillow — For system tray mode (`pip install ".[tray]"`)
+- PyQt6 - For the GUI (`pip install ".[gui]"`)
+- hidapi - For native i1Display3 driver (`pip install hidapi`)
+- pystray + Pillow - For system tray mode (`pip install ".[tray]"`)
 
 ## Output Files
 

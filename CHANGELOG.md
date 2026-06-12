@@ -11,12 +11,12 @@ this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.0.0] - 2026
 
-### Verified — actually ships
+### Verified - actually ships
 - **QuantaLang compiler**: lexer, parser, type checker, monomorphization,
   traits + vtables, one-shot algebraic effects; **C backend end-to-end**;
   755 test functions in tree; produces quantac.exe.
 - **Native programs**: 56 MSVC-clean executables from 65 .quanta sources in
-  programs/ — including qdb (SQL engine), qparse, qsed, grep, base64, calc,
+  programs/ - including qdb (SQL engine), qparse, qsed, grep, base64, calc,
   and color_test (12/12 self-checks pass).
 - **foundation stdlib**: SHA-256 (FIPS 180-4 correct), math via intrinsics,
   Vec with correct growth. Collections HashMap/BTreeMap are partial; the
@@ -26,7 +26,7 @@ this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   color, delta (Black-Scholes + full Greeks + IV solvers), oracle (SARIMA),
   entropy (LSTM forward pass), axiom (forward-mode dual-number autodiff),
   field-tensor (Cholesky, power-iteration eigenvalues, indicators).
-- **QuantaOS**: substantial hobby kernel — memory management, scheduler,
+- **QuantaOS**: substantial hobby kernel - memory management, scheduler,
   ext2/ext4, IPC, drivers (PCI/ACPI/AHCI/NVMe/USB), a TCP/IP stack. Boots in
   QEMU is plausible but unverified here. AI syscalls and "self-healing" are
   stubs (return -1; Z-score thresholding, not ML).
@@ -34,9 +34,9 @@ this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Backends
 - **C**: end-to-end, verified. HLSL/GLSL: emit shader text only.
 - x86-64, ARM64, WASM, LLVM, SPIR-V: generate output but have no
-  linker/assembler integration — none yet produce a runnable artifact.
+  linker/assembler integration - none yet produce a runnable artifact.
 
-### Not yet implemented (previously listed as done — corrected)
+### Not yet implemented (previously listed as done - corrected)
 - Compiler borrow checker (compiled output is unchecked), whole-ecosystem
   cross-module compilation, self-hosting.
 - Crypto beyond SHA-256: AES-256, ChaCha20, Blake3, Ed25519, X25519.

@@ -13,12 +13,12 @@ All notable changes to the QuantaLang program suite.
 - Enable in repo Settings > Pages > Deploy from branch `main`, folder `/docs`
 
 **Build scripts created:**
-- `build_all.bat` — compile all programs via quantac + MSVC (run from cmd.exe)
-- `build_all_self.bat` — compile all via self-hosted qcodegen + MSVC
+- `build_all.bat` - compile all programs via quantac + MSVC (run from cmd.exe)
+- `build_all_self.bat` - compile all via self-hosted qcodegen + MSVC
 
 ### Closure Codegen + In-Process Benchmarks (2026-03-27)
 
-**Closure/lambda codegen — THE LAST MAJOR GAP CLOSED:**
+**Closure/lambda codegen - THE LAST MAJOR GAP CLOSED:**
 - `|x| x * 2` emits static C function `__lambda_N`
 - `.map(|x| expr)` desugars to C for-loop with qv_push
 - `.filter(|x| expr)` desugars to conditional qv_push
@@ -37,7 +37,7 @@ Vec, include!(), 30+ builtins, closures, iterator desugaring, self-compilation.
 
 ### Multi-Statement If-Blocks + Full Audit (2026-03-27)
 
-**If-expression blocks with let bindings — FIXED:**
+**If-expression blocks with let bindings - FIXED:**
 - Single-expression branches: still emit compact C ternary
 - Multi-statement branches: emit `if (cond) { stmts; target = last; } else { ... }`
 - 5 new functions: is_multi_stmt_block, if_has_multi_stmt, codegen_if_block_assign,
@@ -167,11 +167,11 @@ correctly) are: test_hello, yes, echo, basename, dirname, seq, + struct test.
 
 **qdb benchmark suite:**
 - `benchmarks/bench_qdb.sh`: INSERT (100/1000 rows), SELECT, WHERE, COUNT,
-  ORDER BY, GROUP BY, JOIN — all timed
+  ORDER BY, GROUP BY, JOIN - all timed
 - Results: 34-87ms per query on 1,000 rows (dominated by process startup)
 - Honest documentation of limitations (no in-process mode, per-invocation overhead)
 
-**numpy warnings — FIXED:**
+**numpy warnings - FIXED:**
 - quanta-color: 13 RuntimeWarnings → 0 (np.errstate wraps in gamut.py,
   spaces.py, tonemap.py)
 - 457 tests pass with zero warnings
@@ -181,7 +181,7 @@ correctly) are: test_hello, yes, echo, basename, dirname, seq, + struct test.
 - Total: 105 lines removed
 - tac.quanta: eliminated entire Tac struct, replaced with lr_new/lr_get
 
-### Shared Tokenizer Extraction — Major Deduplication (2026-03-27)
+### Shared Tokenizer Extraction - Major Deduplication (2026-03-27)
 
 **stdlib/tokenizer.quanta created (430 lines):**
 - All 48 TK_* token type constants
@@ -201,14 +201,14 @@ correctly) are: test_hello, yes, echo, basename, dirname, seq, + struct test.
 | qc.quanta | 2,280 | 1,898 | 382 |
 | **Total** | **8,076** | **5,958** | **2,118** |
 
-**String pool migration — partially blocked:**
+**String pool migration - partially blocked:**
 - csv2json, paste, patch annotated with stdlib pattern reference
 - Cannot directly include stdlib/string_pool.quanta due to function name
   collisions (each program's sp_add takes a different struct type)
 - Blocked by: compiler lacks function overloading or module-scoped names
 - Documented in program comments for future migration
 
-### Stdlib Migration — First Real Deduplication (2026-03-27)
+### Stdlib Migration - First Real Deduplication (2026-03-27)
 
 **Self-hosting tools migrated to shared stdlib:**
 - tok.quanta: -60 lines (is_alpha/is_digit/etc. replaced with include)
@@ -220,24 +220,24 @@ correctly) are: test_hello, yes, echo, basename, dirname, seq, + struct test.
 - Each file now starts with `include!("stdlib/chars.quanta");`
 
 **Stdlib expanded (3 new modules):**
-- `stdlib/lines.quanta` — LineReader struct (lr_new, lr_get) for splitting
+- `stdlib/lines.quanta` - LineReader struct (lr_new, lr_get) for splitting
   strings into lines. Used by 35+ programs.
-- `stdlib/string_pool.quanta` — StringPool struct (sp_new, sp_add, sp_get)
+- `stdlib/string_pool.quanta` - StringPool struct (sp_new, sp_add, sp_get)
   for storing string arrays with Vec<i32>. Used by 10+ programs.
-- `stdlib/chars.quanta` — added is_bin_digit, is_oct_digit (needed by tokenizers)
+- `stdlib/chars.quanta` - added is_bin_digit, is_oct_digit (needed by tokenizers)
 
 **Stdlib inventory:**
 ```
-stdlib/chars.quanta        — is_digit, is_alpha, is_alnum, is_whitespace,
+stdlib/chars.quanta        - is_digit, is_alpha, is_alnum, is_whitespace,
                              is_hex_digit, is_bin_digit, is_oct_digit
-stdlib/string_utils.quanta — trim_left, starts_with_alpha
-stdlib/lines.quanta        — LineReader (split string into lines)
-stdlib/string_pool.quanta  — StringPool (string array via Vec<i32>)
+stdlib/string_utils.quanta - trim_left, starts_with_alpha
+stdlib/lines.quanta        - LineReader (split string into lines)
+stdlib/string_pool.quanta  - StringPool (string array via Vec<i32>)
 ```
 
 ### Multi-File Includes + Refactoring (2026-03-27)
 
-**`include!("path")` preprocessor — NEW COMPILER FEATURE:**
+**`include!("path")` preprocessor - NEW COMPILER FEATURE:**
 - Textual file inclusion: `include!("stdlib/chars.quanta");` splices referenced
   file contents at the directive site, like C's `#include`
 - Double-inclusion guard: each file included at most once (canonical path tracking)
@@ -247,8 +247,8 @@ stdlib/string_pool.quanta  — StringPool (string array via Vec<i32>)
 - Unblocks: stdlib extraction, eliminating 4,000 lines of duplicated code
 
 **Standard library started:**
-- `stdlib/chars.quanta` — `is_digit`, `is_alpha`, `is_alnum`, `is_whitespace`, `is_hex_digit`
-- `stdlib/string_utils.quanta` — `trim_left`, `starts_with_alpha` (includes chars.quanta)
+- `stdlib/chars.quanta` - `is_digit`, `is_alpha`, `is_alnum`, `is_whitespace`, `is_hex_digit`
+- `stdlib/string_utils.quanta` - `trim_left`, `starts_with_alpha` (includes chars.quanta)
 - Both verified: compiles, correct output, nested inclusion works
 
 **Setter workaround removal:**
@@ -259,25 +259,25 @@ stdlib/string_pool.quanta  — StringPool (string array via Vec<i32>)
 
 ### Compiler Bug Fixes (2026-03-27)
 
-**Struct field assignment on local variables — FIXED:**
+**Struct field assignment on local variables - FIXED:**
 - Root cause: `lower_assign()` only handled field assignment through pointers
   (`obj->field = val`), not on local struct values (`obj.field = val`).
-  Assignments on locals were silently dropped — no MIR instruction emitted.
+  Assignments on locals were silently dropped - no MIR instruction emitted.
 - Fix: Added `MirStmtKind::FieldAssign` to IR, builder, lowerer, and all 7
   backends (C, LLVM, WASM, SPIRV, ARM64, x86_64). C backend now emits
   `base.field = value;` for locals.
 - Impact: Eliminates the `&mut` workaround pattern from ALL 60 programs.
   Programs can now assign struct fields directly in any function scope.
-- Test: `125_local_struct_assign.quanta` — verifies `p.x = 10;` emits correctly.
+- Test: `125_local_struct_assign.quanta` - verifies `p.x = 10;` emits correctly.
 
-**String literal method calls — VERIFIED WORKING:**
+**String literal method calls - VERIFIED WORKING:**
 - Previously reported as broken (`let s = ""; s.char_at(0)` fails).
 - After investigation: compiles correctly in isolation. The issue occurs only
   when mixing string literal returns with parameter method calls in the same
-  function — a specific codegen edge case, not a general type inference bug.
+  function - a specific codegen edge case, not a general type inference bug.
 - Status: Documented as edge-case workaround, not a blocking issue.
 
-**Sequential while-loop codegen — VERIFIED FIXED:**
+**Sequential while-loop codegen - VERIFIED FIXED:**
 - Previously reported as dropped second while loop.
 - The var_map save/restore fix (applied earlier) resolved this completely.
 - Verified: 3 sequential while loops generate correct C with proper basic blocks.
@@ -285,56 +285,56 @@ stdlib/string_pool.quanta  — StringPool (string array via Vec<i32>)
 ### Quality Overhaul (2026-03-27)
 
 **Documentation:**
-- Added `README.md` (192 lines) — architecture decisions, full program table,
+- Added `README.md` (192 lines) - architecture decisions, full program table,
   self-hosting chain, qdb feature set, build instructions, known issues
-- Added `ARCHITECTURE.md` (176 lines) — qdb module map, data model, file format
+- Added `ARCHITECTURE.md` (176 lines) - qdb module map, data model, file format
   spec, WAL protocol, query execution flow, design tradeoffs
 - Added section banners and function documentation to db.quanta (15+ functions)
 
 **Testing:**
-- Added `tests/run_tests.sh` — automated test suite
+- Added `tests/run_tests.sh` - automated test suite
 - 96 tests pass, 0 failures, 8 skips (interactive/system-dependent programs)
 - Coverage: 49 of 57 executables tested
 
 **Consistency Fixes:**
 - Fixed qjq hanging on no input (added stdin_is_pipe check)
-- Added `--help` to qdb, qjq, qsql (was missing — now 100% coverage)
+- Added `--help` to qdb, qjq, qsql (was missing - now 100% coverage)
 - All 60 programs respond to `--help` or `-h`
 
 **Code Organization:**
 - db.quanta reorganized into 12 labeled sections with architecture comments
-- No logic changes — pure documentation and structural clarity
+- No logic changes - pure documentation and structural clarity
 
 ### Compiler Cleanup (2026-03-26)
 
 - Reduced compiler warnings from 2,031 to 0
 - Split lower.rs (7,967 lines) into 4 modules:
-  - `mod.rs` (1,609) — struct, constructors, item lowering
-  - `expr.rs` (3,627) — expression and statement lowering
-  - `types.rs` (777) — type lowering, const eval
-  - `macros.rs` (2,028) — closures, builtins, iterators
+  - `mod.rs` (1,609) - struct, constructors, item lowering
+  - `expr.rs` (3,627) - expression and statement lowering
+  - `types.rs` (777) - type lowering, const eval
+  - `macros.rs` (2,028) - closures, builtins, iterators
 - Added `programs/.gitignore` for build artifacts (*.c, *.exe, *.obj)
 - Removed stale `db.exe` duplicate and misnamed `qdiff` C file
 - Removed stray `claude-mastery-project.conf` from calibrate-pro and aurora
 
-## [1.0.0] — 2026-03-24 to 2026-03-27
+## [1.0.0] - 2026-03-24 to 2026-03-27
 
 ### Programs (60 total)
 
 **Self-Hosting Compiler Chain (8 programs, 8,315 lines):**
-- `qtok` — tokenizer (975 lines)
-- `qparse` — recursive descent parser (1,464 lines)
-- `qcheck` — type checker with scope tracking (2,040 lines)
-- `qcodegen` — C code generator (1,513 lines)
-- `qc` — unified self-hosted compiler (2,323 lines)
-- `qfmt` — code formatter (462 lines)
-- `qlint` — source linter with 8 checks (452 lines)
-- `qjson` — JSON parser/pretty-printer (417 lines)
+- `qtok` - tokenizer (975 lines)
+- `qparse` - recursive descent parser (1,464 lines)
+- `qcheck` - type checker with scope tracking (2,040 lines)
+- `qcodegen` - C code generator (1,513 lines)
+- `qc` - unified self-hosted compiler (2,323 lines)
+- `qfmt` - code formatter (462 lines)
+- `qlint` - source linter with 8 checks (452 lines)
+- `qjson` - JSON parser/pretty-printer (417 lines)
 
 **Database Engine (3 programs, 5,634 lines):**
-- `qdb` — SQL database with JOIN, GROUP BY, indexes, WAL, transactions (4,232 lines)
-- `qkv` — persistent key-value store (533 lines)
-- `qsql` — standalone SQL parser (869 lines)
+- `qdb` - SQL database with JOIN, GROUP BY, indexes, WAL, transactions (4,232 lines)
+- `qkv` - persistent key-value store (533 lines)
+- `qsql` - standalone SQL parser (869 lines)
 
 **Text Processing (14 programs):**
 - `qawk`, `qcut`, `qexpand`, `qfold`, `qgrep`, `qht`, `qnl`, `qpaste`,
@@ -374,22 +374,22 @@ stdlib/string_pool.quanta  — StringPool (string array via Vec<i32>)
 ## Known Issues and Technical Debt
 
 ### Critical (blocking portfolio quality)
-1. **No inter-program code reuse** — tokenizer duplicated across 5 self-hosting
+1. **No inter-program code reuse** - tokenizer duplicated across 5 self-hosting
    tools (~4,000 lines). Blocked by: compiler lacks multi-file compilation.
    Intended fix: add `use` import support to quantac.
 
 ### Significant
-2. **Struct field assignment on locals** — compiler codegen bug. Programs work
+2. **Struct field assignment on locals** - compiler codegen bug. Programs work
    around it with `&mut` reference parameters. Fix requires C backend changes.
-3. **String type inference** — `let x = ""` infers `&'static str`, blocking
+3. **String type inference** - `let x = ""` infers `&'static str`, blocking
    method calls. Workaround: use `str.substring(0, 0)` instead of `""`.
-4. **Sequential while-loop codegen** — second while loop in same scope can be
+4. **Sequential while-loop codegen** - second while loop in same scope can be
    silently dropped. Workaround: use single-loop patterns or separate functions.
-5. **Vec<String> incomplete** — only Vec<i32>/Vec<f64> have full codegen.
+5. **Vec<String> incomplete** - only Vec<i32>/Vec<f64> have full codegen.
    Programs use string pool pattern instead.
 
 ### Minor
-6. **GROUP BY rendering** — some aggregate combinations produce incorrect values
-7. **qc subset** — self-hosted compiler handles simple programs only
+6. **GROUP BY rendering** - some aggregate combinations produce incorrect values
+7. **qc subset** - self-hosted compiler handles simple programs only
 8. **13 numpy warnings** in quanta-color (harmless edge cases)
 9. **8 compiler integration tests skipped** (not blocking, test infra issue)
