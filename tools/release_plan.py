@@ -56,7 +56,8 @@ def evaluate_package(pkg: Dict[str, Any]) -> Dict[str, Any]:
         publish = False
     else:
         publish = bool(pkg.get("publish", False))
-    if publish and "missing" not in "".join(status):
+    core_checks = [s for s in status if s.startswith("source:") or s.startswith("manifest:")]
+    if publish and all(not s.endswith(":missing") for s in core_checks):
         status.append("publish:ready")
     else:
         status.append("publish:not-ready")
