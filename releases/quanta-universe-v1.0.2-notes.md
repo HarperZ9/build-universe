@@ -1,6 +1,6 @@
-﻿## Quanta Universe v1.0.1
+﻿## Quanta Universe v1.0.2
 
-This release publishes the module-forward tooling surface for split-repo packaging.
+This release publishes the refreshed module-forward tooling surface for split-repo packaging.
 
 ### Highlights
 - Added generated release candidate dashboard: `releases/release-candidates.md`
