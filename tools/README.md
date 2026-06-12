@@ -12,6 +12,19 @@ sketches in STATUS.md Tier 3. Each entry has a verify command and an expectation
 (tested = runtime-verified, build = compile/link only). A new real module joins
 the organism by adding an entry here.
 
+## package-index.toml
+
+`package-index.toml` is the publication surface for split-repo packaging.
+Each entry maps one repository-ready module to:
+
+- lowercase slug (release-ready naming),
+- repo-relative source path,
+- canonical GitHub repository,
+- publish intent (`publish = true` means this module is currently a release candidate).
+
+Use this file to build release candidate checklists and public-facing module
+material (repo links, naming, and package ordering).
+
 ## verify_organism.py
 
 Runs every component verify command and prints what actually builds and passes on

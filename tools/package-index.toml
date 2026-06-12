@@ -1,0 +1,215 @@
+# Package index for publishable nested repos.
+#
+# This registry is the outward-facing boundary for module-level packaging.
+# Keep this list in sync with CATALOG.json entries that have a dedicated
+# GitHub repository.
+#
+# Fields:
+# - name: display title
+# - slug: repo/package slug (lowercase, hyphenated)
+# - source: repo-relative source directory
+# - language: primary implementation language
+# - repository: canonical publish target
+# - publish: whether this module is currently published as a candidate package
+#
+
+version = "1.0.0"
+updated = "2026-06-12"
+
+[[package]]
+name = "QuantaLang"
+slug = "quantalang"
+source = "quantalang"
+language = "rust"
+repository = "https://github.com/HarperZ9/quantalang"
+publish = true
+category = "core"
+
+[[package]]
+name = "QuantaOS"
+slug = "quanta-os"
+source = "quantaos"
+language = "rust"
+repository = "https://github.com/HarperZ9/quantaos"
+publish = true
+category = "core"
+
+[[package]]
+name = "Axiom"
+slug = "axiom"
+source = "axiom"
+language = "quanta"
+repository = "https://github.com/HarperZ9/axiom"
+publish = true
+category = "core"
+
+[[package]]
+name = "Photon"
+slug = "photon"
+source = "photon"
+language = "mixed"
+repository = "https://github.com/HarperZ9/photon"
+publish = true
+category = "rendering"
+
+[[package]]
+name = "Spectrum"
+slug = "spectrum"
+source = "spectrum"
+language = "quanta"
+repository = "https://github.com/HarperZ9/spectrum"
+publish = true
+category = "rendering"
+
+[[package]]
+name = "Chromatic"
+slug = "chromatic"
+source = "chromatic"
+language = "quanta"
+repository = "https://github.com/HarperZ9/chromatic"
+publish = true
+category = "rendering"
+
+[[package]]
+name = "Lumina"
+slug = "lumina"
+source = "lumina"
+language = "quanta"
+repository = "https://github.com/HarperZ9/lumina"
+publish = true
+category = "rendering"
+
+[[package]]
+name = "Nexus"
+slug = "nexus"
+source = "nexus"
+language = "quanta"
+repository = "https://github.com/HarperZ9/nexus"
+publish = true
+category = "rendering"
+
+[[package]]
+name = "Prism"
+slug = "prism"
+source = "prism"
+language = "quanta"
+repository = "https://github.com/HarperZ9/prism"
+publish = true
+category = "rendering"
+
+[[package]]
+name = "Refract"
+slug = "refract"
+source = "refract"
+language = "quanta"
+repository = "https://github.com/HarperZ9/refract"
+publish = true
+category = "rendering"
+
+[[package]]
+name = "Neutrino"
+slug = "neutrino"
+source = "neutrino"
+language = "quanta"
+repository = "https://github.com/HarperZ9/neutrino"
+publish = true
+category = "rendering"
+
+[[package]]
+name = "Quantum Finance"
+slug = "quantum-finance"
+source = "quantum-finance"
+language = "quanta"
+repository = "https://github.com/HarperZ9/quantum-finance"
+publish = true
+category = "trading"
+
+[[package]]
+name = "Field Tensor"
+slug = "field-tensor"
+source = "field-tensor"
+language = "quanta"
+repository = "https://github.com/HarperZ9/field-tensor"
+publish = true
+category = "trading"
+
+[[package]]
+name = "Delta"
+slug = "delta"
+source = "delta"
+language = "quanta"
+repository = "https://github.com/HarperZ9/delta"
+publish = true
+category = "trading"
+
+[[package]]
+name = "Entropy"
+slug = "entropy"
+source = "entropy"
+language = "quanta"
+repository = "https://github.com/HarperZ9/entropy"
+publish = true
+category = "trading"
+
+[[package]]
+name = "Entangle"
+slug = "entangle"
+source = "entangle"
+language = "quanta"
+repository = "https://github.com/HarperZ9/entangle"
+publish = true
+category = "integration"
+
+[[package]]
+name = "Calibrate"
+slug = "calibrate"
+source = "calibrate"
+language = "quanta"
+repository = "https://github.com/HarperZ9/calibrate"
+publish = true
+category = "integration"
+
+[[package]]
+name = "Nova"
+slug = "nova"
+source = "nova"
+language = "quanta"
+repository = "https://github.com/HarperZ9/nova"
+publish = true
+category = "integration"
+
+[[package]]
+name = "Oracle"
+slug = "oracle"
+source = "oracle"
+language = "quanta"
+repository = "https://github.com/HarperZ9/oracle"
+publish = true
+category = "ai"
+
+[[package]]
+name = "Wavelength"
+slug = "wavelength"
+source = "wavelength"
+language = "quanta"
+repository = "https://github.com/HarperZ9/wavelength"
+publish = true
+category = "ai"
+
+[[package]]
+name = "Forge"
+slug = "forge"
+source = "forge"
+language = "quanta"
+repository = "https://github.com/HarperZ9/forge"
+publish = true
+category = "tools"
+
+[[package]]
+name = "Foundation"
+slug = "foundation"
+source = "foundation"
+language = "quanta"
+repository = "https://github.com/HarperZ9/foundation"
+publish = true
+category = "tools"

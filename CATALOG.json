@@ -7,133 +7,177 @@
       "name": "QuantaLang",
       "tagline": "The Language of the Universe",
       "category": "core",
-      "source": "core/quantalang"
+      "slug": "quantalang",
+      "source": "quantalang",
+      "repository": "https://github.com/HarperZ9/quantalang"
     },
     "quantaos": {
       "name": "QuantaOS",
       "tagline": "Hobby OS Kernel",
       "category": "core",
-      "source": "core/quantaos"
+      "slug": "quanta-os",
+      "source": "quantaos",
+      "repository": "https://github.com/HarperZ9/quantaos"
     },
     "axiom": {
       "name": "Axiom",
       "tagline": "Self-Evolving AI Through Mathematical Truth",
       "category": "core",
-      "source": "core/axiom"
+      "slug": "axiom",
+      "source": "axiom",
+      "repository": "https://github.com/HarperZ9/axiom"
     },
     "photon": {
       "name": "Photon",
       "tagline": "Universal Light Injection Framework",
       "category": "rendering",
-      "source": "rendering/photon"
+      "slug": "photon",
+      "source": "photon",
+      "repository": "https://github.com/HarperZ9/photon"
     },
     "spectrum": {
       "name": "Spectrum",
       "tagline": "The Complete Science of Light",
       "category": "rendering",
-      "source": "rendering/spectrum"
+      "slug": "spectrum",
+      "source": "spectrum",
+      "repository": "https://github.com/HarperZ9/spectrum"
     },
     "chromatic": {
       "name": "Chromatic",
       "tagline": "Perceptually Uniform Color Space",
       "category": "rendering",
-      "source": "rendering/chromatic"
+      "slug": "chromatic",
+      "source": "chromatic",
+      "repository": "https://github.com/HarperZ9/chromatic"
     },
     "lumina": {
       "name": "Lumina",
       "tagline": "Visual Post-Processing Systems",
       "category": "rendering",
-      "source": "rendering/lumina"
+      "slug": "lumina",
+      "source": "lumina",
+      "repository": "https://github.com/HarperZ9/lumina"
     },
     "nexus": {
       "name": "Nexus",
       "tagline": "Universal Mod Framework",
       "category": "rendering",
-      "source": "rendering/nexus"
+      "slug": "nexus",
+      "source": "nexus",
+      "repository": "https://github.com/HarperZ9/nexus"
     },
     "prism": {
       "name": "Prism",
       "tagline": "Light Refraction Shader Collection",
       "category": "rendering",
-      "source": "rendering/prism"
+      "slug": "prism",
+      "source": "prism",
+      "repository": "https://github.com/HarperZ9/prism"
     },
     "refract": {
       "name": "Refract",
       "tagline": "ENB Integration Layer",
       "category": "rendering",
-      "source": "rendering/refract"
+      "slug": "refract",
+      "source": "refract",
+      "repository": "https://github.com/HarperZ9/refract"
     },
     "neutrino": {
       "name": "Neutrino",
       "tagline": "Neural Rendering Effects",
       "category": "rendering",
-      "source": "rendering/neutrino"
+      "slug": "neutrino",
+      "source": "neutrino",
+      "repository": "https://github.com/HarperZ9/neutrino"
     },
     "quantum-finance": {
       "name": "Quantum Finance",
       "tagline": "Quantitative Trading System",
       "category": "trading",
-      "source": "trading/quantum-finance"
+      "slug": "quantum-finance",
+      "source": "quantum-finance",
+      "repository": "https://github.com/HarperZ9/quantum-finance"
     },
     "field-tensor": {
       "name": "Field Tensor",
       "tagline": "4D Market Data Structure",
       "category": "trading",
-      "source": "trading/field-tensor"
+      "slug": "field-tensor",
+      "source": "field-tensor",
+      "repository": "https://github.com/HarperZ9/field-tensor"
     },
     "delta": {
       "name": "Delta",
       "tagline": "Options Pricing & Greeks",
       "category": "trading",
-      "source": "trading/delta"
+      "slug": "delta",
+      "source": "delta",
+      "repository": "https://github.com/HarperZ9/delta"
     },
     "entropy": {
       "name": "Entropy",
       "tagline": "ML Trading Models",
       "category": "trading",
-      "source": "trading/entropy"
+      "slug": "entropy",
+      "source": "entropy",
+      "repository": "https://github.com/HarperZ9/entropy"
     },
     "entangle": {
       "name": "Entangle",
       "tagline": "PC-Mobile Sync",
       "category": "integration",
-      "source": "integration/entangle"
+      "slug": "entangle",
+      "source": "entangle",
+      "repository": "https://github.com/HarperZ9/entangle"
     },
     "calibrate": {
       "name": "Calibrate",
       "tagline": "Display Calibration System",
       "category": "integration",
-      "source": "integration/calibrate"
+      "slug": "calibrate",
+      "source": "calibrate",
+      "repository": "https://github.com/HarperZ9/calibrate"
     },
     "nova": {
       "name": "Nova",
       "tagline": "Rendering Preset System",
       "category": "integration",
-      "source": "integration/nova"
+      "slug": "nova",
+      "source": "nova",
+      "repository": "https://github.com/HarperZ9/nova"
     },
     "oracle": {
       "name": "Oracle",
       "tagline": "Prediction Engine",
       "category": "ai",
-      "source": "ai/oracle"
+      "slug": "oracle",
+      "source": "oracle",
+      "repository": "https://github.com/HarperZ9/oracle"
     },
     "wavelength": {
       "name": "Wavelength",
       "tagline": "Media Processing Suite",
       "category": "ai",
-      "source": "ai/wavelength"
+      "slug": "wavelength",
+      "source": "wavelength",
+      "repository": "https://github.com/HarperZ9/wavelength"
     },
     "forge": {
       "name": "Forge",
       "tagline": "Developer Tools",
       "category": "tools",
-      "source": "tools/forge"
+      "slug": "forge",
+      "source": "forge",
+      "repository": "https://github.com/HarperZ9/forge"
     },
     "foundation": {
       "name": "Foundation",
       "tagline": "Standard Library",
       "category": "tools",
-      "source": "tools/foundation"
+      "slug": "foundation",
+      "source": "foundation",
+      "repository": "https://github.com/HarperZ9/foundation"
     }
   }
 }

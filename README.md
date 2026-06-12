@@ -42,6 +42,11 @@ A physics-inspired software ecosystem: programming language, operating system ke
 
 **Alpha.** The QuantaLang compiler (Rust; 755 test functions in tree) is the most mature component. The C backend produces correct native binaries. HLSL/GLSL produce clean shader output. Other backends are experimental. The .quanta modules demonstrate the language's capabilities across domains. See [quantaos/STATUS.md](quantaos/STATUS.md) for kernel implementation state.
 
+### Publication Map
+
+Split-repo package metadata now lives in [tools/package-index.toml](tools/package-index.toml).
+Module slugs follow lowercase-hyphen naming for public-facing package IDs.
+
 ## Caveats
 
 - **This ecosystem does not compile as a whole.** Each module depends on the QuantaLang compiler (separate repo: [HarperZ9/quantalang](https://github.com/HarperZ9/quantalang)). The compiler can compile individual modules but cross-module resolution is not yet complete.
