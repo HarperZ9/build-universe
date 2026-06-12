@@ -672,9 +672,7 @@ impl QuantaEvolution {
                 if args.len() > 0 {
                     let mut new_args = args.clone();
                     let idx = self.rng.next_usize() % args.len();
-                    if self.rng.next_f64() < 0.5 {
-                        new_args[idx] = args[idx].clone();
-                    }
+                    new_args[idx] = self.mutate_node(&args[idx]);
                     ASTNode::Apply(func.clone(), new_args)
                 } else {
                     ASTNode::Apply(func.clone(), vec![])
