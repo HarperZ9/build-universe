@@ -244,17 +244,17 @@ include!("stdlib/chars.quanta");
 Double-inclusion guard prevents duplicates. Stdlib modules:
 
 ```
-stdlib/chars.quanta        — is_digit, is_alpha, is_alnum, is_whitespace,
+stdlib/chars.quanta        - is_digit, is_alpha, is_alnum, is_whitespace,
                              is_hex_digit, is_bin_digit, is_oct_digit
-stdlib/tokenizer.quanta    — Tok struct, 48 TK_* constants, tokenize(),
+stdlib/tokenizer.quanta    - Tok struct, 48 TK_* constants, tokenize(),
                              read_string(), read_number(), peek/advance (430 lines)
-stdlib/string_utils.quanta — trim_left, starts_with_alpha
-stdlib/lines.quanta        — LineReader (split string into lines)
-stdlib/string_pool.quanta  — StringPool (string array via Vec<i32>)
+stdlib/string_utils.quanta - trim_left, starts_with_alpha
+stdlib/lines.quanta        - LineReader (split string into lines)
+stdlib/string_pool.quanta  - StringPool (string array via Vec<i32>)
 ```
 
 Self-hosting tools (tok, parse, check, codegen, qc) migrated to shared
-stdlib — **2,358 total lines of duplication eliminated** (240 from char
+stdlib - **2,358 total lines of duplication eliminated** (240 from char
 functions + 2,118 from tokenizer).
 
 ### ~~Blocking: Struct Field Assignment on Locals~~ FIXED (2026-03-27)
@@ -299,8 +299,8 @@ From cmd.exe: `cd programs && build_all_self.bat`
 
 ## Documentation
 
-- **[Website](https://harperz9.github.io/quanta-universe)** — overview, examples, architecture
-- `CHANGELOG.md` — detailed change history
-- `ARCHITECTURE.md` — qdb database engine architecture
-- `tests/run_tests.sh` — automated test suite
-- `benchmarks/` — qdb performance benchmarks
+- **[Website](https://harperz9.github.io/quanta-universe)** - overview, examples, architecture
+- `CHANGELOG.md` - detailed change history
+- `ARCHITECTURE.md` - qdb database engine architecture
+- `tests/run_tests.sh` - automated test suite
+- `benchmarks/` - qdb performance benchmarks
