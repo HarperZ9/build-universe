@@ -46,6 +46,9 @@ A physics-inspired software ecosystem: programming language, operating system ke
 
 Split-repo package metadata now lives in [tools/package-index.toml](tools/package-index.toml).
 Module slugs follow lowercase-hyphen naming for public-facing package IDs.
+Use [releases/release-candidates.md](releases/release-candidates.md) for the
+current publish dashboard and [tools/showcase.md](tools/showcase.md) for the
+audience-facing module surface.
 
 ## Caveats
 
