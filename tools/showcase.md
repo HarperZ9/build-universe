@@ -1,6 +1,6 @@
 # Nested Module Showcase
 
-Generated: 2026-06-12 09:19:42Z
+Generated: 2026-06-12 09:23:15Z
 
 These repositories are the split-repo publication surface.
 Each row links the canonical GitHub target, slug, and source directory.
