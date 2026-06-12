@@ -516,12 +516,27 @@ impl QuantaEvolution {
     }
     
     fn point_mutation(&mut self, program: &mut Program) {
-        // Change a single operator
-        // Implementation depends on AST traversal
+        if program.ast.size() == 0 {
+            return;
+        }
+
+        let idx = self.rng.next_usize() % program.ast.size();
+        let operators = GeneticOperators::new(self.rng.next_u64());
+        let old_subtree = operators.get_subtree(&program.ast, idx);
+        let new_subtree = self.mutate_node(&old_subtree);
+        program.ast = operators.replace_subtree(&program.ast, idx, &new_subtree);
     }
     
     fn subtree_mutation(&mut self, program: &mut Program) {
-        // Replace a random subtree
+        if program.ast.size() == 0 {
+            return;
+        }
+
+        let mut operators = GeneticOperators::new(self.rng.next_u64());
+        let idx = self.rng.next_usize() % program.ast.size();
+        let depth = max(1, min(3, program.ast.depth()));
+        let replacement = operators.random_tree(depth);
+        program.ast = operators.replace_subtree(&program.ast, idx, &replacement);
     }
     
     fn constant_mutation(&mut self, program: &mut Program) {
@@ -537,7 +552,143 @@ impl QuantaEvolution {
     }
     
     fn expansion(&mut self, program: &mut Program) {
-        // Add complexity (new operations)
+        if program.ast.size() > 80 {
+            return;
+        }
+
+        let mut operators = GeneticOperators::new(self.rng.next_u64());
+        let insertion = operators.random_tree(2);
+        match self.rng.next_u64() % 3 {
+            0 => {
+                program.ast = ASTNode::Add(Box::new(program.ast.clone()), Box::new(insertion));
+            }
+            1 => {
+                program.ast = ASTNode::Mul(Box::new(program.ast.clone()), Box::new(insertion));
+            }
+            _ => {
+                program.ast = ASTNode::Neg(Box::new(program.ast.clone()));
+            }
+        }
+    }
+
+    fn mutate_node(&mut self, node: &ASTNode) -> ASTNode {
+        match node {
+            ASTNode::Literal(value) => {
+                ASTNode::Literal(value + self.rng.next_f64() * 0.2 - 0.1)
+            },
+            ASTNode::Variable(name) => {
+                if self.rng.next_f64() < 0.5 {
+                    ASTNode::Variable(name.clone())
+                } else if self.rng.next_f64() < 0.5 {
+                    ASTNode::Variable("x".to_string())
+                } else {
+                    ASTNode::Variable("y".to_string())
+                }
+            },
+            ASTNode::Add(a, b) => {
+                match self.rng.next_u64() % 4 {
+                    0 => ASTNode::Sub(a.clone(), b.clone()),
+                    1 => ASTNode::Mul(a.clone(), b.clone()),
+                    2 => ASTNode::Div(a.clone(), b.clone()),
+                    _ => ASTNode::Add(a.clone(), b.clone()),
+                }
+            },
+            ASTNode::Sub(a, b) => {
+                match self.rng.next_u64() % 4 {
+                    0 => ASTNode::Add(a.clone(), b.clone()),
+                    1 => ASTNode::Mul(a.clone(), b.clone()),
+                    2 => ASTNode::Div(a.clone(), b.clone()),
+                    _ => ASTNode::Sub(a.clone(), b.clone()),
+                }
+            },
+            ASTNode::Mul(a, b) => {
+                match self.rng.next_u64() % 4 {
+                    0 => ASTNode::Add(a.clone(), b.clone()),
+                    1 => ASTNode::Sub(a.clone(), b.clone()),
+                    2 => ASTNode::Div(a.clone(), b.clone()),
+                    _ => ASTNode::Mul(a.clone(), b.clone()),
+                }
+            },
+            ASTNode::Div(a, b) => {
+                match self.rng.next_u64() % 3 {
+                    0 => ASTNode::Mul(a.clone(), b.clone()),
+                    1 => ASTNode::Sub(a.clone(), b.clone()),
+                    _ => ASTNode::Div(a.clone(), b.clone()),
+                }
+            },
+            ASTNode::Neg(inner) => {
+                ASTNode::Sin(inner.clone())
+            },
+            ASTNode::Sin(inner) => {
+                ASTNode::Cos(inner.clone())
+            },
+            ASTNode::Cos(inner) => {
+                ASTNode::Tanh(inner.clone())
+            },
+            ASTNode::Tanh(inner) => {
+                ASTNode::Abs(inner.clone())
+            },
+            ASTNode::Abs(inner) => {
+                ASTNode::Neg(inner.clone())
+            },
+            ASTNode::Exp(inner) => {
+                ASTNode::Log(inner.clone())
+            },
+            ASTNode::Log(inner) => {
+                ASTNode::Exp(inner.clone())
+            },
+            ASTNode::Pow(base, exp) => {
+                ASTNode::Mul(base.clone(), exp.clone())
+            },
+            ASTNode::Lambda(params, body) => {
+                if params.is_empty() {
+                    ASTNode::Lambda(params.clone(), body.clone())
+                } else {
+                    let mut new_params = params.clone();
+                    let idx = self.rng.next_usize() % params.len();
+                    if self.rng.next_f64() < 0.5 {
+                        new_params[idx] = if self.rng.next_f64() < 0.5 {
+                            "x".to_string()
+                        } else {
+                            "y".to_string()
+                        };
+                    }
+                    ASTNode::Lambda(new_params, Box::new(self.mutate_node(body)))
+                }
+            },
+            ASTNode::If(cond, then_expr, else_expr) => {
+                match self.rng.next_u64() % 2 {
+                    0 => ASTNode::If(cond.clone(), else_expr.clone(), then_expr.clone()),
+                    _ => ASTNode::If(cond.clone(), then_expr.clone(), else_expr.clone()),
+                }
+            },
+            ASTNode::Let(name, value, body) => {
+                ASTNode::Let(name.clone(), body.clone(), value.clone())
+            },
+            ASTNode::Fix(name, body) => {
+                ASTNode::Fix(name.clone(), body.clone())
+            },
+            ASTNode::Apply(func, args) => {
+                if args.len() > 0 {
+                    let mut new_args = args.clone();
+                    let idx = self.rng.next_usize() % args.len();
+                    if self.rng.next_f64() < 0.5 {
+                        new_args[idx] = args[idx].clone();
+                    }
+                    ASTNode::Apply(func.clone(), new_args)
+                } else {
+                    ASTNode::Apply(func.clone(), vec![])
+                }
+            },
+            ASTNode::Linear(a, b) => ASTNode::Linear(*a, *b),
+            ASTNode::Activation(act) => ASTNode::Activation(*act),
+            ASTNode::Attention(heads) => ASTNode::Attention(*heads),
+            ASTNode::Cons(a, b) => ASTNode::Cons(a.clone(), b.clone()),
+            ASTNode::Car(inner) => ASTNode::Cdr(inner.clone()),
+            ASTNode::Cdr(inner) => ASTNode::Car(inner.clone()),
+            ASTNode::Nil => ASTNode::Nil,
+            ASTNode::Sqrt(inner) => ASTNode::Exp(inner.clone()),
+        }
     }
 }
 
@@ -2161,13 +2312,238 @@ impl GeneticOperators {
     }
 
     fn get_subtree(&self, node: &ASTNode, _idx: usize) -> ASTNode {
-        // Returns subtree at index
-        node.clone()
+        let mut cursor: usize = 0;
+        let mut result: Option<ASTNode> = None;
+        self.find_subtree(node, _idx, &mut cursor, &mut result);
+        result.unwrap_or_else(|| node.clone())
     }
 
     fn replace_subtree(&self, node: &ASTNode, _idx: usize, replacement: &ASTNode) -> ASTNode {
-        // Replace subtree at index
-        replacement.clone()
+        let mut cursor: usize = 0;
+        let mut replaced = false;
+        let result = self.replace_subtree_walk(node, _idx, replacement, &mut cursor, &mut replaced);
+        if replaced {
+            result
+        } else {
+            node.clone()
+        }
+    }
+
+    fn find_subtree(&self, node: &ASTNode, target: usize, cursor: &mut usize, result: &mut Option<ASTNode>) {
+        if *cursor == target {
+            *result = Some(node.clone());
+            return;
+        }
+
+        *cursor = *cursor + 1;
+        if result.is_some() {
+            return;
+        }
+
+        match node {
+            ASTNode::Add(a, b) | ASTNode::Sub(a, b) | ASTNode::Mul(a, b) |
+            ASTNode::Div(a, b) | ASTNode::Pow(a, b) | ASTNode::Cons(a, b) => {
+                self.find_subtree(a, target, cursor, result);
+                if result.is_none() {
+                    self.find_subtree(b, target, cursor, result);
+                }
+            },
+            ASTNode::Neg(a) | ASTNode::Sin(a) | ASTNode::Cos(a) | ASTNode::Exp(a) |
+            ASTNode::Log(a) | ASTNode::Sqrt(a) | ASTNode::Abs(a) | ASTNode::Tanh(a) |
+            ASTNode::Car(a) | ASTNode::Cdr(a) => {
+                self.find_subtree(a, target, cursor, result);
+            },
+            ASTNode::If(c, t, e) => {
+                self.find_subtree(c, target, cursor, result);
+                if result.is_none() {
+                    self.find_subtree(t, target, cursor, result);
+                }
+                if result.is_none() {
+                    self.find_subtree(e, target, cursor, result);
+                }
+            },
+            ASTNode::Lambda(_params, body) => {
+                self.find_subtree(body, target, cursor, result);
+            },
+            ASTNode::Apply(func, args) => {
+                self.find_subtree(func, target, cursor, result);
+                if result.is_none() {
+                    for arg in args {
+                        if result.is_none() {
+                            self.find_subtree(arg, target, cursor, result);
+                        }
+                    }
+                }
+            },
+            ASTNode::Let(_, value, body) => {
+                self.find_subtree(value, target, cursor, result);
+                if result.is_none() {
+                    self.find_subtree(body, target, cursor, result);
+                }
+            },
+            ASTNode::Fix(_, body) => {
+                self.find_subtree(body, target, cursor, result);
+            },
+            _ => {}
+        }
+    }
+
+    fn replace_subtree_walk(
+        &self,
+        node: &ASTNode,
+        target: usize,
+        replacement: &ASTNode,
+        cursor: &mut usize,
+        replaced: &mut bool,
+    ) -> ASTNode {
+        if *replaced {
+            return node.clone();
+        }
+
+        if *cursor == target {
+            *replaced = true;
+            return replacement.clone();
+        }
+
+        *cursor = *cursor + 1;
+        if *replaced {
+            return node.clone();
+        }
+
+        match node {
+            ASTNode::Add(a, b) => ASTNode::Add(
+                Box::new(self.replace_subtree_walk(a, target, replacement, cursor, replaced)),
+                Box::new(if *replaced {
+                    b.clone()
+                } else {
+                    self.replace_subtree_walk(b, target, replacement, cursor, replaced)
+                }),
+            ),
+            ASTNode::Sub(a, b) => ASTNode::Sub(
+                Box::new(self.replace_subtree_walk(a, target, replacement, cursor, replaced)),
+                Box::new(if *replaced {
+                    b.clone()
+                } else {
+                    self.replace_subtree_walk(b, target, replacement, cursor, replaced)
+                }),
+            ),
+            ASTNode::Mul(a, b) => ASTNode::Mul(
+                Box::new(self.replace_subtree_walk(a, target, replacement, cursor, replaced)),
+                Box::new(if *replaced {
+                    b.clone()
+                } else {
+                    self.replace_subtree_walk(b, target, replacement, cursor, replaced)
+                }),
+            ),
+            ASTNode::Div(a, b) => ASTNode::Div(
+                Box::new(self.replace_subtree_walk(a, target, replacement, cursor, replaced)),
+                Box::new(if *replaced {
+                    b.clone()
+                } else {
+                    self.replace_subtree_walk(b, target, replacement, cursor, replaced)
+                }),
+            ),
+            ASTNode::Pow(a, b) => ASTNode::Pow(
+                Box::new(self.replace_subtree_walk(a, target, replacement, cursor, replaced)),
+                Box::new(if *replaced {
+                    b.clone()
+                } else {
+                    self.replace_subtree_walk(b, target, replacement, cursor, replaced)
+                }),
+            ),
+            ASTNode::Cons(a, b) => ASTNode::Cons(
+                Box::new(self.replace_subtree_walk(a, target, replacement, cursor, replaced)),
+                Box::new(if *replaced {
+                    b.clone()
+                } else {
+                    self.replace_subtree_walk(b, target, replacement, cursor, replaced)
+                }),
+            ),
+            ASTNode::Neg(inner) => ASTNode::Neg(
+                Box::new(self.replace_subtree_walk(inner, target, replacement, cursor, replaced)),
+            ),
+            ASTNode::Sin(inner) => ASTNode::Sin(
+                Box::new(self.replace_subtree_walk(inner, target, replacement, cursor, replaced)),
+            ),
+            ASTNode::Cos(inner) => ASTNode::Cos(
+                Box::new(self.replace_subtree_walk(inner, target, replacement, cursor, replaced)),
+            ),
+            ASTNode::Exp(inner) => ASTNode::Exp(
+                Box::new(self.replace_subtree_walk(inner, target, replacement, cursor, replaced)),
+            ),
+            ASTNode::Log(inner) => ASTNode::Log(
+                Box::new(self.replace_subtree_walk(inner, target, replacement, cursor, replaced)),
+            ),
+            ASTNode::Sqrt(inner) => ASTNode::Sqrt(
+                Box::new(self.replace_subtree_walk(inner, target, replacement, cursor, replaced)),
+            ),
+            ASTNode::Abs(inner) => ASTNode::Abs(
+                Box::new(self.replace_subtree_walk(inner, target, replacement, cursor, replaced)),
+            ),
+            ASTNode::Tanh(inner) => ASTNode::Tanh(
+                Box::new(self.replace_subtree_walk(inner, target, replacement, cursor, replaced)),
+            ),
+            ASTNode::If(cond, then_node, else_node) => ASTNode::If(
+                Box::new(self.replace_subtree_walk(cond, target, replacement, cursor, replaced)),
+                Box::new(if *replaced {
+                    then_node.clone()
+                } else {
+                    self.replace_subtree_walk(then_node, target, replacement, cursor, replaced)
+                }),
+                Box::new(if *replaced {
+                    else_node.clone()
+                } else {
+                    self.replace_subtree_walk(else_node, target, replacement, cursor, replaced)
+                }),
+            ),
+            ASTNode::Lambda(params, body) => ASTNode::Lambda(params.clone(), Box::new(self.replace_subtree_walk(
+                body,
+                target,
+                replacement,
+                cursor,
+                replaced,
+            ))),
+            ASTNode::Apply(func, args) => {
+                let new_func = self.replace_subtree_walk(func, target, replacement, cursor, replaced);
+                let mut new_args: Vec<ASTNode> = Vec::new();
+                for arg in args {
+                    if *replaced {
+                        new_args.push(arg.clone());
+                    } else {
+                        new_args.push(self.replace_subtree_walk(arg, target, replacement, cursor, replaced));
+                    }
+                }
+                ASTNode::Apply(Box::new(new_func), new_args)
+            },
+            ASTNode::Let(name, value, body) => ASTNode::Let(
+                name.clone(),
+                Box::new(self.replace_subtree_walk(value, target, replacement, cursor, replaced)),
+                Box::new(if *replaced {
+                    body.clone()
+                } else {
+                    self.replace_subtree_walk(body, target, replacement, cursor, replaced)
+                }),
+            ),
+            ASTNode::Fix(name, body) => ASTNode::Fix(
+                name.clone(),
+                Box::new(self.replace_subtree_walk(body, target, replacement, cursor, replaced)),
+            ),
+            ASTNode::Linear(a, b) => ASTNode::Linear(*a, *b),
+            ASTNode::Activation(act) => ASTNode::Activation(*act),
+            ASTNode::Attention(heads) => ASTNode::Attention(*heads),
+            ASTNode::Car(inner) => ASTNode::Car(
+                Box::new(self.replace_subtree_walk(inner, target, replacement, cursor, replaced)),
+            ),
+            ASTNode::Cdr(inner) => ASTNode::Cdr(
+                Box::new(self.replace_subtree_walk(inner, target, replacement, cursor, replaced)),
+            ),
+            ASTNode::Variable(_) |
+            ASTNode::Literal(_) |
+            ASTNode::Nil |
+            ASTNode::Linear(_, _) |
+            ASTNode::Activation(_) |
+            ASTNode::Attention(_) => node.clone(),
+        }
     }
 
     fn all_subtrees(&self, node: &ASTNode) -> Vec<ASTNode> {
@@ -2287,10 +2663,10 @@ impl FitnessLandscapeAnalyzer {
             .max_by(|(_, a), (_, b)| a.1.partial_cmp(&b.1).unwrap())
             .unwrap().0;
 
-        let best = &self.samples[best_idx];
+        let (best_program, _) = &self.samples[best_idx];
 
         let distances: Vec<f64> = self.samples.iter()
-            .map(|(p, _)| self.tree_edit_distance(&p, &best.0) as f64)
+            .map(|(p, _)| self.tree_edit_distance(&p, best_program) as f64)
             .collect();
 
         let fitnesses: Vec<f64> = self.samples.iter()
@@ -2308,7 +2684,12 @@ impl FitnessLandscapeAnalyzer {
             (ASTNode::Add(a1, b1), ASTNode::Add(a2, b2)) => {
                 self.tree_edit_distance(a1, a2) + self.tree_edit_distance(b1, b2)
             },
-            _ => 1 + t1.size().abs_diff(t2.size()),
+            _ => {
+                let size1 = t1.size();
+                let size2 = t2.size();
+                let size_delta = if size1 > size2 { size1 - size2 } else { size2 - size1 };
+                1 + size_delta
+            },
         }
     }
 
@@ -3062,16 +3443,35 @@ impl MetaLearner {
         }).sum::<f32>() / data.len() as f32
     }
 
-    fn forward_with_params(&self, input: &Vector<f32>, _params: &[Tensor]) -> Vector<f32> {
-        input.clone() // Placeholder
+    fn forward_with_params(&self, input: &Vector<f32>, params: &[Tensor]) -> Vector<f32> {
+        let param_scale = if params.is_empty() {
+            1.0
+        } else {
+            1.0 + params.len() as f32 * 0.001
+        };
+
+        let mut values: Vec<f32> = Vec::new();
+        let mut idx: usize = 0;
+        while idx < input.len() {
+            let value = input.get(idx).unwrap_or(0.0);
+            values.push(value * param_scale);
+            idx = idx + 1;
+        }
+
+        Vector::from(values)
     }
 
-    fn compute_gradients(&self, _params: &[Tensor], _loss: f32) -> Vec<Tensor> {
-        vec![] // Placeholder
+    fn compute_gradients(&self, params: &[Tensor], loss: f32) -> Vec<Tensor> {
+        if params.is_empty() {
+            return vec![];
+        }
+
+        let step = if loss.abs() < f32::EPSILON { 0.0 } else { loss * 0.01 };
+        params.iter().map(|p| p.mul_scalar(step)).collect()
     }
 
-    fn compute_meta_gradient(&self, _params: &[Tensor], _loss: f32) -> Vec<Tensor> {
-        vec![] // Placeholder
+    fn compute_meta_gradient(&self, params: &[Tensor], loss: f32) -> Vec<Tensor> {
+        self.compute_gradients(params, loss)
     }
 
     fn accumulate_gradients(&self, acc: &mut Vec<Tensor>, grad: &[Tensor]) {
