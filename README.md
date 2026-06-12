@@ -1,6 +1,12 @@
-# Quanta Universe v1.0.0
+# quanta-universe v1.0.0
 
-A physics-inspired software ecosystem: programming language, operating system kernel, graphics engines, trading systems, and AI frameworks — all written in QuantaLang.
+A physics-inspired software ecosystem: programming language, operating system kernel, graphics engines, trading systems, and AI frameworks — all written in quantalang.
+
+## Release Packaging
+
+Public module boundaries are maintained as independent repositories and published with lowercase-hyphen naming:
+- [quantalang](https://github.com/HarperZ9/quantalang)
+- [quantaos](https://github.com/HarperZ9/quanta-universe) (lineage docs and OS scaffolding)
 
 ## Modules
 
