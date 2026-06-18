@@ -1,0 +1,36 @@
+// =============================================================================
+// hello_quanta — minimal self-contained QuantaLang demo
+// =============================================================================
+// Demonstrates the constructs the C backend handles reliably (see STATUS.md and
+// programs/test_hello.quanta, on which this is modeled): free functions,
+// recursion, `let mut`, a `while` loop, i64 arithmetic, and println! formatting.
+// It takes no arguments and uses no imports, so it transpiles standalone.
+//
+// Build + run (see ../../USAGE.md and ../../programs/README.md):
+//   quantac examples/demo/hello_quanta.quanta            # -> hello_quanta.c
+//   programs/build.bat examples/demo/hello_quanta.c demo.exe   # MSVC -> demo.exe
+//   ./demo.exe
+// =============================================================================
+
+fn factorial(n: i64) -> i64 {
+    if n <= 1 {
+        return 1;
+    }
+    return n * factorial(n - 1);
+}
+
+fn sum_to(limit: i64) -> i64 {
+    let mut total: i64 = 0;
+    let mut i: i64 = 1;
+    while i <= limit {
+        total = total + i;
+        i = i + 1;
+    }
+    return total;
+}
+
+fn main() {
+    println!("Hello from QuantaLang");
+    println!("{}", factorial(10));   // 3628800
+    println!("{}", sum_to(100));     // 5050
+}

@@ -59,6 +59,28 @@ Use [releases/release-candidates.md](releases/release-candidates.md) for the
 current publish dashboard and [tools/showcase.md](tools/showcase.md) for the
 audience-facing module surface.
 
+## Usage
+
+This is a multi-module ecosystem, not a single installable package. The two
+things you actually run are the `quantac` compiler (transpile/build `.quanta`
+modules and programs) and the Python organism tooling (`tools/verify_organism.py`,
+`tools/release_plan.py`). See **[USAGE.md](USAGE.md)** for install/build lines,
+the real commands, and worked examples. A runnable demo lives in
+[examples/demo/](examples/demo/).
+
+Quick orientation:
+
+```sh
+# 1. Verify which components actually build/pass on this machine (no compiler needed)
+python tools/verify_organism.py --quick
+
+# 2. Transpile a module or program to C with the quantac compiler (separate repo)
+quantac programs/echo.quanta --target c -o /dev/null
+```
+
+`quantac` comes from the separate [HarperZ9/quantalang](https://github.com/HarperZ9/quantalang)
+repo (build it with `cargo build --release`); it is not bundled here.
+
 ## Caveats
 
 - **This ecosystem does not compile as a whole.** Each module depends on the QuantaLang compiler (separate repo: [HarperZ9/quantalang](https://github.com/HarperZ9/quantalang)). The compiler can compile individual modules but cross-module resolution is not yet complete.
