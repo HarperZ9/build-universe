@@ -1,5 +1,14 @@
 # Quanta Universe v1.0.0
 
+> A physics-inspired software ecosystem - language, OS kernel, graphics engines, trading systems, and AI frameworks, all written in QuantaLang.
+
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![quantalang](https://img.shields.io/badge/quantalang-.quanta-orange.svg)
+![version](https://img.shields.io/badge/version-1.0.0-informational.svg)
+[![CI](https://github.com/HarperZ9/quanta-universe/actions/workflows/ci.yml/badge.svg)](https://github.com/HarperZ9/quanta-universe/actions/workflows/ci.yml)
+![deps: none](https://img.shields.io/badge/deps-none-success.svg)
+[![part of: Quanta ecosystem](https://img.shields.io/badge/part_of-Quanta_ecosystem-00b3a4.svg)](https://github.com/HarperZ9/quanta-universe)
+
 A physics-inspired software ecosystem: programming language, operating system kernel, graphics engines, trading systems, and AI frameworks - all written in QuantaLang.
 
 ## Modules
