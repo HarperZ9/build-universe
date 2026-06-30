@@ -1,5 +1,5 @@
 // ===============================================================================
-// QUANTAOS KERNEL - ADVANCED SMP SCHEDULER
+// BUILDOS KERNEL - ADVANCED SMP SCHEDULER
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // Neural Process Scheduler

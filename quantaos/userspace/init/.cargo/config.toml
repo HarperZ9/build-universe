@@ -1,11 +1,11 @@
 # ============================================================================
-# QUANTAOS USER-SPACE BUILD CONFIGURATION
+# BUILDOS USER-SPACE BUILD CONFIGURATION
 # ============================================================================
 # Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 # ============================================================================
 
 [build]
-target = "../x86_64-quantaos-user.json"
+target = "../x86_64-buildos-user.json"
 
 [target.'cfg(target_os = "none")']
 linker = "rust-lld"

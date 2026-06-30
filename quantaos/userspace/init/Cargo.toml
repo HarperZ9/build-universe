@@ -3,6 +3,6 @@ name = "init"
 version = "0.1.0"
 edition = "2021"
 authors = ["Zain Dana Harper"]
-description = "QuantaOS init process - first user-space program"
+description = "BuildOS init process - first user-space program"
 
 [dependencies]

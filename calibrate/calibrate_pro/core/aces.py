@@ -14,7 +14,7 @@ ACES 2.0 Key Features:
 This implementation follows the ACES 2.0 specifications and is compatible
 with OpenColorIO 2.4+ fixed functions.
 
-Author: Zain Dana / Quanta
+Author: Zain Dana / Build
 License: MIT
 
 References:

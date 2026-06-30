@@ -1,16 +1,16 @@
 # ===============================================================================
-# QUANTAOS KERNEL
+# BUILDOS KERNEL
 # ===============================================================================
 # Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 # ===============================================================================
 
 [package]
-name = "quantaos-kernel"
+name = "buildos-kernel"
 version = "2.0.0"
 edition = "2021"
 authors = ["Zain Dana Harper"]
 license = "Proprietary"
-description = "QuantaOS Kernel"
+description = "BuildOS Kernel"
 
 [dependencies]
 spin = "0.9"

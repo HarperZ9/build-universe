@@ -1,10 +1,10 @@
 // ===============================================================================
-// QUANTAOS BOOTLOADER
+// BUILDOS BOOTLOADER
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================
 //
-// UEFI bootloader for QuantaOS. Handles:
+// UEFI bootloader for BuildOS. Handles:
 // - UEFI entry and initialization
 // - Memory map acquisition
 // - Kernel loading from disk
@@ -43,7 +43,7 @@ use uefi::CStr16;
 
 /// Kernel file path on the EFI partition
 #[allow(dead_code)]
-const KERNEL_PATH: &str = "\\EFI\\QUANTAOS\\KERNEL.ELF";
+const KERNEL_PATH: &str = "\\EFI\\BUILDOS\\KERNEL.ELF";
 
 /// Magic number expected in kernel header
 #[allow(dead_code)]
@@ -295,7 +295,7 @@ fn efi_main(image: Handle, system_table: SystemTable<Boot>) -> Status {
     early_console.set_color(0x00AAFFAA, 0x00000000);
     early_console.write_str("[BOOT] ");
     early_console.set_color(0x00FFFFFF, 0x00000000);
-    early_console.write_str("QuantaOS Bootloader v2.0.0\n");
+    early_console.write_str("BuildOS Bootloader v2.0.0\n");
 
     early_console.set_color(0x00AAFFAA, 0x00000000);
     early_console.write_str("[BOOT] ");
@@ -664,7 +664,7 @@ fn load_kernel(
     // Build kernel path as wide string
     let kernel_path_wide: [u16; 32] = {
         let mut buf = [0u16; 32];
-        let path = "\\EFI\\QUANTAOS\\KERNEL.ELF";
+        let path = "\\EFI\\BUILDOS\\KERNEL.ELF";
         for (i, c) in path.encode_utf16().enumerate() {
             if i < 31 {
                 buf[i] = c;
@@ -828,7 +828,7 @@ fn load_initrd(
     // Build initrd path
     let initrd_path_wide: [u16; 32] = {
         let mut buf = [0u16; 32];
-        let path = "\\EFI\\QUANTAOS\\INITRD.IMG";
+        let path = "\\EFI\\BUILDOS\\INITRD.IMG";
         for (i, c) in path.encode_utf16().enumerate() {
             if i < 31 {
                 buf[i] = c;
@@ -1020,7 +1020,7 @@ fn load_config_file(boot_services: &BootServices, image: Handle) -> Option<alloc
 
     let config_path_wide: [u16; 32] = {
         let mut buf = [0u16; 32];
-        let path = "\\EFI\\QUANTAOS\\BOOT.CFG";
+        let path = "\\EFI\\BUILDOS\\BOOT.CFG";
         for (i, c) in path.encode_utf16().enumerate() {
             if i < 31 {
                 buf[i] = c;

@@ -1,16 +1,16 @@
-# QuantaOS Status
+# BuildOS Status
 
 Hobby x86-64 kernel written in Rust. Educational/portfolio project. NOT a production OS.
 
-The `.quanta` file (`lib.quanta`) describes the design in QuantaLang syntax.
+The `.bld` file (`lib.bld`) describes the design in BuildLang syntax.
 The actual implementation lives in `kernel/src/` (Rust, `#![no_std]`).
 
 ## Build
 
-- Target: `x86_64-quantaos.json` (custom bare-metal target, `rust-lld` linker)
+- Target: `x86_64-buildos.json` (custom bare-metal target, `rust-lld` linker)
 - Dependencies: `spin 0.9`, `bitflags 2.4`, `static_assertions 1.1`, `libm 0.2`
 - Nightly Rust required (`abi_x86_interrupt`, `alloc_error_handler`, `negative_impls`)
-- The kernel compiles to `libquantaos_kernel.rlib` (build artifacts exist)
+- The kernel compiles to `libbuildos_kernel.rlib` (build artifacts exist)
 - UEFI bootloader in `bootloader/` (depends on `uefi 0.31`)
 - QEMU run script in `scripts/run-qemu.sh`
 - **Has it booted on real hardware?** Unknown. QEMU-only as far as artifacts show.
@@ -63,7 +63,7 @@ The actual implementation lives in `kernel/src/` (Rust, `#![no_std]`).
 | Random | IMPLEMENTED | ChaCha20-based CSPRNG, entropy pool |
 | AI subsystem | PARTIAL | Data structures defined (models, tensors, dtypes). Init code runs. But see syscalls below. |
 | Self-healing engine | PARTIAL | Checkpoint/restore structures defined. Anomaly detector scaffolding. Calls healing functions. No ML model actually runs. |
-| Userspace | PARTIAL | `userspace/` has init, shell, coreutils, libquanta -- separate Cargo workspace |
+| Userspace | PARTIAL | `userspace/` has init, shell, coreutils, libbuild -- separate Cargo workspace |
 
 ## Syscalls
 
@@ -91,13 +91,13 @@ It does not. This is a priority-boost mechanism, not neural scheduling.
 structures. The 5 core AI syscalls are stubs returning -1. No inference engine exists.
 The infrastructure (tensor types, model loading API) is designed but not functional.
 
-**Can it boot?** -- Build artifacts exist (`libquantaos_kernel.rlib`). A UEFI bootloader
+**Can it boot?** -- Build artifacts exist (`libbuildos_kernel.rlib`). A UEFI bootloader
 and QEMU script exist. The boot sequence in `kernel_main` is well-structured. Whether it
 successfully boots in QEMU has not been independently verified.
 
-## Relationship to QUANTA-UNIVERSE
+## Relationship to BUILD-UNIVERSE
 
-This is one module in the larger QUANTA-UNIVERSE ecosystem. The `lib.quanta` file (50K+ tokens)
-is the QuantaLang design specification. The `kernel/src/` Rust code is the implementation.
-They describe the same system but the `.quanta` file includes aspirational design elements
+This is one module in the larger BUILD-UNIVERSE ecosystem. The `lib.bld` file (50K+ tokens)
+is the BuildLang design specification. The `kernel/src/` Rust code is the implementation.
+They describe the same system but the `.bld` file includes aspirational design elements
 that are not yet implemented in Rust.

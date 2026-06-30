@@ -242,7 +242,7 @@ def create_whitepoint_correction_curves(
     """
     # Import color math
     import sys
-    sys.path.insert(0, 'C:/Users/Zain/QUANTA-UNIVERSE/calibrate')
+    sys.path.insert(0, 'C:/Users/Zain/BUILD-UNIVERSE/calibrate')
     from calibrate_pro.hardware.sensorless_calibration import (
         xy_to_XYZ, bradford_adapt, BRADFORD_M, BRADFORD_M_INV
     )

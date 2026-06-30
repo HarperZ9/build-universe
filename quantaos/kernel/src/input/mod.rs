@@ -1,4 +1,4 @@
-//! QuantaOS Input Subsystem
+//! BuildOS Input Subsystem
 //!
 //! This module implements a comprehensive input subsystem compatible with
 //! the Linux evdev (event device) interface. It provides unified handling

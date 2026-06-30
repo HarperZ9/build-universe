@@ -1,4 +1,4 @@
-//! QuantaOS GUI Theme System
+//! BuildOS GUI Theme System
 //!
 //! Theming support for customizing the look and feel of the GUI.
 

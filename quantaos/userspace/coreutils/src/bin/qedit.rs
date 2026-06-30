@@ -1,10 +1,10 @@
 // ===============================================================================
-// QUANTAOS TEXT EDITOR (qedit)
+// BUILDOS TEXT EDITOR (qedit)
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================
 //
-// A nano-like text editor for QuantaOS with:
+// A nano-like text editor for BuildOS with:
 // - Full text editing capabilities
 // - Search and replace
 // - Cut/copy/paste
@@ -1694,7 +1694,7 @@ fn show_help(editor: &mut Editor) {
     move_cursor(0, 0);
 
     print("\n");
-    print("  QEdit - QuantaOS Text Editor\n");
+    print("  QEdit - BuildOS Text Editor\n");
     print("  ============================\n\n");
     print("  Keyboard Shortcuts:\n\n");
     print("  Navigation:\n");
@@ -1737,7 +1737,7 @@ pub extern "C" fn _start() -> ! {
 
 fn main() {
     // Parse command line arguments
-    // In QuantaOS, we'd get these from argc/argv
+    // In BuildOS, we'd get these from argc/argv
     // For now, just start with empty buffer or try to read filename
 
     let mut editor = Editor::new();

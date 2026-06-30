@@ -1,4 +1,4 @@
-//! QuantaOS Pseudo-Terminal (PTY) Implementation
+//! BuildOS Pseudo-Terminal (PTY) Implementation
 //!
 //! Provides pseudo-terminal pairs (master/slave) for terminal emulators
 //! and remote login sessions.

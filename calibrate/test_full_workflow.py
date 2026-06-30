@@ -10,7 +10,7 @@ This script tests the complete calibration pipeline:
 6. Mastering Standard Validation
 7. Full Verification Report
 
-Author: Quanta
+Author: Build
 """
 
 import sys

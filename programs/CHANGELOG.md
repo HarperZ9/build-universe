@@ -1,19 +1,19 @@
 # Changelog
 
-All notable changes to the QuantaLang program suite.
+All notable changes to the BuildLang program suite.
 
 ## [Unreleased]
 
 ### Documentation Site + Build Scripts (2026-03-27)
 
 **GitHub Pages site created (docs/index.html):**
-- Single-page documentation at harperz9.github.io/quanta-universe
+- Single-page documentation at harperz9.github.io/build-universe
 - Stats, code examples, program table, architecture overview, quality badges
 - All numbers verified from actual source (30,132 lines, 62 programs, etc.)
 - Enable in repo Settings > Pages > Deploy from branch `main`, folder `/docs`
 
 **Build scripts created:**
-- `build_all.bat` - compile all programs via quantac + MSVC (run from cmd.exe)
+- `build_all.bat` - compile all programs via buildc + MSVC (run from cmd.exe)
 - `build_all_self.bat` - compile all via self-hosted qcodegen + MSVC
 
 ### Closure Codegen + In-Process Benchmarks (2026-03-27)
@@ -24,7 +24,7 @@ All notable changes to the QuantaLang program suite.
 - `.filter(|x| expr)` desugars to conditional qv_push
 - `.fold(init, |acc, x| expr)` desugars to accumulator loop
 - `fn(T) -> T` types emit C typedef function pointers
-- codegen.quanta: 2,294 → 2,490 lines (+196)
+- codegen.bld: 2,294 → 2,490 lines (+196)
 
 **All major codegen features now implemented:**
 Functions, let, if (ternary + blocks), while, return, structs, impl methods,
@@ -42,7 +42,7 @@ Vec, include!(), 30+ builtins, closures, iterator desugaring, self-compilation.
 - Multi-statement branches: emit `if (cond) { stmts; target = last; } else { ... }`
 - 5 new functions: is_multi_stmt_block, if_has_multi_stmt, codegen_if_block_assign,
   codegen_if_branch_body, infer_if_block_type
-- codegen.quanta: 2,081 → 2,294 lines (+213)
+- codegen.bld: 2,081 → 2,294 lines (+213)
 
 **Full re-audit: 62/62 programs produce structurally valid C**
 - All have `#include`, `int main`, >20 lines
@@ -57,7 +57,7 @@ Vec, include!(), 30+ builtins, closures, iterator desugaring, self-compilation.
 - Path resolution relative to source file directory
 - All 16 stdlib-using programs now generate correct C
 - **Self-compilation works:** qcodegen processes its own source (2,081 lines)
-  including `include!("stdlib/chars.quanta")` and `include!("stdlib/tokenizer.quanta")`
+  including `include!("stdlib/chars.bld")` and `include!("stdlib/tokenizer.bld")`
   → produces 3,352 lines of C
 
 **15 missing builtins mapped:**
@@ -69,7 +69,7 @@ Vec, include!(), 30+ builtins, closures, iterator desugaring, self-compilation.
 
 **getenv return type fixed:** now inferred as `const char*` (was `int64_t`)
 
-codegen.quanta: 1,835 → 2,081 lines (+246)
+codegen.bld: 1,835 → 2,081 lines (+246)
 
 ### Impl Method Dispatch + E2E Audit (2026-03-27)
 
@@ -78,7 +78,7 @@ codegen.quanta: 1,835 → 2,081 lines (+246)
 - `self.field` → `self->field` (pointer deref inside methods)
 - `obj.method(args)` → `Type_method(&obj, args)` (dispatch with address-of)
 - `Type::new(...)` recognized as constructor returning `Type`
-- codegen.quanta: 1,594 → 1,835 lines (+241 lines for impl support)
+- codegen.bld: 1,594 → 1,835 lines (+241 lines for impl support)
 
 **End-to-end audit (qcodegen → MSVC → run):**
 - Previously proven: 6 programs (test_hello, yes, echo, basename, dirname, seq)
@@ -91,12 +91,12 @@ codegen.quanta: 1,835 → 2,081 lines (+246)
 **qcodegen now compiles ALL 62 programs to C.**
 - Added Vec codegen: `vec![]` → `qv_new()`, `vec_push`/`vec_get`/`vec_len` → `qv_push`/`qv_get`/`qv_len` with embedded QVec runtime
 - Fixed ternary type inference for string branches
-- codegen.quanta: 1,517 → 1,594 lines
+- codegen.bld: 1,517 → 1,594 lines
 
 **Audit results:**
 - 62/62 programs produce valid C output
-- Largest: db.quanta → 4,429 lines of C
-- Self-compilation: codegen.quanta → 1,773 lines C, qc.quanta → 2,228 lines C
+- Largest: db.bld → 4,429 lines of C
+- Self-compilation: codegen.bld → 1,773 lines C, qc.bld → 2,228 lines C
 - Smallest: test_hello → 36 lines C
 
 **Note:** "compiles to C" means syntactically valid C is generated. Some programs
@@ -114,23 +114,23 @@ correctly) are: test_hello, yes, echo, basename, dirname, seq, + struct test.
 - Struct parameters in functions: `fn foo(p: Point)` → `int64_t foo(Point p)`
 
 **New programs compilable by self-hosted compiler:**
-- basename.quanta (232 lines C), dirname.quanta (235), seq.quanta (349)
+- basename.bld (232 lines C), dirname.bld (235), seq.bld (349)
 - Any program using simple structs now works
 
 **Programs proven end-to-end with qcodegen: 6**
 (test_hello, yes, echo, + struct test, basename, dirname)
 
-**4 more programs migrated to stdlib/lines.quanta:**
+**4 more programs migrated to stdlib/lines.bld:**
 - awk (-18), sed (-13), cut (-12), paste (-30) = **-73 lines**
 
 ### Self-Hosted Compiler Proven End-to-End (2026-03-27)
 
 **qcodegen compiles real programs to working native binaries:**
-- `yes.quanta` (81 lines) → 156 lines of C → compiles → runs correctly
+- `yes.bld` (81 lines) → 156 lines of C → compiles → runs correctly
   (tested: `yes -n 5`, `yes hello -n 3`, `yes --help`)
-- `echo.quanta` (131 lines) → 195 lines of C → compiles → runs correctly
+- `echo.bld` (131 lines) → 195 lines of C → compiles → runs correctly
   (tested: `echo hello world`, `echo -n hello`, `echo --help`)
-- `test_hello.quanta` → compiles → `3628800`, `5050` (correct)
+- `test_hello.bld` → compiles → `3628800`, `5050` (correct)
 
 **7 codegen fixes applied:**
 1. Variable type tracking (string vs int for correct format specifiers)
@@ -145,8 +145,8 @@ correctly) are: test_hello, yes, echo, basename, dirname, seq, + struct test.
 - Structs, if-expressions, Vec, trait methods not yet handled
 - Programs using these features still need the Rust compiler
 
-**2 more programs migrated to stdlib/lines.quanta:**
-- grep.quanta (-16 lines), rev.quanta (-15 lines)
+**2 more programs migrated to stdlib/lines.bld:**
+- grep.bld (-16 lines), rev.bld (-15 lines)
 - sort, uniq, wc couldn't migrate (architecture mismatch, already clean)
 
 **Artifact cleanup:**
@@ -172,18 +172,18 @@ correctly) are: test_hello, yes, echo, basename, dirname, seq, + struct test.
 - Honest documentation of limitations (no in-process mode, per-invocation overhead)
 
 **numpy warnings - FIXED:**
-- quanta-color: 13 RuntimeWarnings → 0 (np.errstate wraps in gamut.py,
+- build-color: 13 RuntimeWarnings → 0 (np.errstate wraps in gamut.py,
   spaces.py, tonemap.py)
 - 457 tests pass with zero warnings
 
-**5 more programs migrated to stdlib/lines.quanta:**
+**5 more programs migrated to stdlib/lines.bld:**
 - expand (-6), unexpand (-6), fold (-6), nl (-10), tac (-77)
 - Total: 105 lines removed
-- tac.quanta: eliminated entire Tac struct, replaced with lr_new/lr_get
+- tac.bld: eliminated entire Tac struct, replaced with lr_new/lr_get
 
 ### Shared Tokenizer Extraction - Major Deduplication (2026-03-27)
 
-**stdlib/tokenizer.quanta created (430 lines):**
+**stdlib/tokenizer.bld created (430 lines):**
 - All 48 TK_* token type constants
 - Tok struct, tok_new constructor
 - Full tokenizer: tokenize(), read_string(), read_number(), read_ident_or_keyword()
@@ -194,16 +194,16 @@ correctly) are: test_hello, yes, echo, basename, dirname, seq, + struct test.
 
 | File | Before | After | Saved |
 |------|--------|-------|-------|
-| tok.quanta | 916 | 289 | 627 |
-| parse.quanta | 1,420 | 1,050 | 370 |
-| check.quanta | 1,990 | 1,628 | 362 |
-| codegen.quanta | 1,470 | 1,093 | 377 |
-| qc.quanta | 2,280 | 1,898 | 382 |
+| tok.bld | 916 | 289 | 627 |
+| parse.bld | 1,420 | 1,050 | 370 |
+| check.bld | 1,990 | 1,628 | 362 |
+| codegen.bld | 1,470 | 1,093 | 377 |
+| qc.bld | 2,280 | 1,898 | 382 |
 | **Total** | **8,076** | **5,958** | **2,118** |
 
 **String pool migration - partially blocked:**
 - csv2json, paste, patch annotated with stdlib pattern reference
-- Cannot directly include stdlib/string_pool.quanta due to function name
+- Cannot directly include stdlib/string_pool.bld due to function name
   collisions (each program's sp_add takes a different struct type)
 - Blocked by: compiler lacks function overloading or module-scoped names
 - Documented in program comments for future migration
@@ -211,34 +211,34 @@ correctly) are: test_hello, yes, echo, basename, dirname, seq, + struct test.
 ### Stdlib Migration - First Real Deduplication (2026-03-27)
 
 **Self-hosting tools migrated to shared stdlib:**
-- tok.quanta: -60 lines (is_alpha/is_digit/etc. replaced with include)
-- parse.quanta: -45 lines
-- check.quanta: -45 lines
-- codegen.quanta: -45 lines
-- qc.quanta: -45 lines
+- tok.bld: -60 lines (is_alpha/is_digit/etc. replaced with include)
+- parse.bld: -45 lines
+- check.bld: -45 lines
+- codegen.bld: -45 lines
+- qc.bld: -45 lines
 - Total: **240 lines of duplication eliminated** from 5 files
-- Each file now starts with `include!("stdlib/chars.quanta");`
+- Each file now starts with `include!("stdlib/chars.bld");`
 
 **Stdlib expanded (3 new modules):**
-- `stdlib/lines.quanta` - LineReader struct (lr_new, lr_get) for splitting
+- `stdlib/lines.bld` - LineReader struct (lr_new, lr_get) for splitting
   strings into lines. Used by 35+ programs.
-- `stdlib/string_pool.quanta` - StringPool struct (sp_new, sp_add, sp_get)
+- `stdlib/string_pool.bld` - StringPool struct (sp_new, sp_add, sp_get)
   for storing string arrays with Vec<i32>. Used by 10+ programs.
-- `stdlib/chars.quanta` - added is_bin_digit, is_oct_digit (needed by tokenizers)
+- `stdlib/chars.bld` - added is_bin_digit, is_oct_digit (needed by tokenizers)
 
 **Stdlib inventory:**
 ```
-stdlib/chars.quanta        - is_digit, is_alpha, is_alnum, is_whitespace,
+stdlib/chars.bld        - is_digit, is_alpha, is_alnum, is_whitespace,
                              is_hex_digit, is_bin_digit, is_oct_digit
-stdlib/string_utils.quanta - trim_left, starts_with_alpha
-stdlib/lines.quanta        - LineReader (split string into lines)
-stdlib/string_pool.quanta  - StringPool (string array via Vec<i32>)
+stdlib/string_utils.bld - trim_left, starts_with_alpha
+stdlib/lines.bld        - LineReader (split string into lines)
+stdlib/string_pool.bld  - StringPool (string array via Vec<i32>)
 ```
 
 ### Multi-File Includes + Refactoring (2026-03-27)
 
 **`include!("path")` preprocessor - NEW COMPILER FEATURE:**
-- Textual file inclusion: `include!("stdlib/chars.quanta");` splices referenced
+- Textual file inclusion: `include!("stdlib/chars.bld");` splices referenced
   file contents at the directive site, like C's `#include`
 - Double-inclusion guard: each file included at most once (canonical path tracking)
 - Recursion depth limit: 10 levels max with clear error on overflow
@@ -247,12 +247,12 @@ stdlib/string_pool.quanta  - StringPool (string array via Vec<i32>)
 - Unblocks: stdlib extraction, eliminating 4,000 lines of duplicated code
 
 **Standard library started:**
-- `stdlib/chars.quanta` - `is_digit`, `is_alpha`, `is_alnum`, `is_whitespace`, `is_hex_digit`
-- `stdlib/string_utils.quanta` - `trim_left`, `starts_with_alpha` (includes chars.quanta)
+- `stdlib/chars.bld` - `is_digit`, `is_alpha`, `is_alnum`, `is_whitespace`, `is_hex_digit`
+- `stdlib/string_utils.bld` - `trim_left`, `starts_with_alpha` (includes chars.bld)
 - Both verified: compiles, correct output, nested inclusion works
 
 **Setter workaround removal:**
-- Refactored awk.quanta (-3 lines), make.quanta (-14 lines), sed.quanta (-13 lines)
+- Refactored awk.bld (-3 lines), make.bld (-14 lines), sed.bld (-13 lines)
 - Removed 7 trivial setter functions, replaced with direct `s.field = value;`
 - Total: 30 lines removed. Proves the struct field fix has real impact.
 - All 96 program tests pass after refactoring.
@@ -268,7 +268,7 @@ stdlib/string_pool.quanta  - StringPool (string array via Vec<i32>)
   `base.field = value;` for locals.
 - Impact: Eliminates the `&mut` workaround pattern from ALL 60 programs.
   Programs can now assign struct fields directly in any function scope.
-- Test: `125_local_struct_assign.quanta` - verifies `p.x = 10;` emits correctly.
+- Test: `125_local_struct_assign.bld` - verifies `p.x = 10;` emits correctly.
 
 **String literal method calls - VERIFIED WORKING:**
 - Previously reported as broken (`let s = ""; s.char_at(0)` fails).
@@ -289,7 +289,7 @@ stdlib/string_pool.quanta  - StringPool (string array via Vec<i32>)
   self-hosting chain, qdb feature set, build instructions, known issues
 - Added `ARCHITECTURE.md` (176 lines) - qdb module map, data model, file format
   spec, WAL protocol, query execution flow, design tradeoffs
-- Added section banners and function documentation to db.quanta (15+ functions)
+- Added section banners and function documentation to db.bld (15+ functions)
 
 **Testing:**
 - Added `tests/run_tests.sh` - automated test suite
@@ -302,7 +302,7 @@ stdlib/string_pool.quanta  - StringPool (string array via Vec<i32>)
 - All 60 programs respond to `--help` or `-h`
 
 **Code Organization:**
-- db.quanta reorganized into 12 labeled sections with architecture comments
+- db.bld reorganized into 12 labeled sections with architecture comments
 - No logic changes - pure documentation and structural clarity
 
 ### Compiler Cleanup (2026-03-26)
@@ -354,7 +354,7 @@ stdlib/string_pool.quanta  - StringPool (string array via Vec<i32>)
 **Utilities (7 programs):**
 - `qhttp`, `qmake`, `qmd`, `qrev`, `qseq`, `qtac`, `qtee`, `qyes`
 
-### Compiler (quantac)
+### Compiler (buildc)
 
 - 507 tests, 0 warnings
 - 96 runtime builtins
@@ -366,7 +366,7 @@ stdlib/string_pool.quanta  - StringPool (string array via Vec<i32>)
 
 ### Spectrum Library
 
-- 7,129 lines of QuantaLang color science compiles to 35,241 lines of C
+- 7,129 lines of BuildLang color science compiles to 35,241 lines of C
 - Zero parse errors, zero type errors
 - Covers: RGB/XYZ/Lab/Oklab/JzAzBz/ICtCp conversions, CIEDE2000,
   tonemapping, chromatic adaptation, gamut mapping, ICC profiles
@@ -376,7 +376,7 @@ stdlib/string_pool.quanta  - StringPool (string array via Vec<i32>)
 ### Critical (blocking portfolio quality)
 1. **No inter-program code reuse** - tokenizer duplicated across 5 self-hosting
    tools (~4,000 lines). Blocked by: compiler lacks multi-file compilation.
-   Intended fix: add `use` import support to quantac.
+   Intended fix: add `use` import support to buildc.
 
 ### Significant
 2. **Struct field assignment on locals** - compiler codegen bug. Programs work
@@ -391,5 +391,5 @@ stdlib/string_pool.quanta  - StringPool (string array via Vec<i32>)
 ### Minor
 6. **GROUP BY rendering** - some aggregate combinations produce incorrect values
 7. **qc subset** - self-hosted compiler handles simple programs only
-8. **13 numpy warnings** in quanta-color (harmless edge cases)
+8. **13 numpy warnings** in build-color (harmless edge cases)
 9. **8 compiler integration tests skipped** (not blocking, test infra issue)

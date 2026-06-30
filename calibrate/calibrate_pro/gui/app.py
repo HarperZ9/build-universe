@@ -32,7 +32,7 @@ from PyQt6.QtCore import QPointF, QRectF
 
 APP_NAME = "Calibrate Pro"
 APP_VERSION = "1.0.0"
-APP_ORG = "Quanta Universe"
+APP_ORG = "Build Universe"
 
 
 def make_app_icon() -> QIcon:
@@ -1402,7 +1402,7 @@ class CalibrateProWindow(QMainWindow):
             f"<p>Professional sensorless display calibration<br>"
             f"with native colorimeter support.</p>"
             f"<p>Color science: Oklab, JzAzBz, CAM16, PQ/HLG, ACES</p>"
-            f"<p>&copy; 2024-2025 Zain Dana Quanta</p>"
+            f"<p>&copy; 2024-2025 Zain Dana Build</p>"
         )
 
     # --- Geometry persistence ---
@@ -1435,7 +1435,7 @@ def launch():
     # Windows taskbar icon fix — set app user model ID
     try:
         import ctypes
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("quanta.calibratepro.1")
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("build.calibratepro.1")
     except Exception:
         pass
 

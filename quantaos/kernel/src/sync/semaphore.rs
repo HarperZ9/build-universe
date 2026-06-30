@@ -1,4 +1,4 @@
-//! QuantaOS Semaphore Implementation
+//! BuildOS Semaphore Implementation
 //!
 //! Counting and binary semaphores for resource management.
 
