@@ -1,8 +1,8 @@
-# QuantaLang Programs
+# BuildLang Programs
 
-64 programs compiled from QuantaLang to C via the compiler. All 64 pass the type checker. Several produce verified correct native binaries.
+64 programs compiled from BuildLang to C via the compiler. All 64 pass the type checker. Several produce verified correct native binaries.
 
-Total: ~30,500 lines of QuantaLang source across 64 programs.
+Total: ~30,500 lines of BuildLang source across 64 programs.
 
 ## Architecture
 
@@ -11,16 +11,16 @@ Total: ~30,500 lines of QuantaLang source across 64 programs.
 Programs are compiled in two steps:
 
 ```
-source.quanta  -->  quantac  -->  program.c  -->  cl.exe /O2  -->  program.exe
+source.bld  -->  buildc  -->  program.c  -->  cl.exe /O2  -->  program.exe
                     (Rust)        (generated)      (MSVC)          (native)
 ```
 
-`quantac` is the Rust-based compiler that lowers QuantaLang to C. The generated
+`buildc` is the Rust-based compiler that lowers BuildLang to C. The generated
 C is then compiled with any standard C compiler (MSVC `cl.exe` or `gcc`).
 
 ### Why Flat Structs
 
-QuantaLang's C backend has a known limitation: struct field assignment on local
+BuildLang's C backend has a known limitation: struct field assignment on local
 variables doesn't emit correct C in all contexts. As a workaround, all programs
 use a "flat struct" pattern where state lives in a single struct passed via `&mut`
 references to helper functions. This trades readability for reliability.
@@ -30,7 +30,7 @@ Example from `qdb` -- all parser state, storage, indexes, and WAL live in one
 
 ### Why String Pools
 
-QuantaLang's `Vec<String>` support is incomplete (only `Vec<i32>` and `Vec<f64>`
+BuildLang's `Vec<String>` support is incomplete (only `Vec<i32>` and `Vec<f64>`
 have full codegen support). Programs that need arrays of strings use a "string
 pool" pattern: a single `String` buffer with parallel `Vec<i32>` arrays tracking
 start positions and lengths. This is similar to arena allocation.
@@ -46,7 +46,7 @@ A call to `sp_get(state, id)` extracts `sp_buf.substring(sp_starts[id], sp_lens[
 ### Why Embedded Tokenizers
 
 The compiler doesn't yet support multi-file compilation or `use` imports between
-`.quanta` files. Programs that need tokenization (parse, check, codegen, qc)
+`.bld` files. Programs that need tokenization (parse, check, codegen, qc)
 embed their own tokenizer. This is acknowledged technical debt -- a shared stdlib
 is the intended fix.
 
@@ -58,9 +58,9 @@ is the intended fix.
 | qbase64 | 238 | encoding | Base64 encode/decode |
 | qbasename | 147 | path | Strip directory and suffix from filenames |
 | qcalc | 752 | math | Mathematical expression calculator |
-| qcheck | 2,040 | compiler | QuantaLang type checker (self-hosting) |
+| qcheck | 2,040 | compiler | BuildLang type checker (self-hosting) |
 | qcmp | 200 | file | Byte-by-byte file comparison |
-| qcodegen | 1,513 | compiler | QuantaLang-to-C code generator (self-hosting) |
+| qcodegen | 1,513 | compiler | BuildLang-to-C code generator (self-hosting) |
 | qcomm | 319 | text | Compare two sorted files line by line |
 | qcsv | 595 | data | CSV-to-JSON converter |
 | qcut | 476 | text | Field/character extraction (GNU cut) |
@@ -72,7 +72,7 @@ is the intended fix.
 | qenv | 109 | system | Environment variable viewer |
 | qexpand | 152 | text | Convert tabs to spaces |
 | qfind | 298 | file | File search utility |
-| qfmt | 462 | dev | Code formatter for QuantaLang source |
+| qfmt | 462 | dev | Code formatter for BuildLang source |
 | qfold | 190 | text | Wrap long lines to specified width |
 | qgrep | 224 | text | Pattern matching (simplified grep) |
 | qhex | 262 | encoding | Hex dump utility |
@@ -82,16 +82,16 @@ is the intended fix.
 | qjq | 1,014 | data | jq-lite JSON query engine |
 | qjson | 417 | data | JSON parser/pretty-printer |
 | qkv | 533 | database | Persistent key-value database CLI |
-| qlint | 452 | dev | QuantaLang source linter |
+| qlint | 452 | dev | BuildLang source linter |
 | qloc | 489 | dev | Lines-of-code counter (tokei/scc) |
 | qmake | 747 | dev | Make-lite build tool |
 | qmd | 843 | data | Markdown-to-HTML converter |
 | qnl | 208 | text | Number lines (GNU nl) |
-| qparse | 1,464 | compiler | QuantaLang parser (self-hosting) |
+| qparse | 1,464 | compiler | BuildLang parser (self-hosting) |
 | qpaste | 371 | text | Merge lines of files (GNU paste) |
 | qpatch | 198 | file | Apply unified diff patches |
 | qprintf | 224 | text | Format string output |
-| qc | 2,323 | compiler | Self-hosted QuantaLang compiler (all stages) |
+| qc | 2,323 | compiler | Self-hosted BuildLang compiler (all stages) |
 | qrealpath | 142 | path | Normalize path, resolve . and .. |
 | qrev | 126 | text | Reverse characters in each line |
 | qsed | 698 | text | Stream editor (sed) |
@@ -104,7 +104,7 @@ is the intended fix.
 | qtac | 189 | text | Print lines in reverse order |
 | qtee | 87 | system | Split output to file and stdout |
 | qtest | 161 | system | Evaluate conditional expressions (test/[) |
-| qtok | 975 | compiler | QuantaLang tokenizer (self-hosting) |
+| qtok | 975 | compiler | BuildLang tokenizer (self-hosting) |
 | qtr | 291 | text | Character translate/delete/squeeze |
 | qunexpand | 178 | text | Convert leading spaces to tabs |
 | quniq | 259 | text | Remove consecutive duplicate lines |
@@ -116,19 +116,19 @@ is the intended fix.
 
 ## Self-Hosting Compiler Chain
 
-QuantaLang can compile a subset of itself to C:
+BuildLang can compile a subset of itself to C:
 
 ```
-source.quanta --> qtok (tokenize) --> qparse (AST) --> qcheck (typecheck) --> qcodegen (emit C)
+source.bld --> qtok (tokenize) --> qparse (AST) --> qcheck (typecheck) --> qcodegen (emit C)
 ```
 
 The `qc` program (2,323 lines) combines all four stages into a single binary.
 The `qcodegen` component (1,415 lines) has been proven end-to-end:
 
 **Programs compiled by the self-hosted compiler to working binaries:**
-- `yes.quanta` (81 lines) → 156 lines of C → native exe → correct output
-- `echo.quanta` (131 lines) → 195 lines of C → native exe → correct output
-- `test_hello.quanta` → factorial(10) = 3628800, sum(1..100) = 5050
+- `yes.bld` (81 lines) → 156 lines of C → native exe → correct output
+- `echo.bld` (131 lines) → 195 lines of C → native exe → correct output
+- `test_hello.bld` → factorial(10) = 3628800, sum(1..100) = 5050
 
 The generated C includes an embedded runtime with string helpers (starts_with,
 substring, strlen, strcmp, strcat), argument handling (argc/argv translation),
@@ -146,7 +146,7 @@ format specifiers (%s for strings, %lld for ints).
 All 62 programs in the suite produce valid C from `qcodegen`. End-to-end
 verified (C compiles and runs correctly): test_hello, yes, echo, basename,
 dirname, seq. The remaining programs generate C but may have runtime-level
-type issues that require the Rust-based `quantac` for correct binaries.
+type issues that require the Rust-based `buildc` for correct binaries.
 
 **All major codegen features implemented.** The self-hosted compiler handles:
 functions, let, if (ternary + blocks), while, return, structs, impl methods,
@@ -163,7 +163,7 @@ preprocessing, string operations (15 methods), builtins (args, file I/O,
 time, clock, getenv), println! with type-aware format specifiers.
 
 **Self-compilation:** qcodegen processes its own 2,081-line source → 3,352 lines
-of C, proving the self-hosted compiler can handle substantial QuantaLang code.
+of C, proving the self-hosted compiler can handle substantial BuildLang code.
 
 ## Database Engine (qdb)
 
@@ -204,7 +204,7 @@ DUMP operations. Uses append-only file storage with compaction.
 
 ```bash
 # Compile a single program
-quantac programs/wc.quanta
+buildc programs/wc.bld
 cl.exe /O2 /Fe:programs/qwc.exe programs/wc.c
 
 # Or with GCC
@@ -227,7 +227,7 @@ bash programs/tests/run_tests.sh
 | Metric | Value |
 |--------|-------|
 | Programs | 60 |
-| Total QuantaLang LOC | ~30,900 |
+| Total BuildLang LOC | ~30,900 |
 | Automated tests | 96 pass, 0 fail |
 | Compiler tests | 507 pass, 0 warnings |
 | Self-hosting tools | 7 (fmt, lint, tok, parse, check, codegen, qc) |
@@ -237,20 +237,20 @@ bash programs/tests/run_tests.sh
 
 ### ~~Blocking: Multi-file Compilation~~ RESOLVED (2026-03-27)
 Added `include!("path")` preprocessor directive. Programs can now share code:
-```quanta
-include!("stdlib/chars.quanta");
+```build
+include!("stdlib/chars.bld");
 // is_digit(), is_alpha(), etc. are now available
 ```
 Double-inclusion guard prevents duplicates. Stdlib modules:
 
 ```
-stdlib/chars.quanta        - is_digit, is_alpha, is_alnum, is_whitespace,
+stdlib/chars.bld        - is_digit, is_alpha, is_alnum, is_whitespace,
                              is_hex_digit, is_bin_digit, is_oct_digit
-stdlib/tokenizer.quanta    - Tok struct, 48 TK_* constants, tokenize(),
+stdlib/tokenizer.bld    - Tok struct, 48 TK_* constants, tokenize(),
                              read_string(), read_number(), peek/advance (430 lines)
-stdlib/string_utils.quanta - trim_left, starts_with_alpha
-stdlib/lines.quanta        - LineReader (split string into lines)
-stdlib/string_pool.quanta  - StringPool (string array via Vec<i32>)
+stdlib/string_utils.bld - trim_left, starts_with_alpha
+stdlib/lines.bld        - LineReader (split string into lines)
+stdlib/string_pool.bld  - StringPool (string array via Vec<i32>)
 ```
 
 Self-hosting tools (tok, parse, check, codegen, qc) migrated to shared
@@ -284,9 +284,9 @@ arrays use the string pool pattern (string buffer + parallel index arrays).
 
 ## Building
 
-### With the Rust compiler (quantac):
+### With the Rust compiler (buildc):
 ```bash
-quantac program.quanta        # generates program.c
+buildc program.bld        # generates program.c
 cl /O2 /Fe:qprogram.exe program.c   # MSVC
 gcc -O2 -o qprogram program.c       # GCC
 ```
@@ -299,7 +299,7 @@ From cmd.exe: `cd programs && build_all_self.bat`
 
 ## Documentation
 
-- **[Website](https://harperz9.github.io/quanta-universe)** - overview, examples, architecture
+- **[Website](https://harperz9.github.io/build-universe)** - overview, examples, architecture
 - `CHANGELOG.md` - detailed change history
 - `ARCHITECTURE.md` - qdb database engine architecture
 - `tests/run_tests.sh` - automated test suite

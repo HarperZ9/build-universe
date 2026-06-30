@@ -1,5 +1,5 @@
 // ===============================================================================
-// QUANTAOS KERNEL - ICMP (INTERNET CONTROL MESSAGE PROTOCOL)
+// BUILDOS KERNEL - ICMP (INTERNET CONTROL MESSAGE PROTOCOL)
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================

@@ -1,4 +1,4 @@
-//! QuantaOS Control Groups (cgroups)
+//! BuildOS Control Groups (cgroups)
 //!
 //! Resource management and process grouping using control groups.
 

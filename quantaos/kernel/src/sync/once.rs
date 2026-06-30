@@ -1,4 +1,4 @@
-//! QuantaOS Once Implementation
+//! BuildOS Once Implementation
 //!
 //! One-time initialization primitives.
 

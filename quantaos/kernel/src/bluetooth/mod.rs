@@ -474,7 +474,7 @@ impl BluetoothAdapter {
     pub fn new(id: u32, hci: HciController) -> Self {
         Self {
             id,
-            name: String::from("QuantaOS Bluetooth"),
+            name: String::from("BuildOS Bluetooth"),
             address: BdAddr::default(),
             powered: AtomicBool::new(false),
             discoverable: AtomicBool::new(false),

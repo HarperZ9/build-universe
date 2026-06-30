@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# QuantaLang Program Test Suite
-# Tests all 60 compiled programs in the QUANTA-UNIVERSE/programs/ directory.
+# BuildLang Program Test Suite
+# Tests all 60 compiled programs in the BUILD-UNIVERSE/programs/ directory.
 # Run: bash programs/tests/run_tests.sh
 
 set -o pipefail
@@ -50,7 +50,7 @@ check_exact() {
     fi
 }
 
-echo "=== QuantaLang Program Test Suite ==="
+echo "=== BuildLang Program Test Suite ==="
 echo "Programs dir: $PROGRAMS_DIR"
 echo ""
 
@@ -178,25 +178,25 @@ check_output "hex output"  "echo -n 'AB' | $PROGRAMS_DIR/qhex.exe" "4142"
 # =========================================================================
 echo "qfind:"
 check_exit   "help"            "$PROGRAMS_DIR/qfind.exe --help" 0
-check_output "find quanta"     "$PROGRAMS_DIR/qfind.exe $PROGRAMS_DIR -name '*.quanta' -type f" ".quanta"
+check_output "find build"     "$PROGRAMS_DIR/qfind.exe $PROGRAMS_DIR -name '*.bld' -type f" ".bld"
 
 # =========================================================================
 # 17. qloc — lines of code counter
 # =========================================================================
 echo "qloc:"
-check_output "count loc"  "$PROGRAMS_DIR/qloc.exe $PROGRAMS_DIR" "QuantaLang"
+check_output "count loc"  "$PROGRAMS_DIR/qloc.exe $PROGRAMS_DIR" "BuildLang"
 
 # =========================================================================
 # 18. qfmt — code formatter
 # =========================================================================
 echo "qfmt:"
-check_exit   "check formatted"  "$PROGRAMS_DIR/qfmt.exe --check $PROGRAMS_DIR/wc.quanta" 0
+check_exit   "check formatted"  "$PROGRAMS_DIR/qfmt.exe --check $PROGRAMS_DIR/wc.bld" 0
 
 # =========================================================================
 # 19. qlint — code linter
 # =========================================================================
 echo "qlint:"
-check_output "lint wc"  "$PROGRAMS_DIR/qlint.exe $PROGRAMS_DIR/wc.quanta 2>&1" "warning"
+check_output "lint wc"  "$PROGRAMS_DIR/qlint.exe $PROGRAMS_DIR/wc.bld 2>&1" "warning"
 
 # =========================================================================
 # 20. qcmp — byte comparator
@@ -229,7 +229,7 @@ check_exact  "single arg"     "$PROGRAMS_DIR/qecho.exe test" "test"
 # 24. qtest — conditional evaluator
 # =========================================================================
 echo "qtest:"
-check_exit  "file exists"   "$PROGRAMS_DIR/qtest.exe -f $PROGRAMS_DIR/wc.quanta" 0
+check_exit  "file exists"   "$PROGRAMS_DIR/qtest.exe -f $PROGRAMS_DIR/wc.bld" 0
 check_exit  "file missing"  "$PROGRAMS_DIR/qtest.exe -f /nonexistent" 1
 check_exit  "eq true"       "$PROGRAMS_DIR/qtest.exe 5 -eq 5" 0
 check_exit  "gt true"       "$PROGRAMS_DIR/qtest.exe 5 -gt 3" 0
@@ -358,7 +358,7 @@ check_output "parse let"  "echo 'fn main() { let x = 42; }' | $PROGRAMS_DIR/qpar
 # 43. qcheck — type checker (self-hosting step 3)
 # =========================================================================
 echo "qcheck:"
-check_output "check wc"  "$PROGRAMS_DIR/qcheck.exe $PROGRAMS_DIR/wc.quanta 2>&1" "warning"
+check_output "check wc"  "$PROGRAMS_DIR/qcheck.exe $PROGRAMS_DIR/wc.bld 2>&1" "warning"
 
 # =========================================================================
 # 44. qcodegen — C code generator (self-hosting step 4)

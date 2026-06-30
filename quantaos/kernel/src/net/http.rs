@@ -1,10 +1,10 @@
 // ===============================================================================
-// QUANTAOS KERNEL - HTTP CLIENT
+// BUILDOS KERNEL - HTTP CLIENT
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================
 //
-// HTTP/1.1 client implementation for QuantaOS.
+// HTTP/1.1 client implementation for BuildOS.
 // Supports GET, POST, PUT, DELETE methods with headers and body.
 //
 // ===============================================================================
@@ -47,7 +47,7 @@ pub const CONNECTION_TIMEOUT_MS: u64 = 30000;
 pub const READ_TIMEOUT_MS: u64 = 30000;
 
 /// User agent string
-pub const USER_AGENT: &str = "QuantaOS/1.0";
+pub const USER_AGENT: &str = "BuildOS/1.0";
 
 // =============================================================================
 // HTTP METHOD

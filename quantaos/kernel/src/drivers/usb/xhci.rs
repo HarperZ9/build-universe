@@ -1,5 +1,5 @@
 // ===============================================================================
-// QUANTAOS KERNEL - xHCI (USB 3.x) HOST CONTROLLER DRIVER
+// BUILDOS KERNEL - xHCI (USB 3.x) HOST CONTROLLER DRIVER
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================

@@ -1,5 +1,5 @@
 // ===============================================================================
-// QUANTAOS KERNEL - LOGGING AND TRACING INFRASTRUCTURE
+// BUILDOS KERNEL - LOGGING AND TRACING INFRASTRUCTURE
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================

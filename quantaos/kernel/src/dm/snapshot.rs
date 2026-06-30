@@ -1,5 +1,5 @@
 // ===============================================================================
-// QUANTAOS KERNEL - DEVICE MAPPER SNAPSHOT TARGET
+// BUILDOS KERNEL - DEVICE MAPPER SNAPSHOT TARGET
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================

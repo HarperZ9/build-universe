@@ -1,5 +1,5 @@
 // ===============================================================================
-// QUANTAOS KERNEL - PROCESS MANAGEMENT
+// BUILDOS KERNEL - PROCESS MANAGEMENT
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================
@@ -551,7 +551,7 @@ pub fn start_init() {
     let init_env: &[(&str, &str)] = &[
         ("PATH", "/bin:/sbin:/usr/bin:/usr/sbin"),
         ("HOME", "/"),
-        ("TERM", "quantaos-console"),
+        ("TERM", "buildos-console"),
     ];
 
     for init_path in init_paths {

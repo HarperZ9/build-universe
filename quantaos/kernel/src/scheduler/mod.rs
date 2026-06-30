@@ -1,4 +1,4 @@
-//! QuantaOS Advanced Scheduler
+//! BuildOS Advanced Scheduler
 //!
 //! Enhanced scheduling with:
 //! - Completely Fair Scheduler (CFS) implementation

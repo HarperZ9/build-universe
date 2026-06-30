@@ -1,5 +1,5 @@
 // ===============================================================================
-// QUANTAOS KERNEL - SELF-HEALING ENGINE
+// BUILDOS KERNEL - SELF-HEALING ENGINE
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // Self-Healing Engine

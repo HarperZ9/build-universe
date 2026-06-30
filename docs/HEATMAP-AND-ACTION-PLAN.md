@@ -1,4 +1,4 @@
-# QUANTA-UNIVERSE — Engineering Heatmap & Action Plan
+# BUILD-UNIVERSE — Engineering Heatmap & Action Plan
 
 > Ground-truth concreteness assessment of the foundational repo.
 > Method: 5 parallel source audits (compiler, kernel, rendering, finance/AI/tools,
@@ -8,9 +8,9 @@
 
 ## 1. The one-paragraph truth
 
-QUANTA-UNIVERSE has a real, load-bearing core -- the QuantaLang compiler -- and a
+BUILD-UNIVERSE has a real, load-bearing core -- the BuildLang compiler -- and a
 set of genuinely-correct algorithm kernels sitting inside a large outer shell of
-hollow showcase modules. The compiler C backend works end-to-end: .quanta programs
+hollow showcase modules. The compiler C backend works end-to-end: .bld programs
 transpile to C and compile MSVC-native, producing 56 working executables (SQL
 engine, parser, grep, calc). Around that, a handful of modules contain verifiably-
 correct math (color science, options pricing, SHA-256, forward-mode autodiff,
@@ -25,7 +25,7 @@ is: the compiler + its native-program pipeline + ~6 verifiable kernels.
 
 | Component | Score | What is real |
 |---|---|---|
-| quantalang compiler (C backend) | 6.5 | Lexer->parser->typecheck->C-codegen end-to-end; 755 unit tests; monomorphization, traits/vtables, one-shot effects |
+| buildlang compiler (C backend) | 6.5 | Lexer->parser->typecheck->C-codegen end-to-end; 755 unit tests; monomorphization, traits/vtables, one-shot effects |
 | programs/ (65 src, 56 MSVC exes) | 9.0 | Pipeline ships native binaries: qdb (SQL), qparse, qsed, grep, base64, color_test 12/12 pass |
 | spectrum (color science) | 9.0 | Correct sRGB-XYZ matrices, PQ/HLG EOTFs, 13 tonemappers, verified OKLab constants |
 | chromatic (perceptual color) | 8.0 | Real LAB-RGB with matrix inversion, gamut mapping via binary search |
@@ -36,7 +36,7 @@ is: the compiler + its native-program pipeline + ~6 verifiable kernels.
 
 | Component | Score | Real core | Scaffolding |
 |---|---|---|---|
-| quantaos kernel | 6.5 | Memory, scheduler (CFS+RT), ext2/4, IPC, 15-phase boot, TCP/IP stack 16K LOC, USB/NVMe/AHCI/PCI/ACPI drivers | AI syscalls return -1; self-healing is Z-score, not ML |
+| buildos kernel | 6.5 | Memory, scheduler (CFS+RT), ext2/4, IPC, 15-phase boot, TCP/IP stack 16K LOC, USB/NVMe/AHCI/PCI/ACPI drivers | AI syscalls return -1; self-healing is Z-score, not ML |
 | entropy (ML) | 7.0 | LSTM forward pass correct; GBDT variance-split trees | No backprop |
 | oracle (forecasting) | 7.0 | SARIMA differencing + AR/MA fitting | Forecast integration thin |
 | field-tensor | 6.0 | Cholesky, power-iteration eigenvalues, SMA/EMA/RSI | 4D market application sparse |
@@ -61,12 +61,12 @@ is: the compiler + its native-program pipeline + ~6 verifiable kernels.
 
 - VERSION file = 1.0.0; README = 1.0.0; CATALOG = 1.0.0; UNIVERSE.toml = 2.0.0 (outlier).
 - LICENSE file = MIT (Copyright Zain Dana Harper 2024-2026); README = MIT; UNIVERSE.toml = Proprietary (outlier).
-- Module count: CATALOG names 22; UNIVERSE.toml says 32; 35 dirs contain lib.quanta.
+- Module count: CATALOG names 22; UNIVERSE.toml says 32; 35 dirs contain lib.bld.
 - Compile status: README says "does not compile as a whole, Alpha"; ENGINEERING says "16/16 modules compile". Reality: each module transpiles to C individually; cross-module resolution incomplete; self-hosting 0% compilable.
 - Compiler tests: README "599", ENGINEERING "604"; actual #[test] count = 755.
 - The "8 backends" claim: only C is end-to-end. HLSL/GLSL emit text. x86-64/ARM64/WASM/LLVM/SPIR-V have no linker/assembler integration -- none produce a runnable artifact.
 - CHANGELOG lists features absent or stubbed in source: borrow checker, SVD, Blake3, Ed25519, HTTP/2, WebSocket, Transformer, SPIR-V compilation, GARCH, Prophet, Isolation Forest.
-- ~6 GB is Cargo target/ build cache (quantaos 3.1 GB, quantalang 2.9 GB). Real source < ~5 MB.
+- ~6 GB is Cargo target/ build cache (buildos 3.1 GB, buildlang 2.9 GB). Real source < ~5 MB.
 
 ## 4. Plan of action (heatmap-driven)
 
@@ -84,7 +84,7 @@ is: the compiler + its native-program pipeline + ~6 verifiable kernels.
 - Demote Tier-3 modules to a labeled sketches area, or delete.
 
 ### Phase 3 -- Bridge spec to product (APPS)
-- Formalize the UNIVERSE-APPS mapping; make .quanta (spec) and Python (product) validate against shared golden-vector tests. Ship calibrate-pro, quanta-color.
+- Formalize the UNIVERSE-APPS mapping; make .bld (spec) and Python (product) validate against shared golden-vector tests. Ship calibrate-pro, build-color.
 
 ## 5. The decision
 
@@ -104,10 +104,10 @@ already resolved on the current compiler:
   generic methods returning Self, and heap types in enum variants all compile.
 - One real defect found and fixed: bare Self / unit-struct value in value position
   (fn new() -> Self { Self }). 3-layer fix + regression test; 612 tests pass.
-  See quantalang commit 8d83d74 (branch feat/phase1-generics) and STATUS.md.
+  See buildlang commit 8d83d74 (branch feat/phase1-generics) and STATUS.md.
 
 Revised guidance: the highest-leverage compiler work is NOT the documented
 generic-system list (mostly already done) but (a) finding the ACTUAL remaining
-self-hosting blockers by compiling the real quantalang/src/ tree, and (b) a local
+self-hosting blockers by compiling the real buildlang/src/ tree, and (b) a local
 C toolchain so generated C can be execution-verified, not just emitted. STATUS.md
 is the canonical capability record.

@@ -1,4 +1,4 @@
-//! QuantaOS Virtual Terminal (TTY) Subsystem
+//! BuildOS Virtual Terminal (TTY) Subsystem
 //!
 //! Provides virtual terminal support with:
 //! - Multiple virtual consoles

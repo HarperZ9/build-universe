@@ -1,4 +1,4 @@
-//! QuantaOS Window Compositor
+//! BuildOS Window Compositor
 //!
 //! Handles window compositing, alpha blending, and effects.
 

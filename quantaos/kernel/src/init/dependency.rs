@@ -1,4 +1,4 @@
-//! QuantaOS Dependency Resolution
+//! BuildOS Dependency Resolution
 //!
 //! Handles dependency resolution for unit startup ordering.
 

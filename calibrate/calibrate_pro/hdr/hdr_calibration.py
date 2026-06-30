@@ -10,7 +10,7 @@ Comprehensive calibration workflow for all HDR formats:
 Provides a single interface for complete HDR display calibration
 with support for professional mastering standards.
 
-Author: Zain Dana / Quanta
+Author: Zain Dana / Build
 License: MIT
 """
 

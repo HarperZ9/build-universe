@@ -52,7 +52,7 @@ fn main(argc: usize, argv: *const *const u8) -> i32 {
         }
     }
 
-    // In QuantaOS, we'd read from /proc
+    // In BuildOS, we'd read from /proc
     // For now, just show current process
 
     if show_full {

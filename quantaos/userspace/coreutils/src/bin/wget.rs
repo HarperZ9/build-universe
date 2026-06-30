@@ -1,4 +1,4 @@
-//! QuantaOS wget - Network file download utility
+//! BuildOS wget - Network file download utility
 //!
 //! A command-line utility for downloading files from HTTP/HTTPS servers.
 //! Similar to GNU wget with essential functionality.
@@ -325,7 +325,7 @@ impl Default for WgetOptions {
             quiet: false,
             tries: 3,
             timeout: 30,
-            user_agent: "QuantaOS-wget/1.0".to_string(),
+            user_agent: "BuildOS-wget/1.0".to_string(),
             follow_redirects: true,
             max_redirects: MAX_REDIRECTS,
             headers_only: false,
@@ -1040,7 +1040,7 @@ fn timestamp() -> String {
 fn print_usage() {
     println!("Usage: wget [OPTION]... [URL]...");
     println!();
-    println!("QuantaOS wget - Download files from the network");
+    println!("BuildOS wget - Download files from the network");
     println!();
     println!("Options:");
     println!("  -O, --output-document=FILE  write documents to FILE");
@@ -1071,8 +1071,8 @@ fn print_usage() {
 
 /// Print version information
 fn print_version() {
-    println!("QuantaOS wget 1.0");
-    println!("Copyright (c) 2024-2025 QUANTA-UNIVERSE");
+    println!("BuildOS wget 1.0");
+    println!("Copyright (c) 2024-2025 BUILD-UNIVERSE");
     println!("Network file download utility");
 }
 

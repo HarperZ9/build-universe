@@ -1,4 +1,4 @@
-//! QuantaOS GUI Subsystem
+//! BuildOS GUI Subsystem
 //!
 //! Window manager, compositor, and GUI primitives for graphical applications.
 

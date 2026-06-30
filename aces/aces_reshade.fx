@@ -1,15 +1,15 @@
 // ============================================================================
-// ACES ReShade Effect — Generated from QuantaLang
+// ACES ReShade Effect — Generated from BuildLang
 // ============================================================================
-// Source: aces/rrt.quanta
-// Built with: quantac build aces/rrt.quanta --target hlsl
+// Source: aces/rrt.bld
+// Built with: buildc build aces/rrt.bld --target hlsl
 //
 // Install: Copy to reshade-shaders/Shaders/
 // ============================================================================
 
 #include "ReShade.fxh"
 
-// --- Begin QuantaLang Generated Code ---
+// --- Begin BuildLang Generated Code ---
 
 // Constants
 static const float RRT_A = 2.51;
@@ -20,7 +20,7 @@ static const float RRT_E = 0.14;
 static const float SRGB_CUTOFF = 0.0031308;
 static const float SRGB_SLOPE = 12.92;
 
-// ACES tone mapping (from QuantaLang)
+// ACES tone mapping (from BuildLang)
 float aces_tonemap(float x) {
     float num = x * (RRT_A * x + RRT_B);
     float den = x * (RRT_C * x + RRT_D) + RRT_E;
@@ -42,7 +42,7 @@ float srgb_oetf(float linear) {
         return 1.055 * pow(linear, 0.4166667) - 0.055;
 }
 
-// --- End QuantaLang Generated Code ---
+// --- End BuildLang Generated Code ---
 
 // ReShade UI
 uniform float Exposure <
@@ -85,9 +85,9 @@ float4 PS_ACES(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_Target {
     return float4(color, 1.0);
 }
 
-technique ACES_QuantaLang <
-    ui_label = "ACES (QuantaLang)";
-    ui_tooltip = "Academy Color Encoding System tone mapping.\nWritten in QuantaLang, compiled to HLSL.";
+technique ACES_BuildLang <
+    ui_label = "ACES (BuildLang)";
+    ui_tooltip = "Academy Color Encoding System tone mapping.\nWritten in BuildLang, compiled to HLSL.";
 > {
     pass {
         VertexShader = PostProcessVS;

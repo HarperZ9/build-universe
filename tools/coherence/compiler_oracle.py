@@ -1,14 +1,14 @@
-"""Compiler organ of the coherence membrane: adjudicate a .quanta module against
-the actual compiler (quantac) and the actual C compiler (cl) -- not against
+"""Compiler organ of the coherence membrane: adjudicate a .bld module against
+the actual compiler (buildc) and the actual C compiler (cl) -- not against
 reasoning about the lowering (the doctrine section 10 sensor: read the generated
 C, do not reason about it). Two invariants, most-expensive-last:
-  transpile           -- quantac emits C (exit 0)
+  transpile           -- buildc emits C (exit 0)
   codegen well-formed -- the EMITTED C compiles (cl /c), catching the emergent
                          "type-checks but emits invalid C" failure (e.g. return Self;).
 Verdict mirrors the GPU organ ft_adjudicate and the Build organ freshness:
   CONFIRMED (0) / CONTRADICTED (1, witness) / UNRESOLVABLE (2, toolchain absent).
 
-  python tools/coherence/compiler_oracle.py adjudicate <module.quanta|component>
+  python tools/coherence/compiler_oracle.py adjudicate <module.bld|component>
   python tools/coherence/compiler_oracle.py adjudicate-all
 """
 import sys, os, glob, subprocess, tempfile, tomllib
@@ -19,9 +19,9 @@ MANIFEST = os.path.join(REPO, "tools", "components.toml")
 CRLF = chr(13) + chr(10)
 
 
-def find_quantac():
+def find_buildc():
     for sub in ("debug", "release"):
-        p = os.path.join(REPO, "quantalang", "compiler", "target", sub, "quantac.exe")
+        p = os.path.join(REPO, "buildlang", "compiler", "target", sub, "buildc.exe")
         if os.path.isfile(p):
             return p
     return None
@@ -49,8 +49,8 @@ def first_error(text):
     return nonempty[-1].strip()[:200] if nonempty else "(no output)"
 
 
-def transpile(quantac, src, out_c):
-    r = subprocess.run([quantac, src, "--target", "c", "-o", out_c],
+def transpile(buildc, src, out_c):
+    r = subprocess.run([buildc, src, "--target", "c", "-o", out_c],
                        capture_output=True, text=True)
     return r.returncode, (r.stdout + r.stderr)
 
@@ -70,20 +70,20 @@ def module_path(name, comps):
     if os.path.isfile(name):
         return name
     if name in comps:
-        return os.path.join(REPO, comps[name]["path"].replace("/", os.sep), "lib.quanta")
+        return os.path.join(REPO, comps[name]["path"].replace("/", os.sep), "lib.bld")
     return None
 
 
 def adjudicate(name, comps):
-    quantac = find_quantac()
-    if not quantac:
-        return 2, "UNRESOLVABLE no quantac built"
+    buildc = find_buildc()
+    if not buildc:
+        return 2, "UNRESOLVABLE no buildc built"
     src = module_path(name, comps)
     if not src or not os.path.isfile(src):
         return 2, "UNRESOLVABLE module source not found: " + str(name)
     tmp = tempfile.mkdtemp(prefix="coc_")
     out_c = os.path.join(tmp, "module.c")
-    rc, out = transpile(quantac, src, out_c)
+    rc, out = transpile(buildc, src, out_c)
     if rc != 0:
         return 1, "CONTRADICTED transpile fails: " + first_error(out)
     lines = sum(1 for _ in open(out_c, encoding="utf-8", errors="replace")) if os.path.isfile(out_c) else 0
@@ -113,7 +113,7 @@ def main():
     if cmd == "adjudicate-all":
         worst = 0
         for name, c in comps.items():
-            if c.get("language") != "quanta":
+            if c.get("language") != "build":
                 continue
             code, w = adjudicate(name, comps)
             print(name.ljust(16), w)

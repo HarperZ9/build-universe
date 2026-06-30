@@ -240,7 +240,7 @@ impl UtsNamespace {
         Arc::new(Self {
             id: alloc_ns_id(),
             user_ns,
-            hostname: RwLock::new(String::from("quantaos")),
+            hostname: RwLock::new(String::from("buildos")),
             domainname: RwLock::new(String::new()),
         })
     }

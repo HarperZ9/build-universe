@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to QUANTA-UNIVERSE are documented here.
+All notable changes to BUILD-UNIVERSE are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/);
 this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
@@ -12,10 +12,10 @@ this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [1.0.0] - 2026
 
 ### Verified - actually ships
-- **QuantaLang compiler**: lexer, parser, type checker, monomorphization,
+- **BuildLang compiler**: lexer, parser, type checker, monomorphization,
   traits + vtables, one-shot algebraic effects; **C backend end-to-end**;
-  755 test functions in tree; produces quantac.exe.
-- **Native programs**: 56 MSVC-clean executables from 65 .quanta sources in
+  755 test functions in tree; produces buildc.exe.
+- **Native programs**: 56 MSVC-clean executables from 65 .bld sources in
   programs/ - including qdb (SQL engine), qparse, qsed, grep, base64, calc,
   and color_test (12/12 self-checks pass).
 - **foundation stdlib**: SHA-256 (FIPS 180-4 correct), math via intrinsics,
@@ -26,7 +26,7 @@ this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   color, delta (Black-Scholes + full Greeks + IV solvers), oracle (SARIMA),
   entropy (LSTM forward pass), axiom (forward-mode dual-number autodiff),
   field-tensor (Cholesky, power-iteration eigenvalues, indicators).
-- **QuantaOS**: substantial hobby kernel - memory management, scheduler,
+- **BuildOS**: substantial hobby kernel - memory management, scheduler,
   ext2/ext4, IPC, drivers (PCI/ACPI/AHCI/NVMe/USB), a TCP/IP stack. Boots in
   QEMU is plausible but unverified here. AI syscalls and "self-healing" are
   stubs (return -1; Z-score thresholding, not ML).
@@ -54,7 +54,7 @@ this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   corrected from "Proprietary".
 - Version unified to **1.0.0**; UNIVERSE.toml corrected from 2.0.0.
 - ENGINEERING.md APPS test counts corrected to measured values
-  (calibrate-pro 228, quanta-color 281, quanta-engine 173); aurora has no
+  (calibrate-pro 228, build-color 281, build-engine 173); aurora has no
   source present locally.
 
 ---

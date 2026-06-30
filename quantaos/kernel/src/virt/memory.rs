@@ -1,5 +1,5 @@
 // ===============================================================================
-// QUANTAOS KERNEL - VIRTUALIZATION MEMORY MANAGEMENT
+// BUILDOS KERNEL - VIRTUALIZATION MEMORY MANAGEMENT
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================

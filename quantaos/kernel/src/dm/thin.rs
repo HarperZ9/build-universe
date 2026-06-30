@@ -1,5 +1,5 @@
 // ===============================================================================
-// QUANTAOS KERNEL - DEVICE MAPPER THIN PROVISIONING
+// BUILDOS KERNEL - DEVICE MAPPER THIN PROVISIONING
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================

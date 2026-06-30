@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>QuantaLang</title>
+<title>BuildLang</title>
 <style>
 :root {
     --bg: #fdf9f5;
@@ -102,21 +102,21 @@ footer p { font-size: 0.8rem; color: var(--text2); }
 <div class="wrap">
 
 <header>
-    <h1>QuantaLang</h1>
+    <h1>BuildLang</h1>
     <p>A compiled language with a self-hosting compiler, 62 native programs,
     and a SQL database engine. Built from scratch in Rust.</p>
 </header>
 
 <div class="term">
 <span class="comment"># compile and run</span><br>
-<span class="prompt">$</span> quantac hello.quanta && ./hello<br>
-<span class="output">Hello, QuantaLang!</span><br>
+<span class="prompt">$</span> buildc hello.bld && ./hello<br>
+<span class="output">Hello, BuildLang!</span><br>
 <br>
 <span class="comment"># the self-hosted compiler compiles itself</span><br>
-<span class="prompt">$</span> qcodegen codegen.quanta > codegen.c<br>
-<span class="output">2,490 lines .quanta → 3,600 lines C</span><br>
+<span class="prompt">$</span> qcodegen codegen.bld > codegen.c<br>
+<span class="output">2,490 lines .bld → 3,600 lines C</span><br>
 <br>
-<span class="comment"># a real database engine, written in quantalang</span><br>
+<span class="comment"># a real database engine, written in buildlang</span><br>
 <span class="prompt">$</span> qdb app.db <span class="string">"SELECT name, dept FROM employees WHERE salary > 100000 ORDER BY name"</span><br>
 <span class="output">name   | dept</span><br>
 <span class="output">-------+-----</span><br>
@@ -134,7 +134,7 @@ footer p { font-size: 0.8rem; color: var(--text2); }
         </div>
         <div class="card">
             <h3>Self-Hosting</h3>
-            <p>2,490 lines of QuantaLang that compile QuantaLang to C.
+            <p>2,490 lines of BuildLang that compile BuildLang to C.
             Structs, closures, impl methods, Vec, <code>include!()</code>.
             Generates valid C for all 62 programs.</p>
         </div>
@@ -196,13 +196,13 @@ footer p { font-size: 0.8rem; color: var(--text2); }
     <h2>Architecture</h2>
     <div class="term" style="font-size:0.78rem;">
 <span class="comment">// compiler pipeline</span><br>
-source.quanta → lexer → parser → type checker → MIR → C backend → gcc/MSVC → native<br>
+source.bld → lexer → parser → type checker → MIR → C backend → gcc/MSVC → native<br>
 <br>
 <span class="comment">// shared stdlib (5 modules, 593 lines)</span><br>
-include!(<span class="string">"stdlib/tokenizer.quanta"</span>); <span class="comment">// 48 token types, full lexer</span><br>
-include!(<span class="string">"stdlib/chars.quanta"</span>);     <span class="comment">// is_alpha, is_digit, ...</span><br>
-include!(<span class="string">"stdlib/lines.quanta"</span>);     <span class="comment">// LineReader</span><br>
-include!(<span class="string">"stdlib/string_pool.quanta"</span>); <span class="comment">// StringPool (arena pattern)</span>
+include!(<span class="string">"stdlib/tokenizer.bld"</span>); <span class="comment">// 48 token types, full lexer</span><br>
+include!(<span class="string">"stdlib/chars.bld"</span>);     <span class="comment">// is_alpha, is_digit, ...</span><br>
+include!(<span class="string">"stdlib/lines.bld"</span>);     <span class="comment">// LineReader</span><br>
+include!(<span class="string">"stdlib/string_pool.bld"</span>); <span class="comment">// StringPool (arena pattern)</span>
     </div>
 </section>
 
@@ -213,7 +213,7 @@ include!(<span class="string">"stdlib/string_pool.quanta"</span>); <span class="
         <li>95 automated program tests</li>
         <li>1,283 Python tests across 7 packages</li>
         <li>2,600 lines of duplication removed via stdlib extraction</li>
-        <li>Architecture docs: <a href="https://github.com/HarperZ9/quantalang/blob/main/DESIGN.md">DESIGN.md</a>,
+        <li>Architecture docs: <a href="https://github.com/HarperZ9/buildlang/blob/main/DESIGN.md">DESIGN.md</a>,
             ARCHITECTURE.md, CHANGELOG.md</li>
     </ul>
 </section>
@@ -222,11 +222,11 @@ include!(<span class="string">"stdlib/string_pool.quanta"</span>); <span class="
     <h2>Repositories</h2>
     <div class="grid">
         <div class="card">
-            <h3><a href="https://github.com/HarperZ9/quanta-universe">quanta-universe</a></h3>
+            <h3><a href="https://github.com/HarperZ9/build-universe">build-universe</a></h3>
             <p>62 programs, stdlib, spectrum library, docs</p>
         </div>
         <div class="card">
-            <h3><a href="https://github.com/HarperZ9/quantalang">quantalang</a></h3>
+            <h3><a href="https://github.com/HarperZ9/buildlang">buildlang</a></h3>
             <p>Rust compiler, 507 tests, 8 backends</p>
         </div>
         <div class="card">
@@ -234,7 +234,7 @@ include!(<span class="string">"stdlib/string_pool.quanta"</span>); <span class="
             <p>Display calibration, 297 tests</p>
         </div>
         <div class="card">
-            <h3><a href="https://github.com/HarperZ9/quanta-color">quanta-color</a></h3>
+            <h3><a href="https://github.com/HarperZ9/build-color">build-color</a></h3>
             <p>Color science library, 457 tests</p>
         </div>
     </div>

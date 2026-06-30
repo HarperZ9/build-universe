@@ -1,10 +1,10 @@
 // ===============================================================================
-// QUANTAOS KERNEL
+// BUILDOS KERNEL
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================
 //
-// QuantaOS Kernel featuring:
+// BuildOS Kernel featuring:
 // - Process scheduler with priority-based scheduling
 // - Self-Healing Engine with automatic fault recovery
 // - First-class AI inference support
@@ -115,7 +115,7 @@ pub extern "sysv64" fn kernel_main(boot_info: *const BootInfo) -> ! {
     }
 
     kprintln!("=================================================");
-    kprintln!("  QuantaOS v2.0.0");
+    kprintln!("  BuildOS v2.0.0");
     kprintln!("  Copyright 2024-2025 Zain Dana Harper");
     kprintln!("=================================================");
     kprintln!("");

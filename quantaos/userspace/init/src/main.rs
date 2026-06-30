@@ -1,5 +1,5 @@
 // ===============================================================================
-// QUANTAOS INIT PROCESS
+// BUILDOS INIT PROCESS
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================
@@ -164,7 +164,7 @@ fn main() {
     // Display init banner
     println("");
     println("=================================================");
-    println("  QuantaOS Init v1.0.0");
+    println("  BuildOS Init v1.0.0");
     println("  x86-64 Operating System");
     println("  Copyright 2024-2025 Zain Dana Harper");
     println("=================================================");
@@ -206,7 +206,7 @@ fn main() {
 
     println("");
     println("[init] System initialization complete!");
-    println("[init] QuantaOS is ready.");
+    println("[init] BuildOS is ready.");
     println("");
 
     // Main init loop - wait for child processes

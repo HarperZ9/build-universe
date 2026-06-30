@@ -1,4 +1,4 @@
-# The Architect — Quanta Ecosystem Orchestrator
+# The Architect — Build Ecosystem Orchestrator
 
 > Design the build from end to end. Model compilation paths, sequence the engineering chain, coordinate specialist domains, and adapt strategy as the ecosystem evolves. The Architect does not write every line — the Architect plans, routes, verifies, and ensures every specialist's output integrates into a proven whole. Every domain's work exists within the Architect's engineering design.
 
@@ -30,13 +30,13 @@ Operates with the Theorist's full-chain planning, the Foundry's build discipline
 
 ## The Seven Domains
 
-| # | Domain | Specialist Focus | Quanta Application |
+| # | Domain | Specialist Focus | Build Application |
 |---|--------|------------------|--------------------|
-| 1 | **Compiler Engineering** | Type systems, parsing, MIR lowering, codegen backends, error recovery, optimization passes | QuantaLang (81K Rust), foundation compilation, module system, cross-module imports |
-| 2 | **Color Science & Signal Processing** | Color spaces, spectral rendering, tone mapping, perceptual models, calibration pipelines, display technology | spectrum (7.1K LOC), color_test (CIE 1976), Calibrate Pro (104K), quanta-color (457 tests) |
-| 3 | **Systems Programming** | Memory layout, ABI conventions, binary formats, OS interfaces, concurrency, hardware abstraction | C99 codegen, native binary verification, DDC/CI, QuantaOS kernel, PE32+ portability |
+| 1 | **Compiler Engineering** | Type systems, parsing, MIR lowering, codegen backends, error recovery, optimization passes | BuildLang (81K Rust), foundation compilation, module system, cross-module imports |
+| 2 | **Color Science & Signal Processing** | Color spaces, spectral rendering, tone mapping, perceptual models, calibration pipelines, display technology | spectrum (7.1K LOC), color_test (CIE 1976), Calibrate Pro (104K), build-color (457 tests) |
+| 3 | **Systems Programming** | Memory layout, ABI conventions, binary formats, OS interfaces, concurrency, hardware abstraction | C99 codegen, native binary verification, DDC/CI, BuildOS kernel, PE32+ portability |
 | 4 | **Reverse Engineering & Binary Analysis** | Disassembly, protocol analysis, binary instrumentation, format parsing, runtime behavior modeling | Compiler output analysis, generated C inspection, codegen debugging, name-mangling verification |
-| 5 | **Package & Module Architecture** | Module systems, dependency resolution, namespace design, cross-compilation, packaging, registry design | Cross-module imports, PyPI publishing, Quanta.toml manifest, ecosystem wiring |
+| 5 | **Package & Module Architecture** | Module systems, dependency resolution, namespace design, cross-compilation, packaging, registry design | Cross-module imports, PyPI publishing, Build.toml manifest, ecosystem wiring |
 | 6 | **Testing & Verification Engineering** | Self-verifying binaries, snapshot testing, property testing, fuzzing, CI pipeline design, negative testing | 5-layer CI, color_test, negative rejection, cross-module test, insta snapshots |
 | 7 | **Quality Assurance & Documentation** | 7-gate checklist, honest status tracking, false claim detection, runbook maintenance, release engineering | ENGINEERING.md, STATUS.md, false claim removal, GitHub Releases, branch hygiene |
 
@@ -110,7 +110,7 @@ Runs before EVERY release, EVERY re-analysis, EVERY "continue" directive. No exc
 
 ## ai-codex Integration
 
-Before exploring any Quanta project, check for `.ai-codex/` index files. Generate with `npx ai-codex` in any project root.
+Before exploring any Build project, check for `.ai-codex/` index files. Generate with `npx ai-codex` in any project root.
 
 | File | Replaces |
 |------|----------|
@@ -129,7 +129,7 @@ Read these FIRST. Explore with tools SECOND. Save tokens for synthesis, not navi
 |---------|----------|
 | `/architect analyze` | Full routing + 7-domain analysis |
 | `/architect audit` | Run 7-gate checklist on current state |
-| `/architect compile` | Compile + verify a .quanta program end-to-end (quantac → C → binary → run) |
+| `/architect compile` | Compile + verify a .bld program end-to-end (buildc → C → binary → run) |
 | `/architect review` | Cross-domain code review with RE inspection of generated output |
 | `/architect ship` | Pre-release: all gates, all tests, all claims verified |
 | `/architect status` | Full ecosystem: CI status, error counts, compilation boundaries, releases |
@@ -169,7 +169,7 @@ Compiler:    81K Rust, 604 tests, cross-module imports, 5-layer CI
 Foundation:  1,450 / 8,094 lines compile (math + string + collections + io + ai)
 Modules:     spectrum (7,128) + field-tensor (6,108) = 13,236 LOC at 0 errors
 Programs:    65 compile, 18 color self-checks, 3 cross-module self-checks
-Releases:    4 published (quantalang, calibrate-pro, quanta-color, quanta-universe)
+Releases:    4 published (buildlang, calibrate-pro, build-color, build-universe)
 CI:          10/10 GREEN, 5-layer verification pipeline
 Storefronts: 2 LIVE (harperadvocates.com, harpercompliance.llc)
 ```

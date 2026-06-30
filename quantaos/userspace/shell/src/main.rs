@@ -1,5 +1,5 @@
 // ===============================================================================
-// QUANTAOS SHELL - WITH SCRIPTING SUPPORT
+// BUILDOS SHELL - WITH SCRIPTING SUPPORT
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================
@@ -912,7 +912,7 @@ impl Shell {
         self.set_var(b"SHELL", b"/bin/qsh");
         self.set_var(b"PATH", b"/bin:/usr/bin");
         self.set_var(b"HOME", b"/home");
-        self.set_var(b"PS1", b"quanta> ");
+        self.set_var(b"PS1", b"build> ");
         self.set_var(b"PS2", b"> ");
         self.set_var(b"IFS", b" \t\n");
 
@@ -2594,7 +2594,7 @@ fn restore_positional_params(_shell: &mut Shell, _saved: [[u8; MAX_VAR_VALUE]; 1
 
 fn cmd_help() {
     println("");
-    println("QuantaOS Shell v2.0.0 - Scripting Shell");
+    println("BuildOS Shell v2.0.0 - Scripting Shell");
     println("");
     println("Built-in Commands:");
     println("  help          - Show this help message");
@@ -2654,7 +2654,7 @@ fn cmd_help() {
 }
 
 fn cmd_version() {
-    println("QuantaOS Shell v2.0.0");
+    println("BuildOS Shell v2.0.0");
     println("Operating System Shell with Scripting Support");
     println("Copyright 2024-2025 Zain Dana Harper");
 }
@@ -2747,7 +2747,7 @@ impl LineEditor {
     fn redraw(&self) {
         // Move cursor to start, clear line, print buffer
         print("\r\x1b[K");
-        print("quanta> ");
+        print("build> ");
         print_bytes(&self.buffer[..self.len]);
 
         // Move cursor to correct position
@@ -2768,7 +2768,7 @@ fn read_line(shell: &mut Shell, editor: &mut LineEditor) -> bool {
     if let Some(ps1) = shell.get_var(b"PS1") {
         print_bytes(ps1);
     } else {
-        print("quanta> ");
+        print("build> ");
     }
 
     let mut escape_seq = [0u8; 8];
@@ -2922,7 +2922,7 @@ fn read_line(shell: &mut Shell, editor: &mut LineEditor) -> bool {
                 if let Some(ps1) = shell.get_var(b"PS1") {
                     print_bytes(ps1);
                 } else {
-                    print("quanta> ");
+                    print("build> ");
                 }
                 print_bytes(editor.get_line());
             }
@@ -2966,7 +2966,7 @@ fn main() {
     print("\x1b[2J\x1b[H");
     println("");
     println("=================================================");
-    println("  QuantaOS Shell v2.0.0");
+    println("  BuildOS Shell v2.0.0");
     println("  Type 'help' for available commands");
     println("=================================================");
     println("");

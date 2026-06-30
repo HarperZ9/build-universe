@@ -1,4 +1,4 @@
-//! Font Rendering for QuantaOS Graphics Subsystem
+//! Font Rendering for BuildOS Graphics Subsystem
 //!
 //! Provides bitmap font rendering, TrueType-style glyph support,
 //! and text layout capabilities.

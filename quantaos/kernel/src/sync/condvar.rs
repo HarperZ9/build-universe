@@ -1,4 +1,4 @@
-//! QuantaOS Condition Variable Implementation
+//! BuildOS Condition Variable Implementation
 //!
 //! Allows threads to wait for a condition to become true.
 

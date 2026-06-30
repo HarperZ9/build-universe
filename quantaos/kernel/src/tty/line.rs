@@ -1,4 +1,4 @@
-//! QuantaOS Line Discipline
+//! BuildOS Line Discipline
 //!
 //! Implements terminal line discipline for processing input/output
 //! through TTY devices. Handles canonical mode editing, echo, and

@@ -1,5 +1,5 @@
 // ===============================================================================
-// QUANTAOS KERNEL - NFTABLES
+// BUILDOS KERNEL - NFTABLES
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 
 //! nftables Implementation

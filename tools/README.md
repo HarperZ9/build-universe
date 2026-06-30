@@ -1,6 +1,6 @@
-# Quanta organism tooling
+# Build organism tooling
 
-The Quanta repo is a mixed-language organism: a Rust compiler, QuantaLang
+The Build repo is a mixed-language organism: a Rust compiler, BuildLang
 modules, native components (frametrace -- Rust core + C ABI + C++ D3D11 hook +
 Python adapter), and more. These tools keep it cohesive and honest as it grows,
 so modules integrate into one whole by ground truth rather than by assertion.

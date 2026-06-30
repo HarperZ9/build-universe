@@ -1,4 +1,4 @@
-//! QuantaOS Synchronization Primitives
+//! BuildOS Synchronization Primitives
 //!
 //! Provides kernel-level synchronization primitives including mutexes,
 //! spinlocks, read-write locks, condition variables, and RCU.

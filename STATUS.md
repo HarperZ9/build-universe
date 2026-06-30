@@ -1,4 +1,4 @@
-# QUANTA-UNIVERSE — Module Maturity Ledger (Canonical)
+# BUILD-UNIVERSE — Module Maturity Ledger (Canonical)
 
 Last verified: 2026-06-05. This file is the single source of truth for module
 reality. Where README, ENGINEERING, CHANGELOG, UNIVERSE.toml, or CATALOG.json
@@ -11,16 +11,16 @@ source audit: real, correct, extractable logic vs scaffolding/showcase.
 - Compiler: 612 tests pass / 0 fail on cargo test (755 #[test] annotations incl. ignored/multi-bin); only the C backend is end-to-end.
   HLSL/GLSL emit text; x86-64/ARM64/WASM/LLVM/SPIR-V emit output but have no
   linker/assembler integration (no runnable artifacts yet).
-- Each .quanta module transpiles to C individually. Whole-ecosystem cross-module
+- Each .bld module transpiles to C individually. Whole-ecosystem cross-module
   compilation and compiler self-hosting are not yet achieved.
 - ~6 GB of local disk is Cargo target/ build cache (already git-ignored; the
-  compiler dir quantalang/ is itself git-ignored, a separate repo).
+  compiler dir buildlang/ is itself git-ignored, a separate repo).
 
 ## Tier 1 — Load-bearing, real, extractable (the engine)
 
 | Component | Score | What is real |
 |---|---|---|
-| quantalang compiler (C backend) | 6.5 | Full front-to-C pipeline; monomorphization, traits/vtables, one-shot effects; 612 pass / 0 fail |
+| buildlang compiler (C backend) | 6.5 | Full front-to-C pipeline; monomorphization, traits/vtables, one-shot effects; 612 pass / 0 fail |
 | programs/ (56 MSVC exes) | 9.0 | qdb (SQL), qparse, qsed, grep, base64, calc, color_test 12/12 |
 | spectrum (color science) | 9.0 | sRGB/XYZ matrices, PQ/HLG EOTFs, 13 tonemappers, verified OKLab constants |
 | chromatic (perceptual color) | 8.0 | LAB/RGB with matrix inversion, gamut mapping via binary search |
@@ -31,7 +31,7 @@ source audit: real, correct, extractable logic vs scaffolding/showcase.
 
 | Component | Score | Real core | Scaffolding |
 |---|---|---|---|
-| quantaos kernel | 6.5 | Memory, scheduler, ext2/4, IPC, drivers, TCP/IP stack | AI syscalls return -1; self-healing is Z-score, not ML |
+| buildos kernel | 6.5 | Memory, scheduler, ext2/4, IPC, drivers, TCP/IP stack | AI syscalls return -1; self-healing is Z-score, not ML |
 | entropy | 7.0 | LSTM forward pass; GBDT variance splits | No backprop |
 | oracle | 7.0 | SARIMA differencing + AR/MA fitting | Forecast integration thin |
 | field-tensor | 6.0 | Cholesky, power-iteration eigenvalues, indicators | 4D market application sparse |
@@ -75,7 +75,7 @@ not just emitted. This immediately corrected several emission-only conclusions.
   Emission alone hid a real bug: the call result was typed as the literal Self
   (invalid C; method dispatch fell back to a bare name). Root cause was an
   impl-collect forward-declaration that did not resolve Self -> concrete type.
-  Fixed in quantalang 8d83d74 + 2e9296f. e2e regressions tests/programs/132
+  Fixed in buildlang 8d83d74 + 2e9296f. e2e regressions tests/programs/132
   (prints 42) and 133 (prints 5) now compile with MSVC cl and run. Rust suite
   612 pass / 0 fail.
 - KNOWN OPEN (native LINK failure): GENERIC impl methods returning Self, e.g.
@@ -86,10 +86,10 @@ not just emitted. This immediately corrected several emission-only conclusions.
 - Heap types (String) in enum variants and generic enum methods: type-check +
   emit only; not yet individually native-checked.
 
-Caveats: (1) The 231K-line self-hosted compiler in quantalang/src/ still does not
+Caveats: (1) The 231K-line self-hosted compiler in buildlang/src/ still does not
 compile as a whole -- per-feature success does not imply whole-program self-hosting.
 (2) Dev-env: cargo incremental builds are unreliable here (source mtimes are
-preserved by the IO layer); use `cargo clean -p quantalang` before each rebuild.
+preserved by the IO layer); use `cargo clean -p buildlang` before each rebuild.
 (3) Native build helper: C:/Users/Zain/.cqtest/build.bat (vcvars -> cl -> run).
 
 ## Verifiable tier (machine-checked)
@@ -101,19 +101,19 @@ this file. Run:
 
 It builds and tests every real component across languages and reports ground
 truth; the exit code is the failure count, so it is also a CI gate. Last run:
-20 passed / 0 failed -- frametrace (core, C ABI, hook, adapter), quantalang, and 16 .quanta domain modules (verified by quantac transpile). CI runs it on windows-latest (.github/workflows/organism.yml).
+20 passed / 0 failed -- frametrace (core, C ABI, hook, adapter), buildlang, and 16 .bld domain modules (verified by buildc transpile). CI runs it on windows-latest (.github/workflows/organism.yml).
 New real modules join the organism by registering in components.toml.
 
 ## Compiler organ deep-codegen finding (2026-06-05)
 
 The Compiler organ (tools/coherence/compiler_oracle.py) adjudicates the deeper
-claim "the emitted C compiles", beyond the shallow "quantac exits 0":
+claim "the emitted C compiles", beyond the shallow "buildc exits 0":
 - Self-contained programs color_test, wc, base64: CONFIRMED (transpile + cl /c clean).
-- programs/calc: CONTRADICTED at transpile (mutability mismatch, calc.quanta:120).
+- programs/calc: CONTRADICTED at transpile (mutability mismatch, calc.bld:120).
 - Library modules spectrum, delta: transpile but the emitted C FAILS cl -- a real
   name-prefixing codegen bug (typedef `hdr_ColorPrimaries` but a bare
   `ColorPrimaries` field reference; same class for `BTreeMap` in delta).
-So "transpiles cleanly" (the 16 green .quanta modules in the organism check) does
+So "transpiles cleanly" (the 16 green .bld modules in the organism check) does
 NOT imply "emits compilable C". The membrane surfaced this; the codegen prefixing
-fix is open quantalang work. The organism gate intentionally keeps "transpiles"
+fix is open buildlang work. The organism gate intentionally keeps "transpiles"
 as the module bar (a real if shallow check); the deep check is a separate witness.

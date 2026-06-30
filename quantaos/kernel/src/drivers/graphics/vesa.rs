@@ -1,4 +1,4 @@
-//! VESA VBE (Video BIOS Extensions) Driver for QuantaOS
+//! VESA VBE (Video BIOS Extensions) Driver for BuildOS
 //!
 //! Provides framebuffer access through VESA BIOS calls and VBE 2.0+ features.
 

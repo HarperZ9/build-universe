@@ -1,19 +1,19 @@
 {
-  "name": "QUANTA UNIVERSE",
+  "name": "BUILD UNIVERSE",
   "version": "1.0.0",
   "build_date": "2025-12-18T03:55:16.303314",
   "modules": {
-    "quantalang": {
-      "name": "QuantaLang",
+    "buildlang": {
+      "name": "BuildLang",
       "tagline": "The Language of the Universe",
       "category": "core",
-      "source": "core/quantalang"
+      "source": "core/buildlang"
     },
-    "quantaos": {
-      "name": "QuantaOS",
+    "buildos": {
+      "name": "BuildOS",
       "tagline": "Hobby OS Kernel",
       "category": "core",
-      "source": "core/quantaos"
+      "source": "core/buildos"
     },
     "axiom": {
       "name": "Axiom",

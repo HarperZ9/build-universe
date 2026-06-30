@@ -1,4 +1,4 @@
-//! QuantaOS Read-Write Lock Implementation
+//! BuildOS Read-Write Lock Implementation
 //!
 //! Allows multiple readers or a single writer.
 

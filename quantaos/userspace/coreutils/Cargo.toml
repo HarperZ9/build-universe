@@ -1,5 +1,5 @@
 # ===============================================================================
-# QUANTAOS COREUTILS
+# BUILDOS COREUTILS
 # ===============================================================================
 # Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 # ===============================================================================
@@ -9,10 +9,10 @@ name = "coreutils"
 version = "1.0.0"
 edition = "2021"
 authors = ["Zain Dana Harper"]
-description = "Core Unix-like utilities for QuantaOS"
+description = "Core Unix-like utilities for BuildOS"
 
 [dependencies]
-libquanta = { path = "../libquanta" }
+libbuild = { path = "../libbuild" }
 
 [[bin]]
 name = "ls"

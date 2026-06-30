@@ -1,4 +1,4 @@
-//! QuantaOS Spinlock Implementation
+//! BuildOS Spinlock Implementation
 //!
 //! Spin-based locking primitives for interrupt handlers and
 //! other contexts where blocking is not possible.

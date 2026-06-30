@@ -1,7 +1,7 @@
 @echo off
 REM Build all programs using the SELF-HOSTED compiler (qcodegen)
-REM This proves QuantaLang compiles itself.
-REM Run from cmd.exe: cd C:\Users\Zain\QUANTA-UNIVERSE\programs && build_all_self.bat
+REM This proves BuildLang compiles itself.
+REM Run from cmd.exe: cd C:\Users\Zain\BUILD-UNIVERSE\programs && build_all_self.bat
 
 call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat" >nul 2>&1
 
@@ -13,7 +13,7 @@ set SKIP=0
 echo === Self-Hosted Build: all programs via qcodegen ===
 echo.
 
-for %%f in (*.quanta) do (
+for %%f in (*.bld) do (
     set "NAME=%%~nf"
     echo %%~nf | findstr /B "test_" >nul && (
         set /a SKIP+=1

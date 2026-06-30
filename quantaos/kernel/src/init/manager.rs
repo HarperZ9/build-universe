@@ -1,4 +1,4 @@
-//! QuantaOS Service Manager
+//! BuildOS Service Manager
 //!
 //! Main service manager that coordinates unit lifecycle.
 
@@ -45,9 +45,9 @@ impl Default for ManagerConfig {
     fn default() -> Self {
         Self {
             unit_paths: vec![
-                String::from("/etc/quantaos/system/"),
-                String::from("/run/quantaos/system/"),
-                String::from("/usr/lib/quantaos/system/"),
+                String::from("/etc/buildos/system/"),
+                String::from("/run/buildos/system/"),
+                String::from("/usr/lib/buildos/system/"),
             ],
             default_target: String::from("multi-user.target"),
             default_timeout_stop_sec: 90,

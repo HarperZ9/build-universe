@@ -1,5 +1,5 @@
 // ===============================================================================
-// QUANTAOS KERNEL - CONTROL GROUPS (CGROUPS) SUBSYSTEM
+// BUILDOS KERNEL - CONTROL GROUPS (CGROUPS) SUBSYSTEM
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================

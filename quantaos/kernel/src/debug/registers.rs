@@ -1,5 +1,5 @@
 // ===============================================================================
-// QUANTAOS KERNEL - REGISTER ACCESS FOR DEBUGGING
+// BUILDOS KERNEL - REGISTER ACCESS FOR DEBUGGING
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================

@@ -1,4 +1,4 @@
-//! QuantaOS Journal
+//! BuildOS Journal
 //!
 //! Binary logging system for system and service logs.
 

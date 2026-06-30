@@ -1,4 +1,4 @@
-//! QuantaOS GUI Event System
+//! BuildOS GUI Event System
 //!
 //! Input events, window events, and event dispatch.
 

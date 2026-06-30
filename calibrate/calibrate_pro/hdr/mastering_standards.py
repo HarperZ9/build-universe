@@ -11,7 +11,7 @@ Defines compliance specifications for major streaming and broadcast standards:
 These specifications are used for calibration target validation
 and professional compliance verification.
 
-Author: Zain Dana / Quanta
+Author: Zain Dana / Build
 License: MIT
 """
 

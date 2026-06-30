@@ -1,4 +1,4 @@
-//! QuantaOS Service Management
+//! BuildOS Service Management
 //!
 //! Service units represent running processes/daemons.
 

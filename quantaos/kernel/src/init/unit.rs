@@ -1,4 +1,4 @@
-//! QuantaOS Unit System
+//! BuildOS Unit System
 //!
 //! Base unit types and configuration for the init system.
 

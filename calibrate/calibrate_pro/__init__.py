@@ -8,11 +8,11 @@ A comprehensive display calibration application featuring:
 - Full HDR Suite (HDR10, HDR10+, HLG, Dolby Vision)
 - Professional GUI (PyQt6)
 
-Copyright (c) 2024-2025 Zain Dana Quanta
+Copyright (c) 2024-2025 Zain Dana Build
 """
 
 __version__ = "1.0.0"
-__author__ = "Zain Dana Quanta"
+__author__ = "Zain Dana Build"
 
 # Lazy imports to avoid circular dependencies
 def __getattr__(name):
