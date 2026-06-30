@@ -1,20 +1,33 @@
 # Quanta Universe v1.0.0
 
-> A physics-inspired software ecosystem - language, OS kernel, graphics engines, trading systems, and AI frameworks, all written in QuantaLang.
+![Quanta Universe ecosystem hero](docs/brand/quanta-universe-hero.svg)
+
+> Legacy Quanta Universe modules mapped into the current BuildLang / Project Telos ecosystem.
 
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![quantalang](https://img.shields.io/badge/quantalang-.quanta-orange.svg)
+![buildlang](https://img.shields.io/badge/buildlang-.bld-orange.svg)
 ![version](https://img.shields.io/badge/version-1.0.0-informational.svg)
 [![CI](https://github.com/HarperZ9/quanta-universe/actions/workflows/ci.yml/badge.svg)](https://github.com/HarperZ9/quanta-universe/actions/workflows/ci.yml)
 ![deps: none](https://img.shields.io/badge/deps-none-success.svg)
 [![part of: Quanta ecosystem](https://img.shields.io/badge/part_of-Quanta_ecosystem-00b3a4.svg)](https://github.com/HarperZ9/quanta-universe)
 
-A physics-inspired software ecosystem: programming language, operating system kernel, graphics engines, trading systems, and AI frameworks - all written in QuantaLang.
+A physics-inspired software ecosystem: programming language, operating system kernel, graphics engines, trading systems, and AI frameworks. The current public language/toolchain names are **BuildLang**, **`buildc`**, and **`.bld`**; this repository still contains historical `.quanta` modules that document the earlier Quanta Universe lineage.
+
+## Current status
+
+Quanta Universe is an alpha ecosystem archive and showcase, not a single
+installable product. Treat it as the Build ecosystem map: language experiments,
+color and rendering modules, OS/kernel work, finance models, calibration code,
+and organism verification tooling collected in one place.
+
+The compiler/toolchain lives in the separate BuildLang repository. This repo's
+local `.quanta` files are legacy source assets until they are migrated or
+bridged into `.bld`. `STATUS.md` is the canonical maturity ledger.
 
 ## Modules
 
 ### Core
-- **QuantaLang** - Multi-paradigm systems language with algebraic effects, ownership, and a production C backend (HLSL/GLSL/LLVM/x86-64/ARM64/WASM/SPIR-V backends exist but are experimental and do not yet emit runnable artifacts)
+- **BuildLang** - Multi-paradigm systems language with algebraic effects, ownership, and a production C backend (HLSL/GLSL/LLVM/x86-64/ARM64/WASM/SPIR-V backends exist but are experimental and do not yet emit runnable artifacts)
 - **QuantaOS** - Hobby OS kernel (x86-64, ext2/4, context switching, memory management)
 - **Axiom** - Neural architecture search and differentiable program synthesis
 
@@ -49,7 +62,7 @@ A physics-inspired software ecosystem: programming language, operating system ke
 
 ## Status
 
-**Alpha.** The QuantaLang compiler (Rust; 755 test functions in tree) is the most mature component. The C backend produces correct native binaries. HLSL/GLSL produce clean shader output. Other backends are experimental. The .quanta modules demonstrate the language's capabilities across domains. See [quantaos/STATUS.md](quantaos/STATUS.md) for kernel implementation state.
+**Alpha.** The BuildLang compiler (Rust; 755 test functions in tree) is the most mature component. The C backend produces correct native binaries. HLSL/GLSL produce clean shader output. Other backends are experimental. The historical `.quanta` modules demonstrate the language lineage across domains. See [quantaos/STATUS.md](quantaos/STATUS.md) for kernel implementation state.
 
 ### Publication Map
 
@@ -62,8 +75,8 @@ audience-facing module surface.
 ## Usage
 
 This is a multi-module ecosystem, not a single installable package. The two
-things you actually run are the `quantac` compiler (transpile/build `.quanta`
-modules and programs) and the Python organism tooling (`tools/verify_organism.py`,
+things you actually run are the BuildLang compiler/toolchain for source files
+and the Python organism tooling (`tools/verify_organism.py`,
 `tools/release_plan.py`). See **[USAGE.md](USAGE.md)** for install/build lines,
 the real commands, and worked examples. A runnable demo lives in
 [examples/demo/](examples/demo/).
@@ -74,19 +87,33 @@ Quick orientation:
 # 1. Verify which components actually build/pass on this machine (no compiler needed)
 python tools/verify_organism.py --quick
 
-# 2. Transpile a module or program to C with the quantac compiler (separate repo)
-quantac programs/echo.quanta --target c -o /dev/null
+# 2. Transpile a module or program to C with the BuildLang compiler (separate repo)
+buildc programs/echo.bld --target c -o /dev/null
 ```
 
-`quantac` comes from the separate [HarperZ9/quantalang](https://github.com/HarperZ9/quantalang)
+`buildc` comes from the separate [BuildLang compiler repo](https://github.com/HarperZ9/quantalang)
 repo (build it with `cargo build --release`); it is not bundled here.
+
+## For developers
+
+Use the organism tooling for this repo's own health checks:
+
+```bash
+python tools/verify_organism.py --quick
+python tools/release_plan.py
+git diff --check
+```
+
+When editing module metadata, keep `STATUS.md`, `tools/components.toml`,
+`tools/package-index.toml`, `USAGE.md`, and this README aligned. Do not claim
+whole-ecosystem buildability unless `tools/verify_organism.py` proves it.
 
 ## Caveats
 
-- **This ecosystem does not compile as a whole.** Each module depends on the QuantaLang compiler (separate repo: [HarperZ9/quantalang](https://github.com/HarperZ9/quantalang)). The compiler can compile individual modules but cross-module resolution is not yet complete.
+- **This ecosystem does not compile as a whole.** Each module depends on the BuildLang compiler (separate repo: [HarperZ9/quantalang](https://github.com/HarperZ9/quantalang)). The compiler can compile individual modules but cross-module resolution is not yet complete.
 - **QuantaOS** is an educational hobby kernel, not a production OS. See [quantaos/STATUS.md](quantaos/STATUS.md).
 - **Axiom** is an experimental proof-of-concept for differentiable program synthesis.
-- The `.quanta` source files serve as both working code and language specification - demonstrating QuantaLang's syntax across domains.
+- The `.quanta` source files serve as historical working code and language specification material while the current public surface moves to `.bld`.
 
 ## Ground Truth
 

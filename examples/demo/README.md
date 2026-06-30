@@ -1,6 +1,6 @@
-# Demo — hello_quanta
+# Demo -- hello_quanta
 
-> **Best-effort demo — not runtime-verified by author.**
+> **Best-effort demo -- not runtime-verified by author.**
 > Commands use only the invocation forms that appear verbatim elsewhere in this
 > repo (`programs/build_all.bat`, `programs/build.bat`, `tools/components.toml`,
 > `ENGINEERING.md`). The expected output below is illustrative; it was not

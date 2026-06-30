@@ -1,4 +1,4 @@
-# QUANTA-UNIVERSE — Module Maturity Ledger (Canonical)
+# QUANTA-UNIVERSE -- Module Maturity Ledger (Canonical)
 
 Last verified: 2026-06-05. This file is the single source of truth for module
 reality. Where README, ENGINEERING, CHANGELOG, UNIVERSE.toml, or CATALOG.json
@@ -16,7 +16,7 @@ source audit: real, correct, extractable logic vs scaffolding/showcase.
 - ~6 GB of local disk is Cargo target/ build cache (already git-ignored; the
   compiler dir quantalang/ is itself git-ignored, a separate repo).
 
-## Tier 1 — Load-bearing, real, extractable (the engine)
+## Tier 1 -- Load-bearing, real, extractable (the engine)
 
 | Component | Score | What is real |
 |---|---|---|
@@ -27,7 +27,7 @@ source audit: real, correct, extractable logic vs scaffolding/showcase.
 | delta (options pricing) | 8.0 | Black-Scholes exact, full Greeks, Newton-Raphson + Brent IV |
 | foundation math / crypto | 8.0 / 7.0 | SHA-256 FIPS 180-4 correct; trig/pow/log via intrinsics |
 
-## Tier 2 — Real kernel inside scaffolding (extract the core)
+## Tier 2 -- Real kernel inside scaffolding (extract the core)
 
 | Component | Score | Real core | Scaffolding |
 |---|---|---|---|
@@ -41,7 +41,7 @@ source audit: real, correct, extractable logic vs scaffolding/showcase.
 | axiom | 5.0 | Forward-mode dual-number autodiff correct | Mutation ops stubbed; MAML/CMA-ES sketched |
 | foundation collections | 6.0 | Vec correct | HashMap/BTreeMap sparse; regex executor missing |
 
-## Tier 3 — Sketch / showcase (design intent, not engineering)
+## Tier 3 -- Sketch / showcase (design intent, not engineering)
 
 These remain in-tree (interlaced into build/interconnect wiring) but are not to
 be represented as implemented engineering.

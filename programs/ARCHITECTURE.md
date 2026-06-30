@@ -39,7 +39,7 @@ Section                          Lines         Functions   Purpose
 
 ### The DB Struct (139 fields)
 
-All engine state lives in one flat struct. This is a QuantaLang constraint, not a design preference — the C codegen cannot reliably emit struct field assignments on local variables.
+All engine state lives in one flat struct. This is a QuantaLang constraint, not a design preference -- the C codegen cannot reliably emit struct field assignments on local variables.
 
 The struct fields are grouped into:
 
@@ -150,11 +150,11 @@ Sorted-array indexes with binary search:
 
 | Decision | Rationale |
 |----------|-----------|
-| Single flat struct | QuantaLang codegen limitation — no reliable local struct field assignment |
+| Single flat struct | QuantaLang codegen limitation -- no reliable local struct field assignment |
 | String pool | `Vec<String>` codegen is incomplete |
 | Text file format | Human-readable, simple parsing, adequate for target scale |
 | Selection sort | O(n^2) but trivial to implement correctly without stdlib sort |
-| Full array rebuilds | No in-place Vec mutation in QuantaLang — must reconstruct |
+| Full array rebuilds | No in-place Vec mutation in QuantaLang -- must reconstruct |
 | No B-tree | Sorted arrays sufficient; B-tree in flat arrays not justified |
 | Embedded parser state | No separate AST struct; parsed state lives in DB fields |
 

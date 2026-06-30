@@ -4,9 +4,10 @@ Quanta Universe is a **mixed-language ecosystem**, not a single installable
 package. There is no `pip install` / `npm install` / `cargo install` for the
 whole repo. The two surfaces you actually invoke are:
 
-1. **`quantac`** — the QuantaLang compiler (Rust), which transpiles a `.quanta`
-   module or program to C, optionally compiled further to a native binary.
-2. **The Python organism tooling** in `tools/` — `verify_organism.py` (ground-truth
+1. **Compiler path** -- historical fixtures in this repo use `quantac` over
+   `.quanta` modules; the current public toolchain name is BuildLang / `buildc`
+   over `.bld` source.
+2. **The Python organism tooling** in `tools/` -- `verify_organism.py` (ground-truth
    build/test report) and `release_plan.py` (split-repo release view).
 
 > Authoritative per-module reality lives in [STATUS.md](STATUS.md). Where any doc
@@ -21,10 +22,10 @@ whole repo. The two surfaces you actually invoke are:
 | Surface | Requirement |
 |---------|-------------|
 | `quantac` compiler | Build from the separate repo [HarperZ9/quantalang](https://github.com/HarperZ9/quantalang): `cargo build --release` → `quantalang/compiler/target/release/quantac.exe`. Not bundled here. |
-| Native `.exe` from generated C | A C toolchain — MSVC `cl.exe` (Visual Studio 2022 Build Tools) or `gcc`. |
+| Native `.exe` from generated C | A C toolchain -- MSVC `cl.exe` (Visual Studio 2022 Build Tools) or `gcc`. |
 | Organism / release tooling | Python 3.11+ (`tomllib` is used, stdlib since 3.11). No third-party deps. |
 
-The organism tooling runs with no compiler present — components that need
+The organism tooling runs with no compiler present -- components that need
 `quantac` or MSVC report `SKIP` honestly rather than failing.
 
 ---
@@ -32,10 +33,10 @@ The organism tooling runs with no compiler present — components that need
 ## Install / build line
 
 ```sh
-# Organism tooling — nothing to install, just run with Python 3.11+
+# Organism tooling -- nothing to install, just run with Python 3.11+
 python tools/verify_organism.py --quick
 
-# Compiler (separate repo) — build once, then put quantac on PATH
+# Compiler (separate repo) -- build once, then put quantac on PATH
 git clone https://github.com/HarperZ9/quantalang
 cd quantalang/compiler && cargo build --release
 # binary: quantalang/compiler/target/release/quantac(.exe)
@@ -55,7 +56,7 @@ standard C compiler. (From `programs/README.md`.)
 
 ---
 
-## Example 1 — Check what actually builds (no compiler required)
+## Example 1 -- Check what actually builds (no compiler required)
 
 ```sh
 python tools/verify_organism.py --quick
@@ -66,7 +67,7 @@ reports observed results. Exit code = number of failures (so it doubles as a CI
 gate). `--quick` skips the heavy compiler build; `--json` emits a machine-readable
 summary.
 
-Expected output (illustrative — shape per the script's own formatter; the exact
+Expected output (illustrative -- shape per the script's own formatter; the exact
 PASS/SKIP set depends on whether `quantac` and MSVC are present locally):
 
 ```
@@ -83,13 +84,13 @@ ORGANISM: N passed, 0 failed, M skipped
 ```
 
 When `quantac` is absent, the `.quanta` modules show `SKIP:no-quantac` rather
-than failing — that is the intended honest behavior, not an error.
+than failing -- that is the intended honest behavior, not an error.
 
 ---
 
-## Example 2 — Transpile a self-contained program to C
+## Example 2 -- Transpile a self-contained program to C
 
-`programs/echo.quanta` is `qecho`, a self-contained `echo` clone — one of the
+`programs/echo.quanta` is `qecho`, a self-contained `echo` clone -- one of the
 `programs/` set that `build_all.bat` builds to native `.exe` (STATUS.md Tier 1
 counts 56 MSVC exes; the individually codegen-confirmed self-contained programs
 named there are `color_test`, `wc`, and `base64`).
@@ -110,7 +111,7 @@ non-zero exit.
 
 ---
 
-## Example 3 — Transpile and build a program to a native binary (Windows + MSVC)
+## Example 3 -- Transpile and build a program to a native binary (Windows + MSVC)
 
 ```bat
 cd programs
@@ -129,7 +130,7 @@ quantac programs\echo.quanta            REM -> programs\echo.c
 programs\build.bat programs\echo.c qecho.exe
 ```
 
-Expected output (illustrative — per the scripts' own echoes):
+Expected output (illustrative -- per the scripts' own echoes):
 
 ```
 === Building all QuantaLang programs ===
@@ -149,7 +150,7 @@ Expected output (illustrative — per the scripts' own echoes):
 
 ---
 
-## Example 4 — Verify a single module transpiles
+## Example 4 -- Verify a single module transpiles
 
 Each domain module exposes `lib.quanta`. The organism check for a module is
 exactly its `verify` command from `tools/components.toml`, e.g. for `spectrum`:
@@ -160,7 +161,7 @@ quantac lib.quanta --target c -o /dev/null    # nul on Windows
 ```
 
 Exit 0 means the module transpiles to C standalone. This is a `build`-level
-check (transpile/exit-0), not proof the emitted C compiles end-to-end — see the
+check (transpile/exit-0), not proof the emitted C compiles end-to-end -- see the
 codegen-oracle note in STATUS.md for that deeper, separate witness.
 
 ---

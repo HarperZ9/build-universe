@@ -1,4 +1,4 @@
-# QUANTA-UNIVERSE — Engineering Heatmap & Action Plan
+# QUANTA-UNIVERSE -- Engineering Heatmap & Action Plan
 
 > Ground-truth concreteness assessment of the foundational repo.
 > Method: 5 parallel source audits (compiler, kernel, rendering, finance/AI/tools,

@@ -1,4 +1,4 @@
-# Quanta Family — Lineage and Interlacing (Canonical)
+# Quanta Family -- Lineage and Interlacing (Canonical)
 
 Last verified: 2026-06-05. Maps the related workspaces, how the mixed languages
 hand off to each other, and the foundational-to-derivative direction. Single
@@ -14,7 +14,7 @@ source of truth for the family tree.
 | quanta-color | APPS submodule | Python | HarperZ9/quanta-color | Color product (published) |
 | calibrate-pro | APPS submodule | Python + vendored C/C++ | HarperZ9/calibrate-pro | Display-calibration product (shipped exe) |
 | quanta-finance / -oracle / -engine / -ui / -ecosystem | APPS submodules | Python | HarperZ9 | Finance / forecast / engine / UI / meta |
-| aurora | referenced only | Lua (intended) | — | No source present locally |
+| aurora | referenced only | Lua (intended) | -- | No source present locally |
 
 ## Lineage direction (evidence-backed)
 
@@ -30,7 +30,7 @@ QUANTA-UNIVERSE (foundational) -> APPS (derivative productization).
 
 Correction to a common misstatement: APPS does NOT import the .quanta modules
 (Python cannot). APPS is a parallel, hand-written re-implementation in Python of
-the same algorithms — a productization, not a binding.
+the same algorithms -- a productization, not a binding.
 
 ## How the languages interlace (handoff chain)
 
@@ -69,7 +69,7 @@ Module correspondence (UNIVERSE .quanta  to  APPS Python):
 | quanta-ui | 17 | 17 | match |
 | aurora | Lua | 0 | no source present |
 
-## Combining the family — recommendation
+## Combining the family -- recommendation
 
 Do NOT physically merge git histories or collapse the repos yet. The pieces are
 intentionally separated by language and release cadence (UNIVERSE = spec,
@@ -78,12 +78,12 @@ merge would shred the submodule structure and the .quanta/Python boundary.
 
 Recommended combination mechanism, safest first:
 
-1. Lineage manifest (this file) — one authoritative map. Done.
-2. Shared golden-vector tests — extract the verifiable kernels (color, options,
+1. Lineage manifest (this file) -- one authoritative map. Done.
+2. Shared golden-vector tests -- extract the verifiable kernels (color, options,
    SARIMA, SHA-256) into language-neutral test vectors that BOTH the .quanta and
    the Python implementations must satisfy. This is the real combine: it binds
    the two language families by behavior, not by moving files.
-3. Optional umbrella repo — add UNIVERSE and APPS as submodules of a thin parent
+3. Optional umbrella repo -- add UNIVERSE and APPS as submodules of a thin parent
    (or a git subtree) only if a single clone is required. Reversible.
 
 Physical history merge is out of scope until explicitly requested.
