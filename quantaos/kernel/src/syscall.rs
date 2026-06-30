@@ -1,5 +1,5 @@
 // ===============================================================================
-// QUANTAOS KERNEL - SYSTEM CALLS
+// BUILDOS KERNEL - SYSTEM CALLS
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================
@@ -113,7 +113,7 @@ pub const SYS_MQ_UNLINK: u64 = 241;
 pub const SYS_MQ_TIMEDSEND: u64 = 242;
 pub const SYS_MQ_TIMEDRECEIVE: u64 = 243;
 
-// AI-specific syscalls (500 series) - QuantaOS exclusive
+// AI-specific syscalls (500 series) - BuildOS exclusive
 pub const SYS_AI_QUERY: u64 = 500;
 pub const SYS_AI_INFER: u64 = 501;
 pub const SYS_AI_TRAIN_STEP: u64 = 502;

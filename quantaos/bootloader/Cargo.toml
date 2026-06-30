@@ -1,16 +1,16 @@
 # ===============================================================================
-# QUANTAOS BOOTLOADER
+# BUILDOS BOOTLOADER
 # ===============================================================================
 # Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 # ===============================================================================
 
 [package]
-name = "quantaos-bootloader"
+name = "buildos-bootloader"
 version = "2.0.0"
 edition = "2021"
 authors = ["Zain Dana Harper"]
 license = "Proprietary"
-description = "UEFI bootloader for QuantaOS"
+description = "UEFI bootloader for BuildOS"
 
 [dependencies]
 uefi = "0.31"

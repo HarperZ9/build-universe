@@ -9,7 +9,7 @@ State-of-the-art LUT generation matching and exceeding ColourSpace capabilities:
 - HDR LUT support (PQ/HLG encoding)
 - Perceptual smoothing and optimization
 
-Author: Zain Dana / Quanta
+Author: Zain Dana / Build
 License: MIT
 """
 

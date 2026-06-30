@@ -329,7 +329,7 @@ reliability table + ECE; **hard gate `count(confidence=high ∧ contradicted)==0
 
 ## 4. The Cross-Domain Membrane PROTOCOL — one schema, five organs
 
-The whole point of QUANTA being an *organism*: the same four-part membrane schema instantiates across
+The whole point of BUILD being an *organism*: the same four-part membrane schema instantiates across
 every stateful subsystem, so each module exports the **same observable contract** and a cross-module
 read is as local as a within-module read. The unified record:
 
@@ -350,12 +350,12 @@ MembraneRecord {
 }
 ```
 
-| Organ (QUANTA module) | binding-ledger | output-metrics (eyes) | frame-log epoch | invariants |
+| Organ (BUILD module) | binding-ledger | output-metrics (eyes) | frame-log epoch | invariants |
 |---|---|---|---|---|
 | **GPU** (frametrace/RAW) | SRV/RTV/DSV/UAV per slot per pass + setter seq | mean/min/max/NaN/%black/saturation/diff-vs-vanilla | `Present` → frame_id | hazard, restore-verify, range, ping-pong/warmup |
 | **Compiler / module graph** (`entangle`, `foundation`, `neutrino`) | symbol→definition, import edges, ABI discriminant table | compiles-clean %, unresolved-symbol count, `FT_ABI_HASH` | build invocation / commit sha | ABI-trinity pin, no-unresolved, no-cycle, header==rlib |
 | **Heap / allocator** | resource→`alloc_id`+generation, live window | bytes-live, frag%, leak count | alloc epoch / GC tick | use-after-free (gen<current), aliased-read-write, no-double-free |
-| **Threads / contexts** (quantaos seqlock) | lock→holder, context_id→bindings | contention count, queue depth | scheduler tick / `ExecuteCommandList` | tear-free (seqlock even-read), cross-context-leak, no-deadlock-order |
+| **Threads / contexts** (buildos seqlock) | lock→holder, context_id→bindings | contention count, queue depth | scheduler tick / `ExecuteCommandList` | tear-free (seqlock even-read), cross-context-leak, no-deadlock-order |
 | **Build / integration** ("organism" health-check) | artifact→source sha, dep edges | tests-green, coverage%, stale-fingerprint count | session start / CI run | corpus-preverify, manifest sha, freshness pin |
 
 **Why this makes them one organism:** every organ emits `(seq, epoch, checkpoint, bindings, metrics,

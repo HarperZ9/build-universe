@@ -1,4 +1,4 @@
-//! QuantaOS ANSI Escape Sequence Parser
+//! BuildOS ANSI Escape Sequence Parser
 //!
 //! Comprehensive parser for ANSI X3.64 / ECMA-48 escape sequences,
 //! including DEC private sequences and xterm extensions.

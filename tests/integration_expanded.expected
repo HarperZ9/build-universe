@@ -1,4 +1,4 @@
-=== QUANTA-UNIVERSE Cross-Module Integration Tests ===
+=== BUILD-UNIVERSE Cross-Module Integration Tests ===
 
 --- 1. Foundation -> Spectrum ---
   foundation -> spectrum XYZ roundtrip: OK

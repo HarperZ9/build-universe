@@ -1,5 +1,5 @@
 // ===============================================================================
-// QUANTAOS KERNEL - UTS NAMESPACE
+// BUILDOS KERNEL - UTS NAMESPACE
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================
@@ -39,7 +39,7 @@ impl UtsNamespace {
         Self {
             id: next_ns_id(),
             user_ns,
-            hostname: RwLock::new("quantaos".into()),
+            hostname: RwLock::new("buildos".into()),
             domainname: RwLock::new("(none)".into()),
         }
     }
@@ -98,7 +98,7 @@ impl UtsNamespace {
     /// Get uname info
     pub fn uname(&self) -> UtsName {
         UtsName {
-            sysname: "QuantaOS".into(),
+            sysname: "BuildOS".into(),
             nodename: self.hostname.read().clone(),
             release: "2.0.0".into(),
             version: "#1 SMP PREEMPT".into(),

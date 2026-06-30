@@ -1,4 +1,4 @@
-//! QuantaOS Mutex Implementation
+//! BuildOS Mutex Implementation
 //!
 //! A mutual exclusion primitive for protecting shared data.
 

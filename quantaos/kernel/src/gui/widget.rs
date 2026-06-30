@@ -1,4 +1,4 @@
-//! QuantaOS GUI Widget System
+//! BuildOS GUI Widget System
 //!
 //! Base widget types and common UI controls.
 

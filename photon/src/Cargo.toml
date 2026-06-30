@@ -11,7 +11,7 @@ edition = "2021"
 authors = ["Zain Dana Harper"]
 description = "Universal Graphics Hook Framework - DX9/DX10/DX11/DX12/Vulkan/OpenGL"
 license = "Proprietary"
-repository = "https://github.com/quantauniverse/photon"
+repository = "https://github.com/builduniverse/photon"
 
 [lib]
 name = "photon_hook"

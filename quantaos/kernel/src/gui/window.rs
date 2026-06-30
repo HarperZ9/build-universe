@@ -1,4 +1,4 @@
-//! QuantaOS Window Management
+//! BuildOS Window Management
 //!
 //! Window creation, management, and operations.
 

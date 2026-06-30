@@ -1,4 +1,4 @@
-//! QuantaOS Barrier Implementation
+//! BuildOS Barrier Implementation
 //!
 //! Synchronization barrier for coordinating multiple threads.
 

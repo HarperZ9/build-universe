@@ -1,5 +1,5 @@
 // ===============================================================================
-// QUANTAOS KERNEL - TCP (TRANSMISSION CONTROL PROTOCOL)
+// BUILDOS KERNEL - TCP (TRANSMISSION CONTROL PROTOCOL)
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================

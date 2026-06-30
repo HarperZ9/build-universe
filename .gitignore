@@ -1,5 +1,5 @@
-# QuantaLang compiler has its own repo (HarperZ9/quantalang)
-quantalang/
+# BuildLang compiler has its own repo (HarperZ9/buildlang)
+buildlang/
 
 # Calibrate Pro Python artifacts
 calibrate/__pycache__/
@@ -30,7 +30,7 @@ test_simple.c
 
 # Large/generated directories
 harper-engine-complete.zip
-quanta-v4.2.0/
+build-v4.2.0/
 
 # IDE
 .vscode/
@@ -42,7 +42,7 @@ quanta-v4.2.0/
 # OS
 .DS_Store
 Thumbs.db
-# Generated C output from quantac compilation
+# Generated C output from buildc compilation
 */lib.c
 tests/programs/*.c
 programs/*.c

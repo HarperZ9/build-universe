@@ -1,5 +1,5 @@
 // ===============================================================================
-// QUANTAOS KERNEL - ARP (ADDRESS RESOLUTION PROTOCOL)
+// BUILDOS KERNEL - ARP (ADDRESS RESOLUTION PROTOCOL)
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================

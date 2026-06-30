@@ -1,4 +1,4 @@
-name: QUANTA-UNIVERSE CI
+name: BUILD-UNIVERSE CI
 
 on:
   push:
@@ -13,12 +13,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Count .quanta files
+      - name: Count .bld files
         run: |
-          count=$(find . -name "*.quanta" -type f | wc -l)
-          echo "Found $count .quanta files"
+          count=$(find . -name "*.bld" -type f | wc -l)
+          echo "Found $count .bld files"
           if [ "$count" -lt 100 ]; then
-            echo "ERROR: Expected 100+ .quanta files, found $count"
+            echo "ERROR: Expected 100+ .bld files, found $count"
             exit 1
           fi
 
@@ -35,12 +35,12 @@ jobs:
       - name: Check for secrets
         run: |
           ! grep -rE "(api[_-]?key|secret|password|token)\s*=\s*['\"][^'\"]{8,}['\"]" \
-            --include="*.quanta" --include="*.toml" --include="*.md" \
-            --exclude-dir=.git --exclude-dir=quantalang --exclude-dir=harper-engine . \
+            --include="*.bld" --include="*.toml" --include="*.md" \
+            --exclude-dir=.git --exclude-dir=buildlang --exclude-dir=harper-engine . \
             || true
 
   lint:
-    name: Lint .quanta files
+    name: Lint .bld files
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -53,10 +53,10 @@ jobs:
               echo "WARNING: Non-UTF-8 encoding: $f"
               bad=$((bad + 1))
             fi
-          done < <(find . -name "*.quanta" -type f | head -50)
+          done < <(find . -name "*.bld" -type f | head -50)
           echo "Checked 50 files, $bad encoding issues"
 
       - name: Check for trailing whitespace
         run: |
-          count=$(find . -name "*.quanta" -type f -exec grep -l '[[:space:]]$' {} \; | wc -l)
+          count=$(find . -name "*.bld" -type f -exec grep -l '[[:space:]]$' {} \; | wc -l)
           echo "Files with trailing whitespace: $count"

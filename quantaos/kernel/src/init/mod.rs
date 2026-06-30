@@ -1,4 +1,4 @@
-//! QuantaOS Init System
+//! BuildOS Init System
 //!
 //! System initialization and service management, similar to systemd.
 //! Provides:
@@ -69,7 +69,7 @@ pub fn init() {
         // Register built-in services
         register_builtin_services(mgr);
 
-        // Load unit files from /etc/quantaos/system/
+        // Load unit files from /etc/buildos/system/
         mgr.load_units();
     }
 }

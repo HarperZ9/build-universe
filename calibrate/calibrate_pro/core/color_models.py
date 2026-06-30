@@ -11,7 +11,7 @@ CIELAB/CIEDE2000 for HDR and WCG applications:
 These models are critical for accurate color difference calculation in HDR
 where traditional CIELAB breaks down above 100 nits.
 
-Author: Zain Dana / Quanta
+Author: Zain Dana / Build
 License: MIT
 """
 

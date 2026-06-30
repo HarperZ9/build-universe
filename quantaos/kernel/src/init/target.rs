@@ -1,4 +1,4 @@
-//! QuantaOS Target Management
+//! BuildOS Target Management
 //!
 //! Targets are synchronization points that group units together,
 //! similar to runlevels in SysV init.

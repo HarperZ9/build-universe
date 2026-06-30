@@ -1,4 +1,4 @@
-//! QuantaOS Console Driver
+//! BuildOS Console Driver
 //!
 //! Low-level console output for early boot and kernel messages.
 

@@ -1,57 +1,57 @@
-# Quanta Ecosystem — Engineering Runbook
+# Build Ecosystem — Engineering Runbook
 
-Last verified: 2026-06-05. Each .quanta module transpiles to C individually; whole-ecosystem cross-module resolution is incomplete and self-hosting is not yet achieved. 56 native programs verified MSVC-clean (65 sources in programs/). Compiler: 612 tests pass / 0 fail on cargo test (755 #[test] annotations across binaries, incl. ignored/multi-bin). See STATUS.md for per-module maturity. No C toolchain is present locally, so native execution of generated C was not re-verified.
+Last verified: 2026-06-05. Each .bld module transpiles to C individually; whole-ecosystem cross-module resolution is incomplete and self-hosting is not yet achieved. 56 native programs verified MSVC-clean (65 sources in programs/). Compiler: 612 tests pass / 0 fail on cargo test (755 #[test] annotations across binaries, incl. ignored/multi-bin). See STATUS.md for per-module maturity. No C toolchain is present locally, so native execution of generated C was not re-verified.
 
 ## Quick Reference
 
 | Repo | Tests | CI | Release |
 |------|-------|----|---------|
-| quantalang | 612 pass / 0 fail | clippy + fmt + test + e2e color self-check | v1.0.0 (quantac.exe) |
+| buildlang | 612 pass / 0 fail | clippy + fmt + test + e2e color self-check | v1.0.0 (buildc.exe) |
 | calibrate-pro | 228 Python | ruff + pytest (Ubuntu + Windows) | v1.0.0 (standalone exe) |
-| quanta-color | 281 Python | ruff + pytest | v1.0.0 |
-| quanta-universe | — | file validation | v1.0.0 |
-| quanta-finance | 142 Python | ruff + pytest | — |
-| quanta-oracle | 187 Python | ruff + pytest | — |
-| quanta-engine | 173 Python | ruff + pytest (stubs for cross-deps) | — |
-| quanta-ui | 17 Python | ruff + pytest (needs libEGL on Linux) | — |
-| quanta-ecosystem | — | sdist build validation | — |
+| build-color | 281 Python | ruff + pytest | v1.0.0 |
+| build-universe | — | file validation | v1.0.0 |
+| build-finance | 142 Python | ruff + pytest | — |
+| build-oracle | 187 Python | ruff + pytest | — |
+| build-engine | 173 Python | ruff + pytest (stubs for cross-deps) | — |
+| build-ui | 17 Python | ruff + pytest (needs libEGL on Linux) | — |
+| build-ecosystem | — | sdist build validation | — |
 | aurora | no source | referenced only; no .lua source present locally | — |
 
 ## When CI Fails
 
-### quantalang
+### buildlang
 - **clippy fails**: Check `-D clippy::correctness`. Style/perf/complexity are allowed.
 - **fmt fails**: Run `cargo fmt` locally, commit.
 - **test fails**: Run `cargo test -- --skip spirv` locally. 3 SPIR-V tests are skipped (need spirv-val).
-- **e2e compilation fails**: A .quanta program doesn't compile. Check if a type system change broke it.
+- **e2e compilation fails**: A .bld program doesn't compile. Check if a type system change broke it.
 - **color_test fails**: The self-verifying binary disagrees with CIE 1976. Check float codegen.
 
 ### calibrate-pro
-- **quanta-color not found**: It's installed via `git+https://github.com/HarperZ9/quanta-color.git`. If quanta-color CI is red, calibrate-pro will fail too.
+- **build-color not found**: It's installed via `git+https://github.com/HarperZ9/build-color.git`. If build-color CI is red, calibrate-pro will fail too.
 - **Windows-only test fails on Linux**: Tests using `ctypes.windll` are skipped on Linux. If new Windows tests are added, mark them `@pytest.mark.skipif(sys.platform != "win32")`.
 
-### quanta-engine
-- **Cross-project imports fail**: Tests that import `quanta_finance` or `quanta_oracle` are skipped in CI (private repos). Run locally with all packages installed.
+### build-engine
+- **Cross-project imports fail**: Tests that import `build_finance` or `build_oracle` are skipped in CI (private repos). Run locally with all packages installed.
 - **Timing tests fail on Windows**: Rate-limiting tests are skipped on Windows CI.
 
 ### aurora
 - **Lua module not found**: Ensure `LUA_PATH="./?.lua;./?/init.lua;;"` is set.
 - **Lua 5.1 syntax error**: Don't use `or` as standalone expression statements. Use `if not ... then` chains.
 
-## Adding a New .quanta Program
+## Adding a New .bld Program
 
 1. Write the program in `programs/`
-2. Verify it compiles: `quantac your_program.quanta --target c -o /dev/null`
+2. Verify it compiles: `buildc your_program.bld --target c -o /dev/null`
 3. If it uses `pow()`, `sqrt()`, or float division — verify `1.0/3.0` produces `0.333`, not `0`
 4. If it calls methods defined later in the same impl block — move the callee above the caller
 5. Don't use `&str` as function parameters (codegen bug: value vs pointer)
 6. Commit and push — CI will verify
 
-## Adding a New QUANTA-UNIVERSE Module
+## Adding a New BUILD-UNIVERSE Module
 
-1. Create `your_module/lib.quanta`
+1. Create `your_module/lib.bld`
 2. Use `pub mod name {` not `pub module std::name {`
-3. Test compilation: `quantac your_module/lib.quanta --target c -o /dev/null`
+3. Test compilation: `buildc your_module/lib.bld --target c -o /dev/null`
 4. Common blockers:
    - `pub module std::X` → parsed as `mod std`, use `pub mod X`
    - Unicode box characters in comments → cause macro expansion errors
@@ -68,11 +68,11 @@ Last verified: 2026-06-05. Each .quanta module transpiles to C individually; who
 - **Struct literals in some contexts**: `Foo { field: value }` inside deeply nested expressions may be parsed as a block instead of a struct literal.
 
 ### Compiler — Verified resolved / docs were stale (2026-06-05)
-Empirically re-tested by compiling minimal repros with `quantac --target c`. Each item below, previously listed as an active limitation, now compiles:
+Empirically re-tested by compiling minimal repros with `buildc --target c`. Each item below, previously listed as an active limitation, now compiles:
 - ~~&str parameters~~ — `&str` params compile with correct value semantics.
 - ~~Infinite type false positive~~ — a fn taking `&StructType` and returning a struct literal of that type compiles.
 - ~~Trait method dispatch on self~~ — default trait methods calling `self.method()` compile.
-- ~~Self as unit struct constructor~~ — **FIXED this session**: `fn new() -> Self { Self }` now type-checks and lowers to a valid unit construction `(T){0}` (previously emitted invalid C: `return Self;`). quantalang commit 8d83d74 (branch feat/phase1-generics); regression test `tests/programs/132_unit_self_constructor`.
+- ~~Self as unit struct constructor~~ — **FIXED this session**: `fn new() -> Self { Self }` now type-checks and lowers to a valid unit construction `(T){0}` (previously emitted invalid C: `return Self;`). buildlang commit 8d83d74 (branch feat/phase1-generics); regression test `tests/programs/132_unit_self_constructor`.
 - Also verified to type-check and emit C (native run NOT verified — no local C toolchain): generic methods returning `Self`, generic enum methods, and heap types (`String`) in enum variants.
 
 Caveat: "compiles" here means type-check + C emission succeed; with no local C compiler, native execution of the emitted C was not verified.
@@ -82,7 +82,7 @@ Caveat: "compiles" here means type-check + C emission succeed; with no local C c
 - ~~Enum typedef redefinition~~ — Enum struct body uses `struct X {}` not `typedef struct X {} X`.
 - ~~Intrinsic_ prefix in C output~~ — `intrinsic::trunc` etc. now mapped to C stdlib (trunc, exp2, asin...).
 - ~~Vec method dispatch~~ — `.push()/.len()/.pop()/.get()` emit typed runtime calls.
-- ~~Vec subscript on QuantaVecHandle~~ — `vec[i]` emits `quanta_hvec_get_<type>()`.
+- ~~Vec subscript on BuildVecHandle~~ — `vec[i]` emits `build_hvec_get_<type>()`.
 - ~~Missing ctype.h~~ — toupper/tolower/isspace now compile.
 - **64/65 programs compile with MSVC 19.50 zero errors**
 - **7 native executables verified** (color_test 12/12 pass, wc, calc, base64, basename, cmp, grep)
@@ -120,7 +120,7 @@ Caveat: "compiles" here means type-check + C emission succeed; with no local C c
 - **Rectangle collision**: User type `Rectangle` collides with Windows API `wingdi.h`. Avoid this name.
 
 ### Python APPS
-- **quanta-color not on PyPI**: Upload failed. Install from git.
+- **build-color not on PyPI**: Upload failed. Install from git.
 - **calibrate-pro monolithic files**: 3 files exceed 300 lines (2,736 / 2,334 / 2,036). Refactoring planned.
 - **GUI tests on Linux**: PyQt6 needs `libegl1 libxkbcommon0` on Ubuntu CI.
 

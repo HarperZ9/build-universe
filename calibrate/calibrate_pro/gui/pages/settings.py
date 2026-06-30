@@ -23,7 +23,7 @@ from calibrate_pro.gui.app import C, Card, Heading, Stat
 # Constants
 # =============================================================================
 
-APP_ORG = "Quanta Universe"
+APP_ORG = "Build Universe"
 APP_NAME = "Calibrate Pro"
 APP_VERSION = "1.0.0"
 
@@ -360,11 +360,11 @@ class SettingsPage(QWidget):
         sep2.setStyleSheet(f"background: {C.BORDER};")
         about_layout.addWidget(sep2)
 
-        author_label = QLabel("Zain Dana Quanta")
+        author_label = QLabel("Zain Dana Build")
         author_label.setStyleSheet(f"font-size: 12px; color: {C.TEXT};")
         about_layout.addWidget(author_label)
 
-        copyright_label = QLabel("Copyright 2024-2026 Quanta Universe. All rights reserved.")
+        copyright_label = QLabel("Copyright 2024-2026 Build Universe. All rights reserved.")
         copyright_label.setStyleSheet(f"font-size: 10px; color: {C.TEXT3};")
         about_layout.addWidget(copyright_label)
 

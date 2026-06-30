@@ -1,10 +1,10 @@
 // ===============================================================================
-// QUANTAOS COREUTILS - COMMON LIBRARY
+// BUILDOS COREUTILS - COMMON LIBRARY
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================
 //
-// Shared functionality for QuantaOS coreutils
+// Shared functionality for BuildOS coreutils
 //
 // ===============================================================================
 

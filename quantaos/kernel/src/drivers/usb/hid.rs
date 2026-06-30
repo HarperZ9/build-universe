@@ -1,5 +1,5 @@
 // ===============================================================================
-// QUANTAOS KERNEL - USB HID (HUMAN INTERFACE DEVICE) DRIVER
+// BUILDOS KERNEL - USB HID (HUMAN INTERFACE DEVICE) DRIVER
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================

@@ -1,5 +1,5 @@
 // ===============================================================================
-// QUANTAOS KERNEL - RANDOM NUMBER GENERATOR SUBSYSTEM
+// BUILDOS KERNEL - RANDOM NUMBER GENERATOR SUBSYSTEM
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================

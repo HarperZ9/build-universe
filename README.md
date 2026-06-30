@@ -1,21 +1,21 @@
-# Quanta Universe v1.0.0
+# Build Universe v1.0.0
 
-> A physics-inspired software ecosystem - language, OS kernel, graphics engines, trading systems, and AI frameworks, all written in QuantaLang.
+> A physics-inspired software ecosystem - language, OS kernel, graphics engines, trading systems, and AI frameworks, all written in BuildLang.
 
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![quantalang](https://img.shields.io/badge/quantalang-.quanta-orange.svg)
+![buildlang](https://img.shields.io/badge/buildlang-.bld-orange.svg)
 ![version](https://img.shields.io/badge/version-1.0.0-informational.svg)
-[![CI](https://github.com/HarperZ9/quanta-universe/actions/workflows/ci.yml/badge.svg)](https://github.com/HarperZ9/quanta-universe/actions/workflows/ci.yml)
+[![CI](https://github.com/HarperZ9/build-universe/actions/workflows/ci.yml/badge.svg)](https://github.com/HarperZ9/build-universe/actions/workflows/ci.yml)
 ![deps: none](https://img.shields.io/badge/deps-none-success.svg)
-[![part of: Quanta ecosystem](https://img.shields.io/badge/part_of-Quanta_ecosystem-00b3a4.svg)](https://github.com/HarperZ9/quanta-universe)
+[![part of: Build ecosystem](https://img.shields.io/badge/part_of-Build_ecosystem-00b3a4.svg)](https://github.com/HarperZ9/build-universe)
 
-A physics-inspired software ecosystem: programming language, operating system kernel, graphics engines, trading systems, and AI frameworks - all written in QuantaLang.
+A physics-inspired software ecosystem: programming language, operating system kernel, graphics engines, trading systems, and AI frameworks - all written in BuildLang.
 
 ## Modules
 
 ### Core
-- **QuantaLang** - Multi-paradigm systems language with algebraic effects, ownership, and a production C backend (HLSL/GLSL/LLVM/x86-64/ARM64/WASM/SPIR-V backends exist but are experimental and do not yet emit runnable artifacts)
-- **QuantaOS** - Hobby OS kernel (x86-64, ext2/4, context switching, memory management)
+- **BuildLang** - Multi-paradigm systems language with algebraic effects, ownership, and a production C backend (HLSL/GLSL/LLVM/x86-64/ARM64/WASM/SPIR-V backends exist but are experimental and do not yet emit runnable artifacts)
+- **BuildOS** - Hobby OS kernel (x86-64, ext2/4, context switching, memory management)
 - **Axiom** - Neural architecture search and differentiable program synthesis
 
 ### Graphics
@@ -49,21 +49,21 @@ A physics-inspired software ecosystem: programming language, operating system ke
 
 ## Status
 
-**Alpha.** The QuantaLang compiler (Rust; 755 test functions in tree) is the most mature component. The C backend produces correct native binaries. HLSL/GLSL produce clean shader output. Other backends are experimental. The .quanta modules demonstrate the language's capabilities across domains. See [quantaos/STATUS.md](quantaos/STATUS.md) for kernel implementation state.
+**Alpha.** The BuildLang compiler (Rust; 755 test functions in tree) is the most mature component. The C backend produces correct native binaries. HLSL/GLSL produce clean shader output. Other backends are experimental. The .bld modules demonstrate the language's capabilities across domains. See [buildos/STATUS.md](buildos/STATUS.md) for kernel implementation state.
 
 ## Caveats
 
-- **This ecosystem does not compile as a whole.** Each module depends on the QuantaLang compiler (separate repo: [HarperZ9/quantalang](https://github.com/HarperZ9/quantalang)). The compiler can compile individual modules but cross-module resolution is not yet complete.
-- **QuantaOS** is an educational hobby kernel, not a production OS. See [quantaos/STATUS.md](quantaos/STATUS.md).
+- **This ecosystem does not compile as a whole.** Each module depends on the BuildLang compiler (separate repo: [HarperZ9/buildlang](https://github.com/HarperZ9/buildlang)). The compiler can compile individual modules but cross-module resolution is not yet complete.
+- **BuildOS** is an educational hobby kernel, not a production OS. See [buildos/STATUS.md](buildos/STATUS.md).
 - **Axiom** is an experimental proof-of-concept for differentiable program synthesis.
-- The `.quanta` source files serve as both working code and language specification - demonstrating QuantaLang's syntax across domains.
+- The `.bld` source files serve as both working code and language specification - demonstrating BuildLang's syntax across domains.
 
 ## Ground Truth
 
 This repo previously carried conflicting claims across README, ENGINEERING, and CHANGELOG. Authoritative per-module reality now lives in:
 
 - [STATUS.md](STATUS.md) - module maturity ledger (real vs scaffolding). Where any doc disagrees, STATUS.md is canonical.
-- [LINEAGE.md](LINEAGE.md) - the Quanta family tree and how the mixed-language pieces interlace.
+- [LINEAGE.md](LINEAGE.md) - the Build family tree and how the mixed-language pieces interlace.
 - [docs/HEATMAP-AND-ACTION-PLAN.md](docs/HEATMAP-AND-ACTION-PLAN.md) - engineering heatmap and prioritized plan.
 
 ## License

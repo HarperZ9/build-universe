@@ -37,9 +37,9 @@ def has_msvc():
     return any(glob.glob(p) for p in pats)
 
 
-def has_quantac():
+def has_buildc():
     for sub in ("debug", "release"):
-        if os.path.isfile(os.path.join(REPO, "quantalang", "compiler", "target", sub, "quantac.exe")):
+        if os.path.isfile(os.path.join(REPO, "buildlang", "compiler", "target", sub, "buildc.exe")):
             return True
     return False
 
@@ -48,8 +48,8 @@ def build_env():
     env = dict(os.environ)
     extra = [
         os.path.expanduser("~/.cargo/bin"),
-        os.path.join(REPO, "quantalang", "compiler", "target", "debug"),
-        os.path.join(REPO, "quantalang", "compiler", "target", "release"),
+        os.path.join(REPO, "buildlang", "compiler", "target", "debug"),
+        os.path.join(REPO, "buildlang", "compiler", "target", "release"),
     ]
     paths = [p for p in extra if os.path.isdir(p)]
     if paths:
@@ -85,7 +85,7 @@ def main():
     comps = load_manifest()
     by_name = {c["name"]: c for c in comps}
     env = build_env()
-    avail = {"msvc": has_msvc(), "quantac": has_quantac()}
+    avail = {"msvc": has_msvc(), "buildc": has_buildc()}
 
     results = []
     for c in comps:
@@ -113,7 +113,7 @@ def main():
         sys.exit(failures)
 
     print("")
-    print("Quanta organism -- verifiable components (ground truth)")
+    print("Build organism -- verifiable components (ground truth)")
     print("")
     width = max(len(r["name"]) for r in results)
     header = "  " + "component".ljust(width) + "  lang    tier  expect   result        fresh  time"

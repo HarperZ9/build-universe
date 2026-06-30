@@ -26,7 +26,7 @@ DEFAULT_SOURCES = {
     "c": ["c_demo/*.c", "include/*.h", "src/**/*.rs", "Cargo.toml"],
     "cpp": ["hook/*.cpp", "include/*.h", "src/**/*.rs", "Cargo.toml"],
     "python": ["**/*.py"],
-    "quanta": ["lib.quanta"],
+    "build": ["lib.bld"],
 }
 
 def components():

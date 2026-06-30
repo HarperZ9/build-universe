@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# QUANTAOS QEMU TEST SCRIPT
+# BUILDOS QEMU TEST SCRIPT
 # =============================================================================
 # Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 # =============================================================================
@@ -19,7 +19,7 @@ OVMF_VARS="/usr/share/OVMF/OVMF_VARS.fd"
 
 # Paths
 BOOTLOADER_EFI="$PROJECT_ROOT/target/x86_64-unknown-uefi/release/bootloader.efi"
-KERNEL_ELF="$PROJECT_ROOT/target/x86_64-quantaos/release/kernel"
+KERNEL_ELF="$PROJECT_ROOT/target/x86_64-buildos/release/kernel"
 ESP_DIR="$PROJECT_ROOT/target/esp"
 
 # Colors
@@ -31,7 +31,7 @@ NC='\033[0m' # No Color
 
 print_header() {
     echo -e "${BLUE}============================================${NC}"
-    echo -e "${BLUE}  QuantaOS QEMU Launcher${NC}"
+    echo -e "${BLUE}  BuildOS QEMU Launcher${NC}"
     echo -e "${BLUE}============================================${NC}"
 }
 
@@ -90,7 +90,7 @@ build_bootloader() {
 build_kernel() {
     print_step "Building kernel..."
     cd "$PROJECT_ROOT/kernel"
-    cargo build --release --target "$PROJECT_ROOT/kernel/x86_64-quantaos.json"
+    cargo build --release --target "$PROJECT_ROOT/kernel/x86_64-buildos.json"
     cd "$PROJECT_ROOT"
 }
 
@@ -100,12 +100,12 @@ create_esp() {
 
     rm -rf "$ESP_DIR"
     mkdir -p "$ESP_DIR/EFI/BOOT"
-    mkdir -p "$ESP_DIR/EFI/QUANTAOS"
+    mkdir -p "$ESP_DIR/EFI/BUILDOS"
 
     # Copy bootloader
     if [ -f "$BOOTLOADER_EFI" ]; then
         cp "$BOOTLOADER_EFI" "$ESP_DIR/EFI/BOOT/BOOTX64.EFI"
-        cp "$BOOTLOADER_EFI" "$ESP_DIR/EFI/QUANTAOS/BOOTX64.EFI"
+        cp "$BOOTLOADER_EFI" "$ESP_DIR/EFI/BUILDOS/BOOTX64.EFI"
         print_step "Bootloader copied to ESP"
     else
         print_error "Bootloader not found at $BOOTLOADER_EFI"
@@ -115,7 +115,7 @@ create_esp() {
 
     # Copy kernel
     if [ -f "$KERNEL_ELF" ]; then
-        cp "$KERNEL_ELF" "$ESP_DIR/EFI/QUANTAOS/KERNEL.ELF"
+        cp "$KERNEL_ELF" "$ESP_DIR/EFI/BUILDOS/KERNEL.ELF"
         print_step "Kernel copied to ESP"
     else
         print_warning "Kernel not found at $KERNEL_ELF"
@@ -123,8 +123,8 @@ create_esp() {
     fi
 
     # Create boot configuration
-    cat > "$ESP_DIR/EFI/QUANTAOS/BOOT.CFG" << EOF
-# QuantaOS Boot Configuration
+    cat > "$ESP_DIR/EFI/BUILDOS/BOOT.CFG" << EOF
+# BuildOS Boot Configuration
 # ============================
 
 # Kernel command line

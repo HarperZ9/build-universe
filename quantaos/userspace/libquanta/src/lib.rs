@@ -1,10 +1,10 @@
 // ===============================================================================
-// LIBQUANTA - QUANTAOS USER-SPACE STANDARD LIBRARY
+// LIBBUILD - BUILDOS USER-SPACE STANDARD LIBRARY
 // ===============================================================================
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 // ===============================================================================
 //
-// Core system library for QuantaOS user-space programs
+// Core system library for BuildOS user-space programs
 // Provides syscall wrappers, I/O utilities, and common functionality
 //
 // ===============================================================================

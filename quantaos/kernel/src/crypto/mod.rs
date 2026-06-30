@@ -1,5 +1,5 @@
 // ===============================================================================
-// QUANTAOS KERNEL - CRYPTOGRAPHIC SUBSYSTEM
+// BUILDOS KERNEL - CRYPTOGRAPHIC SUBSYSTEM
 // Copyright (c) 2024-2025 Zain Dana Harper. All Rights Reserved.
 
 //! Kernel Cryptographic Subsystem
