@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/brand/build-universe-hero.png" alt="Build Universe: Buildlang Module & Example Surface">
+</p>
+
 # Build Universe v1.0.0
 
 > A physics-inspired software ecosystem - language, OS kernel, graphics engines, trading systems, and AI frameworks, all written in BuildLang.
