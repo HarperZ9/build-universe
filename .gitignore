@@ -52,3 +52,10 @@ programs/*.c
 
 # coherence-membrane build-state witnesses (per-machine)
 tools/coherence/witness/
+
+# release/build artifacts
+__pycache__/
+*.pyc
+*.spec
+*.bin
+*.bak
