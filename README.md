@@ -4,16 +4,25 @@
 
 # Build Universe v1.0.0
 
-> A physics-inspired software ecosystem - language, OS kernel, graphics engines, trading systems, and AI frameworks, all written in BuildLang.
+> A physics-inspired compiler ecosystem: the BuildLang language and standard library, a Rust compiler that transpiles `.bld` to C, and a Rust OS kernel.
 
-[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[Project Telos](https://harperz9.github.io) | [gather](https://github.com/HarperZ9/gather) | [crucible](https://github.com/HarperZ9/crucible) | [index](https://github.com/HarperZ9/index) | [forum](https://github.com/HarperZ9/forum) | [telos](https://github.com/HarperZ9/telos) | [emet](https://github.com/HarperZ9/emet) | [buildlang](https://github.com/HarperZ9/buildlang)
+
+[![license: fair-source](https://img.shields.io/badge/license-fair--source-blue.svg)](LICENSE)
 ![buildlang](https://img.shields.io/badge/buildlang-.bld-orange.svg)
 ![version](https://img.shields.io/badge/version-1.0.0-informational.svg)
+![status: alpha](https://img.shields.io/badge/status-alpha-yellow.svg)
+![build: from source](https://img.shields.io/badge/build-from_source-lightgrey.svg)
 [![CI](https://github.com/HarperZ9/build-universe/actions/workflows/ci.yml/badge.svg)](https://github.com/HarperZ9/build-universe/actions/workflows/ci.yml)
-![deps: none](https://img.shields.io/badge/deps-none-success.svg)
-[![part of: Build ecosystem](https://img.shields.io/badge/part_of-Build_ecosystem-00b3a4.svg)](https://github.com/HarperZ9/build-universe)
+[![part of: Project Telos](https://img.shields.io/badge/part_of-Project_Telos-00b3a4.svg)](https://harperz9.github.io)
 
-A physics-inspired software ecosystem: programming language, operating system kernel, graphics engines, trading systems, and AI frameworks - all written in BuildLang.
+An alpha compiler ecosystem, mixed-language by design. The pieces are not "all written in BuildLang":
+
+- **BuildLang** is the language, and its `foundation/` standard library and the domain modules (spectrum, delta, oracle, and the rest) are the `.bld` source.
+- **The compiler** (`buildlang/`, Rust, ~231K LOC, 612 passing cargo tests) lexes, type-checks, and transpiles a `.bld` module to C, which MSVC then builds to a native binary.
+- **The OS kernel** (`buildos/`, Rust, ~196K LOC) is a separate hobby kernel, not written in BuildLang.
+
+Self-hosting (the compiler compiling itself from `.bld`) and whole-ecosystem cross-module compilation are **goals, not achievements**. See [STATUS.md](STATUS.md) for the canonical per-module reality and [ARCHITECTURE.md](ARCHITECTURE.md) for how a `.bld` module becomes C.
 
 ## Modules
 
@@ -53,7 +62,7 @@ A physics-inspired software ecosystem: programming language, operating system ke
 
 ## Status
 
-**Alpha.** The BuildLang compiler (Rust; 755 test functions in tree) is the most mature component. The C backend produces correct native binaries. HLSL/GLSL produce clean shader output. Other backends are experimental. The .bld modules demonstrate the language's capabilities across domains. See [buildos/STATUS.md](buildos/STATUS.md) for kernel implementation state.
+**Alpha.** The BuildLang compiler (Rust; 612 tests pass / 0 fail on `cargo test`, 755 `#[test]` annotations in tree including ignored/multi-bin) is the most mature component. The C backend produces correct native binaries; HLSL/GLSL emit shader text only. The other backends (x86-64, ARM64, WASM, LLVM, SPIR-V) generate output but have no linker/assembler integration, so none produce a runnable artifact yet. The `.bld` modules demonstrate the language's capabilities across domains and double as its specification. See [STATUS.md](STATUS.md) for the per-module maturity ledger and [buildos/STATUS.md](buildos/STATUS.md) for kernel implementation state.
 
 ## Caveats
 
@@ -67,9 +76,16 @@ A physics-inspired software ecosystem: programming language, operating system ke
 This repo previously carried conflicting claims across README, ENGINEERING, and CHANGELOG. Authoritative per-module reality now lives in:
 
 - [STATUS.md](STATUS.md) - module maturity ledger (real vs scaffolding). Where any doc disagrees, STATUS.md is canonical.
+- [ARCHITECTURE.md](ARCHITECTURE.md) - the ecosystem layers and how a `.bld` module becomes a native binary.
 - [LINEAGE.md](LINEAGE.md) - the Build family tree and how the mixed-language pieces interlace.
+- [CONTRIBUTING.md](CONTRIBUTING.md) - build-from-source steps, how to add a module, and the test/lint gates.
+- [docs/ENTERPRISE-READINESS.md](docs/ENTERPRISE-READINESS.md) - what is production-capable vs alpha, and how it fits Project Telos.
 - [docs/HEATMAP-AND-ACTION-PLAN.md](docs/HEATMAP-AND-ACTION-PLAN.md) - engineering heatmap and prioritized plan.
+
+## Lineage
+
+Build Universe is the canonical successor to the earlier `quanta-universe` repo (renamed to `build-universe` in June 2026 as part of the `quanta` -> `build` rename). `quanta-universe` holds earlier history only and should not be used for new work; all development continues here. See [LINEAGE.md](LINEAGE.md) for the full Build family tree.
 
 ## License
 
-MIT License. See [LICENSE](LICENSE).
+Fair-source, not open source. The source is published so you can read it, run it, and build on it; commercial use that competes with the project is reserved to the Licensor. See [LICENSE](LICENSE) (FSL-1.1-MIT).

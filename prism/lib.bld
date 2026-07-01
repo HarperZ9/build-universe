@@ -2,7 +2,7 @@
 // HARPER RESHADE COLLECTION v3.0.0
 // "108 Professional Effects for Any Game"
 // ===============================================================================
-// Copyright © 2024-2025 Zain Dana Build. All Rights Reserved.
+// Copyright © 2024-2025 Zain Dana Harper. All Rights Reserved.
 //
 // ===============================================================================
 //
@@ -75,7 +75,7 @@ pub const TITAN_TONEMAPPER_FX: &str = r#"
 /*===============================================================================
  * TITAN Tonemapper v2.0
  * Part of Build Prism
- * Copyright © 2024-2025 Zain Dana Build
+ * Copyright © 2024-2025 Zain Dana Harper
  *===============================================================================*/
 
 #include "ReShade.fxh"
@@ -379,7 +379,7 @@ pub const TITAN_COLOR_GRADING_FX: &str = r#"
 /*===============================================================================
  * TITAN Color Grading v2.0
  * Part of Build Prism
- * Copyright © 2024-2025 Zain Dana Build
+ * Copyright © 2024-2025 Zain Dana Harper
  *===============================================================================*/
 
 #include "ReShade.fxh"
@@ -552,7 +552,7 @@ pub const HARPER_SSAO_FX: &str = r#"
  * Build SSAO v1.5
  * Screen Space Ambient Occlusion
  * Part of Build Prism
- * Copyright © 2024-2025 Zain Dana Build
+ * Copyright © 2024-2025 Zain Dana Harper
  *===============================================================================*/
 
 #include "ReShade.fxh"
@@ -691,7 +691,7 @@ pub const HARPER_BLOOM_FX: &str = r#"
  * Build Bloom v2.0
  * Physically-Based Bloom Effect
  * Part of Build Prism
- * Copyright © 2024-2025 Zain Dana Build
+ * Copyright © 2024-2025 Zain Dana Harper
  *===============================================================================*/
 
 #include "ReShade.fxh"
@@ -801,43 +801,43 @@ technique BuildBloom <
 pub fn get_all_effects() -> Vec<EffectInfo> {
     vec![
         // COLOR PROCESSING (20)
-        EffectInfo { name: "TITAN Tonemap".into(), category: EffectCategory::Tonemapping, description: "13 professional tonemapping operators".into(), author: "Zain Dana Build".into(), version: "2.0.0".into(), techniques: vec!["TITANTonemap".into()], uniforms: vec![] },
-        EffectInfo { name: "Spectrum Grade".into(), category: EffectCategory::ColorProcessing, description: "Professional color grading".into(), author: "Zain Dana Build".into(), version: "2.0.0".into(), techniques: vec!["TITANColorGrade".into()], uniforms: vec![] },
-        EffectInfo { name: "TITAN LUT".into(), category: EffectCategory::ColorProcessing, description: "3D LUT color transformation".into(), author: "Zain Dana Build".into(), version: "1.5.0".into(), techniques: vec!["TITANLUT".into()], uniforms: vec![] },
-        EffectInfo { name: "Genesis Symmetric".into(), category: EffectCategory::ColorProcessing, description: "Perceptually uniform color space".into(), author: "Zain Dana Build".into(), version: "1.0.0".into(), techniques: vec!["GenesisSymmetric".into()], uniforms: vec![] },
-        EffectInfo { name: "Color Balance".into(), category: EffectCategory::ColorProcessing, description: "Shadow/midtone/highlight balance".into(), author: "Zain Dana Build".into(), version: "1.0.0".into(), techniques: vec!["ColorBalance".into()], uniforms: vec![] },
+        EffectInfo { name: "TITAN Tonemap".into(), category: EffectCategory::Tonemapping, description: "13 professional tonemapping operators".into(), author: "Zain Dana Harper".into(), version: "2.0.0".into(), techniques: vec!["TITANTonemap".into()], uniforms: vec![] },
+        EffectInfo { name: "Spectrum Grade".into(), category: EffectCategory::ColorProcessing, description: "Professional color grading".into(), author: "Zain Dana Harper".into(), version: "2.0.0".into(), techniques: vec!["TITANColorGrade".into()], uniforms: vec![] },
+        EffectInfo { name: "TITAN LUT".into(), category: EffectCategory::ColorProcessing, description: "3D LUT color transformation".into(), author: "Zain Dana Harper".into(), version: "1.5.0".into(), techniques: vec!["TITANLUT".into()], uniforms: vec![] },
+        EffectInfo { name: "Genesis Symmetric".into(), category: EffectCategory::ColorProcessing, description: "Perceptually uniform color space".into(), author: "Zain Dana Harper".into(), version: "1.0.0".into(), techniques: vec!["GenesisSymmetric".into()], uniforms: vec![] },
+        EffectInfo { name: "Color Balance".into(), category: EffectCategory::ColorProcessing, description: "Shadow/midtone/highlight balance".into(), author: "Zain Dana Harper".into(), version: "1.0.0".into(), techniques: vec!["ColorBalance".into()], uniforms: vec![] },
         // ... more effects
         
         // TONEMAPPING (13 - integrated in TITAN Tonemap)
         
         // LIGHTING & SHADOWS (15)
-        EffectInfo { name: "Build SSAO".into(), category: EffectCategory::LightingShadows, description: "Screen space ambient occlusion".into(), author: "Zain Dana Build".into(), version: "1.5.0".into(), techniques: vec!["BuildSSAO".into()], uniforms: vec![] },
-        EffectInfo { name: "Build SSGI".into(), category: EffectCategory::LightingShadows, description: "Screen space global illumination".into(), author: "Zain Dana Build".into(), version: "1.0.0".into(), techniques: vec!["BuildSSGI".into()], uniforms: vec![] },
-        EffectInfo { name: "Ray Traced Shadows".into(), category: EffectCategory::LightingShadows, description: "Screen space ray traced shadows".into(), author: "Zain Dana Build".into(), version: "1.0.0".into(), techniques: vec!["RTShadows".into()], uniforms: vec![] },
+        EffectInfo { name: "Build SSAO".into(), category: EffectCategory::LightingShadows, description: "Screen space ambient occlusion".into(), author: "Zain Dana Harper".into(), version: "1.5.0".into(), techniques: vec!["BuildSSAO".into()], uniforms: vec![] },
+        EffectInfo { name: "Build SSGI".into(), category: EffectCategory::LightingShadows, description: "Screen space global illumination".into(), author: "Zain Dana Harper".into(), version: "1.0.0".into(), techniques: vec!["BuildSSGI".into()], uniforms: vec![] },
+        EffectInfo { name: "Ray Traced Shadows".into(), category: EffectCategory::LightingShadows, description: "Screen space ray traced shadows".into(), author: "Zain Dana Harper".into(), version: "1.0.0".into(), techniques: vec!["RTShadows".into()], uniforms: vec![] },
         // ... more effects
         
         // POST-PROCESSING (25)
-        EffectInfo { name: "Build Bloom".into(), category: EffectCategory::PostProcessing, description: "Physically-based bloom".into(), author: "Zain Dana Build".into(), version: "2.0.0".into(), techniques: vec!["BuildBloom".into()], uniforms: vec![] },
-        EffectInfo { name: "Build DOF".into(), category: EffectCategory::PostProcessing, description: "Cinematic depth of field".into(), author: "Zain Dana Build".into(), version: "1.5.0".into(), techniques: vec!["BuildDOF".into()], uniforms: vec![] },
-        EffectInfo { name: "Motion Blur".into(), category: EffectCategory::PostProcessing, description: "Per-object motion blur".into(), author: "Zain Dana Build".into(), version: "1.0.0".into(), techniques: vec!["MotionBlur".into()], uniforms: vec![] },
-        EffectInfo { name: "Sharpening".into(), category: EffectCategory::PostProcessing, description: "Adaptive sharpening".into(), author: "Zain Dana Build".into(), version: "1.2.0".into(), techniques: vec!["Sharpening".into()], uniforms: vec![] },
-        EffectInfo { name: "Anti-Aliasing".into(), category: EffectCategory::PostProcessing, description: "SMAA + TAA hybrid".into(), author: "Zain Dana Build".into(), version: "1.0.0".into(), techniques: vec!["AntiAliasing".into()], uniforms: vec![] },
+        EffectInfo { name: "Build Bloom".into(), category: EffectCategory::PostProcessing, description: "Physically-based bloom".into(), author: "Zain Dana Harper".into(), version: "2.0.0".into(), techniques: vec!["BuildBloom".into()], uniforms: vec![] },
+        EffectInfo { name: "Build DOF".into(), category: EffectCategory::PostProcessing, description: "Cinematic depth of field".into(), author: "Zain Dana Harper".into(), version: "1.5.0".into(), techniques: vec!["BuildDOF".into()], uniforms: vec![] },
+        EffectInfo { name: "Motion Blur".into(), category: EffectCategory::PostProcessing, description: "Per-object motion blur".into(), author: "Zain Dana Harper".into(), version: "1.0.0".into(), techniques: vec!["MotionBlur".into()], uniforms: vec![] },
+        EffectInfo { name: "Sharpening".into(), category: EffectCategory::PostProcessing, description: "Adaptive sharpening".into(), author: "Zain Dana Harper".into(), version: "1.2.0".into(), techniques: vec!["Sharpening".into()], uniforms: vec![] },
+        EffectInfo { name: "Anti-Aliasing".into(), category: EffectCategory::PostProcessing, description: "SMAA + TAA hybrid".into(), author: "Zain Dana Harper".into(), version: "1.0.0".into(), techniques: vec!["AntiAliasing".into()], uniforms: vec![] },
         // ... more effects
         
         // FILM & CINEMATIC (15)
-        EffectInfo { name: "Film Grain".into(), category: EffectCategory::FilmCinematic, description: "Realistic film grain".into(), author: "Zain Dana Build".into(), version: "1.5.0".into(), techniques: vec!["FilmGrain".into()], uniforms: vec![] },
-        EffectInfo { name: "Chromatic Aberration".into(), category: EffectCategory::FilmCinematic, description: "Lens chromatic aberration".into(), author: "Zain Dana Build".into(), version: "1.0.0".into(), techniques: vec!["ChromaticAberration".into()], uniforms: vec![] },
-        EffectInfo { name: "Vignette".into(), category: EffectCategory::FilmCinematic, description: "Cinematic vignette".into(), author: "Zain Dana Build".into(), version: "1.0.0".into(), techniques: vec!["Vignette".into()], uniforms: vec![] },
-        EffectInfo { name: "Letterbox".into(), category: EffectCategory::FilmCinematic, description: "Cinematic aspect ratio".into(), author: "Zain Dana Build".into(), version: "1.0.0".into(), techniques: vec!["Letterbox".into()], uniforms: vec![] },
-        EffectInfo { name: "Film Look".into(), category: EffectCategory::FilmCinematic, description: "Complete film emulation".into(), author: "Zain Dana Build".into(), version: "2.0.0".into(), techniques: vec!["FilmLook".into()], uniforms: vec![] },
+        EffectInfo { name: "Film Grain".into(), category: EffectCategory::FilmCinematic, description: "Realistic film grain".into(), author: "Zain Dana Harper".into(), version: "1.5.0".into(), techniques: vec!["FilmGrain".into()], uniforms: vec![] },
+        EffectInfo { name: "Chromatic Aberration".into(), category: EffectCategory::FilmCinematic, description: "Lens chromatic aberration".into(), author: "Zain Dana Harper".into(), version: "1.0.0".into(), techniques: vec!["ChromaticAberration".into()], uniforms: vec![] },
+        EffectInfo { name: "Vignette".into(), category: EffectCategory::FilmCinematic, description: "Cinematic vignette".into(), author: "Zain Dana Harper".into(), version: "1.0.0".into(), techniques: vec!["Vignette".into()], uniforms: vec![] },
+        EffectInfo { name: "Letterbox".into(), category: EffectCategory::FilmCinematic, description: "Cinematic aspect ratio".into(), author: "Zain Dana Harper".into(), version: "1.0.0".into(), techniques: vec!["Letterbox".into()], uniforms: vec![] },
+        EffectInfo { name: "Film Look".into(), category: EffectCategory::FilmCinematic, description: "Complete film emulation".into(), author: "Zain Dana Harper".into(), version: "2.0.0".into(), techniques: vec!["FilmLook".into()], uniforms: vec![] },
         // ... more effects
         
         // UTILITY & DEBUG (20)
-        EffectInfo { name: "Histogram".into(), category: EffectCategory::UtilityDebug, description: "Real-time histogram display".into(), author: "Zain Dana Build".into(), version: "1.0.0".into(), techniques: vec!["Histogram".into()], uniforms: vec![] },
-        EffectInfo { name: "Waveform".into(), category: EffectCategory::UtilityDebug, description: "Waveform monitor".into(), author: "Zain Dana Build".into(), version: "1.0.0".into(), techniques: vec!["Waveform".into()], uniforms: vec![] },
-        EffectInfo { name: "Vectorscope".into(), category: EffectCategory::UtilityDebug, description: "Color vectorscope".into(), author: "Zain Dana Build".into(), version: "1.0.0".into(), techniques: vec!["Vectorscope".into()], uniforms: vec![] },
-        EffectInfo { name: "False Color".into(), category: EffectCategory::UtilityDebug, description: "Exposure false color".into(), author: "Zain Dana Build".into(), version: "1.0.0".into(), techniques: vec!["FalseColor".into()], uniforms: vec![] },
-        EffectInfo { name: "Depth Debug".into(), category: EffectCategory::UtilityDebug, description: "Depth buffer visualization".into(), author: "Zain Dana Build".into(), version: "1.0.0".into(), techniques: vec!["DepthDebug".into()], uniforms: vec![] },
+        EffectInfo { name: "Histogram".into(), category: EffectCategory::UtilityDebug, description: "Real-time histogram display".into(), author: "Zain Dana Harper".into(), version: "1.0.0".into(), techniques: vec!["Histogram".into()], uniforms: vec![] },
+        EffectInfo { name: "Waveform".into(), category: EffectCategory::UtilityDebug, description: "Waveform monitor".into(), author: "Zain Dana Harper".into(), version: "1.0.0".into(), techniques: vec!["Waveform".into()], uniforms: vec![] },
+        EffectInfo { name: "Vectorscope".into(), category: EffectCategory::UtilityDebug, description: "Color vectorscope".into(), author: "Zain Dana Harper".into(), version: "1.0.0".into(), techniques: vec!["Vectorscope".into()], uniforms: vec![] },
+        EffectInfo { name: "False Color".into(), category: EffectCategory::UtilityDebug, description: "Exposure false color".into(), author: "Zain Dana Harper".into(), version: "1.0.0".into(), techniques: vec!["FalseColor".into()], uniforms: vec![] },
+        EffectInfo { name: "Depth Debug".into(), category: EffectCategory::UtilityDebug, description: "Depth buffer visualization".into(), author: "Zain Dana Harper".into(), version: "1.0.0".into(), techniques: vec!["DepthDebug".into()], uniforms: vec![] },
         // ... more effects
     ]
 }
@@ -863,7 +863,7 @@ pub const BUILD_DOF_FX: &str = r#"
  * Build Depth of Field v2.0
  * Physically-Based Bokeh DOF
  * Part of Build Prism
- * Copyright © 2024-2025 Zain Dana Build
+ * Copyright © 2024-2025 Zain Dana Harper
  *===============================================================================*/
 
 #include "ReShade.fxh"
@@ -1131,7 +1131,7 @@ pub const BUILD_SSR_FX: &str = r#"
 /*===============================================================================
  * Build Screen Space Reflections v1.5
  * Part of Build Prism
- * Copyright © 2024-2025 Zain Dana Build
+ * Copyright © 2024-2025 Zain Dana Harper
  *===============================================================================*/
 
 #include "ReShade.fxh"
@@ -1354,7 +1354,7 @@ pub const BUILD_FILM_GRAIN_FX: &str = r#"
  * Build Film Grain v2.0
  * Realistic Temporal Film Grain
  * Part of Build Prism
- * Copyright © 2024-2025 Zain Dana Build
+ * Copyright © 2024-2025 Zain Dana Harper
  *===============================================================================*/
 
 #include "ReShade.fxh"
@@ -1535,7 +1535,7 @@ pub const BUILD_CHROMATIC_FX: &str = r#"
  * Build Chromatic Aberration v1.5
  * Physically-Based Lens CA
  * Part of Build Prism
- * Copyright © 2024-2025 Zain Dana Build
+ * Copyright © 2024-2025 Zain Dana Harper
  *===============================================================================*/
 
 #include "ReShade.fxh"
@@ -1727,7 +1727,7 @@ pub const BUILD_SHARPENING_FX: &str = r#"
  * Build Adaptive Sharpening v1.5
  * Contrast Adaptive Sharpening + Unsharp Mask
  * Part of Build Prism
- * Copyright © 2024-2025 Zain Dana Build
+ * Copyright © 2024-2025 Zain Dana Harper
  *===============================================================================*/
 
 #include "ReShade.fxh"
@@ -1960,7 +1960,7 @@ pub const BUILD_DEBUG_TOOLS_FX: &str = r#"
  * Build Debug Tools v1.0
  * Histogram, Waveform, Vectorscope, False Color
  * Part of Build Prism
- * Copyright © 2024-2025 Zain Dana Build
+ * Copyright © 2024-2025 Zain Dana Harper
  *===============================================================================*/
 
 #include "ReShade.fxh"
@@ -2218,7 +2218,7 @@ pub const BUILD_MOTION_BLUR_FX: &str = r#"
  * Build Motion Blur v1.0
  * Camera and Per-Object Motion Blur
  * Part of Build Prism
- * Copyright © 2024-2025 Zain Dana Build
+ * Copyright © 2024-2025 Zain Dana Harper
  *===============================================================================*/
 
 #include "ReShade.fxh"
@@ -2416,7 +2416,7 @@ pub const DEPTH_OF_FIELD_FX: &str = r#"
 /*===============================================================================
  * Build Depth of Field v1.0
  * Cinematic bokeh with hexagonal/circular aperture
- * Copyright © 2024-2025 Zain Dana Build
+ * Copyright © 2024-2025 Zain Dana Harper
  *===============================================================================*/
 
 #include "ReShade.fxh"
@@ -2537,7 +2537,7 @@ pub const CHROMATIC_ABERRATION_FX: &str = r#"
 /*===============================================================================
  * Build Chromatic Aberration v1.0
  * Physical lens aberration simulation
- * Copyright © 2024-2025 Zain Dana Build
+ * Copyright © 2024-2025 Zain Dana Harper
  *===============================================================================*/
 
 #include "ReShade.fxh"
@@ -2614,7 +2614,7 @@ pub const LENS_FLARE_FX: &str = r#"
 /*===============================================================================
  * Build Lens Flare v1.0
  * Anamorphic and spherical lens flares
- * Copyright © 2024-2025 Zain Dana Build
+ * Copyright © 2024-2025 Zain Dana Harper
  *===============================================================================*/
 
 #include "ReShade.fxh"
@@ -2711,7 +2711,7 @@ pub const VIGNETTE_FX: &str = r#"
 /*===============================================================================
  * Build Vignette v1.0
  * Advanced vignette with multiple shapes and blending
- * Copyright © 2024-2025 Zain Dana Build
+ * Copyright © 2024-2025 Zain Dana Harper
  *===============================================================================*/
 
 #include "ReShade.fxh"

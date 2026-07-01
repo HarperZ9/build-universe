@@ -930,7 +930,7 @@ def generate_mhc2_profile(
     # Assemble tag dictionary
     tags = {}
     tags[b'desc'] = build_mluc_tag(description)
-    tags[b'cprt'] = build_text_tag("Copyright Zain Dana Build 2024-2025 - Calibrate Pro HDR")
+    tags[b'cprt'] = build_text_tag("Copyright Zain Dana Harper 2024-2025 - Calibrate Pro HDR")
     tags[b'wtpt'] = build_xyz_tag(D50_X, D50_Y, D50_Z)
     tags[b'rXYZ'] = build_xyz_tag(*red_xyz_d50)
     tags[b'gXYZ'] = build_xyz_tag(*green_xyz_d50)

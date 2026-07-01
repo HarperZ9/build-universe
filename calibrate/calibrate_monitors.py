@@ -3,7 +3,7 @@
 Calibrate(TM) Automatic Display Calibration
 NeuralUX(TM) AI-Powered Sensorless Calibration
 
-Copyright (C) 2024-2025 Zain Dana Build. All Rights Reserved.
+Copyright (C) 2024-2025 Zain Dana Harper. All Rights Reserved.
 """
 
 import ctypes
@@ -915,7 +915,7 @@ def generate_icc_profile(profile: DisplayProfile, monitor: MonitorInfo) -> bytes
     tags.append((b'desc', desc_data))
 
     # Copyright
-    cprt = b"Copyright Zain Dana Build 2024-2025".ljust(64, b'\x00')
+    cprt = b"Copyright Zain Dana Harper 2024-2025".ljust(64, b'\x00')
     cprt_data = b'text\x00\x00\x00\x00' + cprt
     tags.append((b'cprt', cprt_data))
 

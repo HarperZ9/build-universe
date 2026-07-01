@@ -3,7 +3,7 @@
 Calibrate(TM) Calibration Verification Tool
 Verifies ICC profile installation and displays test patterns
 
-Copyright (C) 2024-2025 Zain Dana Build. All Rights Reserved.
+Copyright (C) 2024-2025 Zain Dana Harper. All Rights Reserved.
 """
 
 import ctypes

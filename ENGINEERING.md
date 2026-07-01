@@ -1,6 +1,6 @@
 # Build Ecosystem — Engineering Runbook
 
-Last verified: 2026-06-05. Each .bld module transpiles to C individually; whole-ecosystem cross-module resolution is incomplete and self-hosting is not yet achieved. 56 native programs verified MSVC-clean (65 sources in programs/). Compiler: 612 tests pass / 0 fail on cargo test (755 #[test] annotations across binaries, incl. ignored/multi-bin). See STATUS.md for per-module maturity. No C toolchain is present locally, so native execution of generated C was not re-verified.
+Last verified: 2026-06-05. Each .bld module transpiles to C individually; whole-ecosystem cross-module resolution is incomplete and self-hosting is not yet achieved. 56 native programs verified MSVC-clean (65 sources in programs/). Compiler: 612 tests pass / 0 fail on cargo test (755 #[test] annotations across binaries, incl. ignored/multi-bin). See STATUS.md for per-module maturity. A local MSVC toolchain (Visual Studio 2022) is available: the 56 native programs compile with MSVC `cl` and run (per STATUS.md); whole-ecosystem cross-module C is still not built as one unit.
 
 ## Quick Reference
 

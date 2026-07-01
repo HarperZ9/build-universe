@@ -360,7 +360,7 @@ class SettingsPage(QWidget):
         sep2.setStyleSheet(f"background: {C.BORDER};")
         about_layout.addWidget(sep2)
 
-        author_label = QLabel("Zain Dana Build")
+        author_label = QLabel("Zain Dana Harper")
         author_label.setStyleSheet(f"font-size: 12px; color: {C.TEXT};")
         about_layout.addWidget(author_label)
 

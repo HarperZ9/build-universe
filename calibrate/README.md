@@ -149,4 +149,4 @@ Built on a complete color science library:
 
 ## License
 
-Copyright 2024-2026 Zain Dana Build. All rights reserved.
+Copyright 2024-2026 Zain Dana Harper. All rights reserved.

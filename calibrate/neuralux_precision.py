@@ -3,7 +3,7 @@
 NeuralUX(TM) Precision Calibration Engine
 Achieves Delta E < 1.0 Without Hardware Instruments
 
-Copyright (C) 2024-2025 Zain Dana Build. All Rights Reserved.
+Copyright (C) 2024-2025 Zain Dana Harper. All Rights Reserved.
 
 This module implements precision sensorless calibration using:
 1. Factory-characterized panel database
@@ -893,7 +893,7 @@ def generate_precision_icc(panel: PanelCharacterization,
     tags.append((b'desc', desc_data))
 
     # Copyright
-    cprt = b"Copyright Zain Dana Build 2024-2025 - NeuralUX Precision".ljust(80, b'\x00')
+    cprt = b"Copyright Zain Dana Harper 2024-2025 - NeuralUX Precision".ljust(80, b'\x00')
     cprt_data = b'text\x00\x00\x00\x00' + cprt
     tags.append((b'cprt', cprt_data))
 

@@ -12,7 +12,7 @@ These specifications are used for calibration target validation
 and professional compliance verification.
 
 Author: Zain Dana / Build
-License: MIT
+License: Fair-Source (see LICENSE)
 """
 
 import numpy as np

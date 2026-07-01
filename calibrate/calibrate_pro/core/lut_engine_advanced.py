@@ -10,7 +10,7 @@ State-of-the-art LUT generation matching and exceeding ColourSpace capabilities:
 - Perceptual smoothing and optimization
 
 Author: Zain Dana / Build
-License: MIT
+License: Fair-Source (see LICENSE)
 """
 
 import numpy as np

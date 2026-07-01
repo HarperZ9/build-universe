@@ -12,7 +12,7 @@ These models are critical for accurate color difference calculation in HDR
 where traditional CIELAB breaks down above 100 nits.
 
 Author: Zain Dana / Build
-License: MIT
+License: Fair-Source (see LICENSE)
 """
 
 import numpy as np

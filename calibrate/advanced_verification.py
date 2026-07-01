@@ -4,7 +4,7 @@ Calibrate(TM) Advanced Color Accuracy Verification
 Professional-grade display verification with Delta E analysis
 NeuralUX(TM) Precision Engine Integration
 
-Copyright (C) 2024-2025 Zain Dana Build. All Rights Reserved.
+Copyright (C) 2024-2025 Zain Dana Harper. All Rights Reserved.
 """
 
 import os

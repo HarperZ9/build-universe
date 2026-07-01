@@ -283,7 +283,7 @@ class SensorlessEngine:
             gamma=(panel.gamma_red.gamma, panel.gamma_green.gamma, panel.gamma_blue.gamma),
             trc_curves=(trc_red, trc_green, trc_blue),
             vcgt=vcgt,
-            copyright=f"Copyright Zain Dana Build 2024-2025 - Calibrate Pro"
+            copyright=f"Copyright Zain Dana Harper 2024-2025 - Calibrate Pro"
         )
 
         return profile

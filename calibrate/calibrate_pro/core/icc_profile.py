@@ -153,7 +153,7 @@ class ICCProfile:
     def __init__(
         self,
         description: str = "Calibrate Pro Display Profile",
-        copyright: str = "Copyright Zain Dana Build 2024-2025",
+        copyright: str = "Copyright Zain Dana Harper 2024-2025",
         manufacturer: str = "QNTA",
         model: str = "CALB"
     ):
@@ -508,7 +508,7 @@ def create_display_profile(
     gamma: Union[float, Tuple[float, float, float]] = 2.2,
     trc_curves: Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]] = None,
     vcgt: Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]] = None,
-    copyright: str = "Copyright Zain Dana Build 2024-2025 - Calibrate Pro"
+    copyright: str = "Copyright Zain Dana Harper 2024-2025 - Calibrate Pro"
 ) -> ICCProfile:
     """
     Create a display calibration profile.

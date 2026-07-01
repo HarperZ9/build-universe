@@ -4,6 +4,14 @@ Last verified: 2026-06-05. Maps the related workspaces, how the mixed languages
 hand off to each other, and the foundational-to-derivative direction. Single
 source of truth for the family tree.
 
+## Successor to quanta-universe
+
+This repo, `build-universe`, is the canonical successor to the earlier
+`quanta-universe` repo, renamed in June 2026 as part of the ecosystem-wide
+`quanta` -> `build` rename. `quanta-universe` retains earlier commit history
+only; it is deprecated for new work, and all development continues here. Do not
+open changes against `quanta-universe`; treat it as a read-only history record.
+
 ## Roster
 
 | Workspace | Path | Language(s) | Remote | Role |

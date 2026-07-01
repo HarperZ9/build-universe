@@ -15,7 +15,7 @@ This implementation follows the ACES 2.0 specifications and is compatible
 with OpenColorIO 2.4+ fixed functions.
 
 Author: Zain Dana / Build
-License: MIT
+License: Fair-Source (see LICENSE)
 
 References:
 - ACES 2.0 Technical Documentation (2024)

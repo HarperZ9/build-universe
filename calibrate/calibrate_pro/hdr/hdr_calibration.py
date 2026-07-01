@@ -11,7 +11,7 @@ Provides a single interface for complete HDR display calibration
 with support for professional mastering standards.
 
 Author: Zain Dana / Build
-License: MIT
+License: Fair-Source (see LICENSE)
 """
 
 import numpy as np

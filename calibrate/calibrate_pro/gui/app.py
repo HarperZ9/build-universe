@@ -1402,7 +1402,7 @@ class CalibrateProWindow(QMainWindow):
             f"<p>Professional sensorless display calibration<br>"
             f"with native colorimeter support.</p>"
             f"<p>Color science: Oklab, JzAzBz, CAM16, PQ/HLG, ACES</p>"
-            f"<p>&copy; 2024-2025 Zain Dana Build</p>"
+            f"<p>&copy; 2024-2025 Zain Dana Harper</p>"
         )
 
     # --- Geometry persistence ---

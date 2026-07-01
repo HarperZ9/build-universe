@@ -50,8 +50,8 @@ this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   are shells (its logger is real).
 
 ### Corrections
-- License unified to **MIT** (matches the LICENSE file); UNIVERSE.toml
-  corrected from "Proprietary".
+- License unified to **fair-source** (FSL-1.1-MIT; source-available, competing commercial use reserved), matching
+  the LICENSE file; UNIVERSE.toml corrected from "Proprietary".
 - Version unified to **1.0.0**; UNIVERSE.toml corrected from 2.0.0.
 - ENGINEERING.md APPS test counts corrected to measured values
   (calibrate-pro 228, build-color 281, build-engine 173); aurora has no
@@ -59,4 +59,4 @@ this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-*Copyright (c) 2024-2026 Zain Dana Harper. MIT License (see LICENSE).*
+*Copyright (c) 2022-2026 Zain Dana Harper. FSL-1.1-MIT (see LICENSE).*

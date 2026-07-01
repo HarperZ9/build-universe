@@ -468,7 +468,7 @@ class ArgyllBackend(ColorimeterBase):
         colprof_args = [
             "-v",
             "-D", f"Calibrate Pro: {output_name}",
-            "-C", "Copyright Zain Dana Build 2024-2025",
+            "-C", "Copyright Zain Dana Harper 2024-2025",
             "-A", "ASUS",  # Will be updated based on display
             "-M", "Display",
         ] + quality_args + [

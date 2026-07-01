@@ -9,7 +9,7 @@ description = "Professional sensorless display calibration"
 readme = "README.md"
 license = {text = "Proprietary"}
 authors = [
-    { name = "Zain Dana Build" },
+    { name = "Zain Dana Harper" },
 ]
 requires-python = ">=3.10"
 dependencies = [
