@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/brand/build-universe-hero.png" alt="Build Universe: Buildlang Module & Example Surface">
+  <img src=".github/assets/zentropy-banner.png" alt="Build Universe: Buildlang Module & Example Surface">
 </p>
 
 # Build Universe v1.0.0
@@ -89,3 +89,7 @@ Build Universe is the canonical successor to the earlier `quanta-universe` repo 
 ## License
 
 Fair-source, not open source. The source is published so you can read it, run it, and build on it; commercial use that competes with the project is reserved to the Licensor. See [LICENSE](LICENSE) (FSL-1.1-MIT).
+
+---
+
+**[Zentropy Labs](https://github.com/ZentropyLabs-ai)** · order out of entropy. An independent lab building evidence-first tools that leave a re-checkable artifact behind. Built by Zain Dana Harper in Seattle. The full workbench is at [Project Telos](https://harperz9.github.io).
