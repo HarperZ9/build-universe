@@ -59,3 +59,6 @@ __pycache__/
 *.spec
 *.bin
 *.bak
+
+# Local-only Claude instructions (global standard: never commit)
+CLAUDE.local.md
