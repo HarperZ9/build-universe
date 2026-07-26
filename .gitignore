@@ -55,3 +55,6 @@ tools/coherence/witness/
 # Python bytecode caches (global)
 __pycache__/
 *.pyc
+
+# Local-only Claude instructions (global standard: never commit)
+CLAUDE.local.md
