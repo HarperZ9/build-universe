@@ -65,7 +65,7 @@ is the intended fix.
 | qcsv | 595 | data | CSV-to-JSON converter |
 | qcut | 476 | text | Field/character extraction (GNU cut) |
 | qdate | 156 | system | Display current date and time |
-| qdb | 4,232 | database | SQL database engine with REPL |
+| qdb | 4,940 | database | SQL database engine with REPL |
 | qdiff | 718 | file | Unified diff (LCS-based) |
 | qdirname | 146 | path | Extract directory component from pathname |
 | qecho | 131 | system | Print arguments to stdout |
@@ -167,16 +167,17 @@ of C, proving the self-hosted compiler can handle substantial BuildLang code.
 
 ## Database Engine (qdb)
 
-The most complex program at 4,232 lines. A SQL database engine with:
+The most complex program at 4,940 lines. A SQL database engine with:
 
 **SQL support:**
 - CREATE TABLE, INSERT, SELECT, UPDATE, DELETE, DROP TABLE
 - ALTER TABLE ADD COLUMN
-- WHERE with AND/OR, LIKE, IN, IS NULL/IS NOT NULL, BETWEEN
+- UPDATE SET col = col OP literal, where OP is `+`, `-`, `*`, or `/` (arithmetic RHS, fail-closed on bad operand or division by zero)
+- WHERE as disjunctive normal form: N conditions joined by AND/OR/NOT, with comparisons, LIKE, IN, IS NULL/IS NOT NULL, BETWEEN
 - Scalar subqueries in WHERE clauses
 - JOIN (nested-loop) with table aliases
-- GROUP BY with aggregates: COUNT(*), SUM, AVG, MIN, MAX
-- HAVING, DISTINCT, ORDER BY, LIMIT
+- GROUP BY with aggregates: COUNT(*), COUNT(col), SUM, AVG, MIN, MAX
+- HAVING, DISTINCT, ORDER BY (including on GROUP BY output), LIMIT/OFFSET
 - Column aliases (SELECT col AS alias)
 
 **Storage and reliability:**
@@ -191,7 +192,9 @@ single `DB` struct due to the flat-struct constraint. The SQL parser is embedded
 (not shared with qsql) because there is no multi-file import support.
 
 **Known limitations:**
-- GROUP BY has rendering issues with some aggregate combinations
+- Grouped ORDER BY sorts by the GROUP BY column only; ordering by an aggregate term (ORDER BY COUNT(*)) leaves rows in group-discovery order
+- WHERE parenthesized grouping and NOT BETWEEN return empty rather than wrong rows (the flat DNF parser cannot express them)
+- Cross-process transactions do not roll back: each CLI statement is its own process and auto-commit checkpoints, so a later ROLLBACK cannot undo an earlier write
 - No query optimizer; all scans are sequential unless an index matches exactly
 - File format is not binary-compatible with SQLite
 
@@ -221,6 +224,19 @@ bash programs/tests/run_tests.sh
 
 96 automated tests cover 49 of 57 executables. 8 programs are skipped
 (interactive, network-dependent, or long-running). Zero failures.
+
+The qdb engine has its own end-to-end harness over the full SQL surface
+(DDL, projection, DNF WHERE, ORDER BY/LIMIT/OFFSET/DISTINCT, aggregates,
+GROUP BY/HAVING, UPDATE arithmetic with fail-closed guards, DELETE, INDEX,
+JOIN, ALTER/DROP). Build `qdb.exe` first, then:
+
+```bash
+bash programs/tests/test_qdb.sh
+```
+
+Divergences from full SQL (parenthesized WHERE grouping, NOT BETWEEN,
+cross-process transactions, aggregate-keyed grouped ORDER BY) are asserted
+as XFAIL, so a closed null reports XPASS instead of silently passing.
 
 ## Project Status
 
@@ -277,7 +293,7 @@ arrays use the string pool pattern (string buffer + parallel index arrays).
 
 ## Known Issues
 
-- GROUP BY has rendering issues with some aggregate combinations
+- Grouped ORDER BY sorts by the GROUP BY column only; ordering by an aggregate term is unsupported (rows stay in group-discovery order)
 - Self-hosted compiler (qc) handles a subset of the language only
 - 3 programs (qc, json, test_hello) have `.c` output but no linked binary
   (requires manual MSVC invocation)
