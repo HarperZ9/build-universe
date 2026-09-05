@@ -3,14 +3,14 @@
 // Main integration system tying together all ENB components
 // ============================================================================
 
-import core::sync
-import refract::lib
-import refract::hooks
-import refract::effects
-import refract::weather
-import refract::particle_lights
-import refract::skylighting
-import refract::presets
+use core::sync
+use refract::lib
+use refract::hooks
+use refract::effects
+use refract::weather
+use refract::particle_lights
+use refract::skylighting
+use refract::presets
 
 // ============================================================================
 // SYSTEM CONFIGURATION

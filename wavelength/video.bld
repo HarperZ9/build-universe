@@ -3,10 +3,10 @@
 // Advanced video processing, frame manipulation, and transcoding
 // ============================================================================
 
-import std::memory::{Buffer, Arena, Pool};
-import std::math::{Vector2, Vector3, Vector4, Matrix3x3, Matrix4x4};
-import std::collections::{Array, HashMap, Queue, RingBuffer};
-import std::simd::{simd_f32x8, simd_i32x8};
+use std::memory::{Buffer, Arena, Pool};
+use std::math::{Vector2, Vector3, Vector4, Matrix3x3, Matrix4x4};
+use std::collections::{Array, HashMap, Queue, RingBuffer};
+use std::simd::{simd_f32x8, simd_i32x8};
 
 // ============================================================================
 // PIXEL FORMATS AND COLOR SPACES

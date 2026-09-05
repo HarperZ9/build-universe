@@ -3,8 +3,8 @@
 // Debugging, profiling, and monitoring tools for mods
 // ============================================================================
 
-import nexus::lib::{ModMetadata, Version};
-import nexus::loader::{ModInstance, LoadState};
+use nexus::lib::{ModMetadata, Version};
+use nexus::loader::{ModInstance, LoadState};
 
 // ============================================================================
 // REGION: Log Levels

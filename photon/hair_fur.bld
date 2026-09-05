@@ -2,11 +2,11 @@
 // Part of the Photon Rendering Module
 // Implements strand-based hair rendering, fur shells, Marschner scattering, and real-time strand simulation
 
-import std::collections::{HashMap, Vec, VecDeque}
-import std::math::{Vec2, Vec3, Vec4, Mat3, Mat4, Quaternion, sqrt, pow, exp, sin, cos, tan, acos, atan2, PI, floor, ceil, clamp, lerp, min, max, abs, dot, cross, normalize, length}
-import std::memory::{Arena, Pool, Box, Arc, Rc}
-import std::sync::{Mutex, RwLock, Atomic}
-import std::simd::{f32x4, f32x8, i32x4, i32x8}
+use std::collections::{HashMap, Vec, VecDeque}
+use std::math::{Vec2, Vec3, Vec4, Mat3, Mat4, Quaternion, sqrt, pow, exp, sin, cos, tan, acos, atan2, PI, floor, ceil, clamp, lerp, min, max, abs, dot, cross, normalize, length}
+use std::memory::{Arena, Pool, Box, Arc, Rc}
+use std::sync::{Mutex, RwLock, Atomic}
+use std::simd::{f32x4, f32x8, i32x4, i32x8}
 
 // ============================================================================
 // HAIR STRAND REPRESENTATION
