@@ -180,7 +180,7 @@ The most complex program at 5,705 lines. A SQL database engine with:
 - Scalar subqueries in WHERE clauses
 - INNER and LEFT JOIN (nested-loop) with table aliases; LEFT JOIN fills unmatched right rows with NULL
 - UNION and UNION ALL, with column-count and per-branch shape checks (fail-closed on mismatch)
-- GROUP BY with aggregates: COUNT(*), COUNT(col), SUM, AVG, MIN, MAX
+- GROUP BY with aggregates: COUNT(*), COUNT(col), COUNT(DISTINCT col), SUM, AVG, MIN, MAX
 - HAVING, DISTINCT, LIMIT/OFFSET
 - ORDER BY, including grouped output by the group column, an aggregate term (ORDER BY SUM(salary)), or a projection alias (ORDER BY the AS name)
 - Column aliases (SELECT col AS alias)
@@ -197,6 +197,7 @@ single `DB` struct due to the flat-struct constraint. The SQL parser is embedded
 (not shared with qsql) because there is no multi-file import support.
 
 **Known limitations:**
+- DISTINCT inside an aggregate is supported only for COUNT (COUNT(DISTINCT col)); SUM(DISTINCT ...), AVG(DISTINCT ...), and COUNT(DISTINCT *) fail closed with an error rather than silently ignoring the keyword
 - Grouped ORDER BY resolves the key to the group column, an aggregate output, or a select alias; a key that matches none of these fails closed with an error rather than sorting by an unselected column
 - Cross-process transactions do not roll back: each CLI statement is its own process and auto-commit checkpoints, so a later ROLLBACK cannot undo an earlier write
 - No query optimizer; all scans are sequential unless an index matches exactly
@@ -303,7 +304,6 @@ pattern (string buffer plus parallel `Vec<i32>` index arrays); programs that nee
 
 ## Known Issues
 
-- Grouped ORDER BY sorts by the GROUP BY column only; ordering by an aggregate term is unsupported (rows stay in group-discovery order)
 - Self-hosted compiler (qc) handles a subset of the language only
 - 3 programs (qc, json, test_hello) have `.c` output but no linked binary
   (requires manual MSVC invocation)

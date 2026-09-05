@@ -4,6 +4,38 @@ All notable changes to the BuildLang program suite.
 
 ## [Unreleased]
 
+### qdb: COUNT(DISTINCT col) + Fail-Closed DISTINCT Guards (2026-09-05)
+
+**COUNT(DISTINCT col) now counts distinct non-NULL values, grouped and non-grouped.**
+- `SELECT COUNT(DISTINCT dept) FROM emp` and
+  `SELECT dept, COUNT(DISTINCT salary) FROM emp GROUP BY dept` previously had no
+  path: the parser accepted only a bare column or `*` inside an aggregate, so
+  DISTINCT was a syntax error. A fourth per-projection array, `p_agg_distinct`,
+  now runs parallel to `p_agg_funcs`/`p_agg_cols`/`p_aliases` and carries a
+  1 for `COUNT(DISTINCT col)`. Both the non-grouped path (`compute_single_agg`)
+  and the grouped path (a new `group_count_col_distinct`) linear-scan the match
+  set and dedup by pooled string value before counting.
+- The distinct count is proven independent of the row count by a test that
+  inserts a duplicate salary within a group, so distinct (2) diverges from the
+  group's row count (3).
+- The output header renders `COUNT(DISTINCT col)`; a projection alias still
+  overrides it, and grouped ORDER BY resolves against that alias.
+- DISTINCT outside COUNT fails closed: `SUM(DISTINCT ...)`/`AVG(DISTINCT ...)`
+  report "DISTINCT is only supported inside COUNT" and `COUNT(DISTINCT *)`
+  reports "COUNT(DISTINCT *) is not supported; use COUNT(*)", both via
+  process_exit(1) with the table left intact, rather than silently dropping the
+  keyword.
+- Tests added: `count_distinct_dept_nogroup`, `count_distinct_grouped`,
+  `count_distinct_alias_order`, `count_distinct_sum_closed`,
+  `count_distinct_star_closed`.
+- db.bld: 5,810 lines. Gate: pass=93 fail=0 xfail=1 xpass=0 (the one XFAIL is
+  cross-process ROLLBACK, a documented process-model null).
+
+**README reconciled.** The aggregate list now includes COUNT(DISTINCT col), a
+known-limitation note records that DISTINCT is COUNT-only with the other forms
+failing closed, and a stale Known-Issue claiming grouped ORDER BY sorts by the
+group column only (already false since the prior entry) was removed.
+
 ### qdb: Grouped ORDER BY by Alias + Fail-Closed Resolution (2026-09-05)
 
 **Grouped ORDER BY now resolves a projection alias.**
