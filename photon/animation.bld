@@ -877,7 +877,7 @@ struct GpuSkinning {
 }
 
 impl GpuSkinning {
-    fn new(device: &Device, max_bones: u32) -> Self {
+    fn new(device: &Device, max_bones: u32) -> Self ~ FileSystem {
         let compute_pipeline = device.create_compute_pipeline(&ComputePipelineDescriptor {
             shader: include_str!("shaders/skinning.wgsl"),
             entry_point: "skin_vertices",
@@ -939,7 +939,7 @@ struct BlendShapeManager {
 }
 
 impl BlendShapeManager {
-    fn new(device: &Device, targets: Vec<BlendShapeTarget>) -> Self {
+    fn new(device: &Device, targets: Vec<BlendShapeTarget>) -> Self ~ FileSystem {
         let target_count = targets.len();
 
         // Pack all deltas into a buffer
@@ -1305,7 +1305,7 @@ impl IkSolver for FabrikSolver {
 }
 
 impl AnimationSystem {
-    fn new(device: &Device, max_bones: u32) -> Self {
+    fn new(device: &Device, max_bones: u32) -> Self ~ FileSystem {
         Self {
             skeletons: HashMap::new(),
             clips: HashMap::new(),

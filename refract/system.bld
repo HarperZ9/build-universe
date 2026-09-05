@@ -531,7 +531,7 @@ impl ENBSystem {
         }
     }
 
-    pub fn initialize(&mut self, device: &Device, width: u32, height: u32) -> Result<(), SystemError> {
+    pub fn initialize(&mut self, device: &Device, width: u32, height: u32) -> Result<(), SystemError> ~ Console {
         self.state = SystemState::Initializing;
 
         // Create render resources

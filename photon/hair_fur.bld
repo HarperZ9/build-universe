@@ -625,7 +625,7 @@ struct HairRenderer {
 }
 
 impl HairRenderer {
-    fn new(device: &Device, config: HairRenderConfig) -> Self {
+    fn new(device: &Device, config: HairRenderConfig) -> Self ~ FileSystem {
         let depth_prepass_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
             vertex_shader: include_str!("shaders/hair_vertex.wgsl"),
             fragment_shader: include_str!("shaders/hair_depth.wgsl"),
@@ -950,7 +950,7 @@ struct FurShellRenderer {
 }
 
 impl FurShellRenderer {
-    fn new(device: &Device, shell_count: u32) -> Self {
+    fn new(device: &Device, shell_count: u32) -> Self ~ FileSystem {
         let shell_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
             vertex_shader: include_str!("shaders/fur_shell_vertex.wgsl"),
             fragment_shader: include_str!("shaders/fur_shell_fragment.wgsl"),
@@ -1379,7 +1379,7 @@ struct GpuHairSimulation {
 }
 
 impl GpuHairSimulation {
-    fn new(device: &Device, strands: &[HairStrand]) -> Self {
+    fn new(device: &Device, strands: &[HairStrand]) -> Self ~ FileSystem {
         let mut total_particles = 0u32;
         for strand in strands {
             total_particles += strand.segments.len() as u32;

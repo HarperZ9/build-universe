@@ -541,7 +541,7 @@ struct ProceduralGrass {
 }
 
 impl ProceduralGrass {
-    fn new(device: &Device, chunk_size: f32, density: f32) -> Self {
+    fn new(device: &Device, chunk_size: f32, density: f32) -> Self ~ FileSystem {
         let max_instances = (chunk_size * chunk_size * density) as usize;
 
         let indirect_buffer = device.create_buffer(&BufferDescriptor {
@@ -976,7 +976,7 @@ struct FoliageManager {
 }
 
 impl FoliageManager {
-    fn new(device: &Device, config: FoliageManagerConfig) -> Self {
+    fn new(device: &Device, config: FoliageManagerConfig) -> Self ~ FileSystem {
         let indirect_buffer = device.create_buffer(&BufferDescriptor {
             size: 1024 * 16, // Space for multiple draw calls
             usage: BufferUsage::INDIRECT | BufferUsage::STORAGE,

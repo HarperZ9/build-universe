@@ -774,7 +774,7 @@ struct SsgiRenderer {
 }
 
 impl SsgiRenderer {
-    fn new(device: &Device, width: u32, height: u32, config: SsgiConfig) -> Self {
+    fn new(device: &Device, width: u32, height: u32, config: SsgiConfig) -> Self ~ FileSystem {
         let scale = config.quality.resolution_scale();
         let scaled_width = (width as f32 * scale) as u32;
         let scaled_height = (height as f32 * scale) as u32;
@@ -1736,7 +1736,7 @@ struct IndirectLightingManager {
 }
 
 impl IndirectLightingManager {
-    fn new(device: &Device, config: IndirectLightingConfig, scene_bounds: (Vec3, Vec3)) -> Self {
+    fn new(device: &Device, config: IndirectLightingConfig, scene_bounds: (Vec3, Vec3)) -> Self ~ FileSystem {
         let (bounds_min, bounds_max) = scene_bounds;
 
         let probe_grid = match config.technique {
