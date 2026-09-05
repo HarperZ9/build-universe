@@ -6346,7 +6346,7 @@ impl AstVisualizer {
         html
     }
 
-    fn render_node(self, html: mut string, node: AstNode, depth: usize) {
+    fn render_node(self, html: &mut string, node: AstNode, depth: usize) {
         if depth > self.max_depth { return; }
         let class = match node.kind {
             Function => "function", Struct => "struct", Expression => "expression", _ => "statement"

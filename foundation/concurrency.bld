@@ -1512,7 +1512,7 @@ impl ThreadPool {
     }
 
     /// Shutdown and wait for completion
-    pub fn join(self: mut Self) {
+    pub fn join(mut self) {
         self.shutdown.store(true, Ordering::SeqCst);
         // Signal workers to stop
         for worker in self.workers.drain(..) {
@@ -1563,7 +1563,7 @@ impl Worker {
         }
     }
 
-    fn join(self: mut Self) {
+    fn join(mut self) {
         if let Some(thread) = self.thread.take() {
             thread.join().unwrap();
         }
@@ -1634,7 +1634,7 @@ impl WorkStealingPool {
     }
 
     /// Shutdown the pool
-    pub fn shutdown(self: mut Self) {
+    pub fn shutdown(mut self) {
         self.shutdown.store(true, Ordering::SeqCst);
         for worker in self.workers.drain(..) {
             worker.join();
@@ -1794,7 +1794,7 @@ impl StealingWorker {
         }
     }
 
-    fn join(self: mut Self) {
+    fn join(mut self) {
         if let Some(thread) = self.thread.take() {
             thread.join().unwrap();
         }

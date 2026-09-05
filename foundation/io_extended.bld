@@ -556,7 +556,7 @@ impl<W: Write> BufWriter<W> {
     }
 
     /// Consume and return the inner writer, flushing first
-    pub fn into_inner(self: mut Self) -> Result<W, IntoInnerError<BufWriter<W>>> {
+    pub fn into_inner(mut self) -> Result<W, IntoInnerError<BufWriter<W>>> {
         match self.flush_buf() {
             Ok(()) => Ok(self.inner.take().unwrap()),
             Err(e) => Err(IntoInnerError { error: e, writer: self }),
@@ -808,37 +808,37 @@ impl MmapOptions {
     }
 
     /// Set offset
-    pub fn offset(self: mut Self, offset: u64) -> Self {
+    pub fn offset(mut self, offset: u64) -> Self {
         self.offset = offset;
         self
     }
 
     /// Set length
-    pub fn len(self: mut Self, len: usize) -> Self {
+    pub fn len(mut self, len: usize) -> Self {
         self.len = Some(len);
         self
     }
 
     /// Set protection mode
-    pub fn protection(self: mut Self, prot: Protection) -> Self {
+    pub fn protection(mut self, prot: Protection) -> Self {
         self.protection = prot;
         self
     }
 
     /// Enable page prefaulting
-    pub fn populate(self: mut Self) -> Self {
+    pub fn populate(mut self) -> Self {
         self.populate = true;
         self
     }
 
     /// Enable huge pages
-    pub fn huge_pages(self: mut Self, size: HugePageSize) -> Self {
+    pub fn huge_pages(mut self, size: HugePageSize) -> Self {
         self.huge_pages = Some(size);
         self
     }
 
     /// Lock pages in memory
-    pub fn lock(self: mut Self) -> Self {
+    pub fn lock(mut self) -> Self {
         self.lock = true;
         self
     }

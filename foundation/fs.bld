@@ -614,43 +614,43 @@ impl OpenOptions {
     }
 
     /// Set read access
-    pub fn read(self: mut Self, read: bool) -> Self {
+    pub fn read(mut self, read: bool) -> Self {
         self.read = read;
         self
     }
 
     /// Set write access
-    pub fn write(self: mut Self, write: bool) -> Self {
+    pub fn write(mut self, write: bool) -> Self {
         self.write = write;
         self
     }
 
     /// Set append mode
-    pub fn append(self: mut Self, append: bool) -> Self {
+    pub fn append(mut self, append: bool) -> Self {
         self.append = append;
         self
     }
 
     /// Set truncate mode
-    pub fn truncate(self: mut Self, truncate: bool) -> Self {
+    pub fn truncate(mut self, truncate: bool) -> Self {
         self.truncate = truncate;
         self
     }
 
     /// Set create mode
-    pub fn create(self: mut Self, create: bool) -> Self {
+    pub fn create(mut self, create: bool) -> Self {
         self.create = create;
         self
     }
 
     /// Set create_new mode (fail if exists)
-    pub fn create_new(self: mut Self, create_new: bool) -> Self {
+    pub fn create_new(mut self, create_new: bool) -> Self {
         self.create_new = create_new;
         self
     }
 
     /// Set Unix permissions mode
-    pub fn mode(self: mut Self, mode: u32) -> Self {
+    pub fn mode(mut self, mode: u32) -> Self {
         self.mode = mode;
         self
     }
@@ -913,13 +913,13 @@ impl FileTimes {
     }
 
     /// Set access time
-    pub fn set_accessed(self: mut Self, t: SystemTime) -> Self {
+    pub fn set_accessed(mut self, t: SystemTime) -> Self {
         self.accessed = Some(t);
         self
     }
 
     /// Set modification time
-    pub fn set_modified(self: mut Self, t: SystemTime) -> Self {
+    pub fn set_modified(mut self, t: SystemTime) -> Self {
         self.modified = Some(t);
         self
     }
@@ -1204,13 +1204,13 @@ impl WalkDir {
     }
 
     /// Follow symbolic links
-    pub fn follow_symlinks(self: mut Self, follow: bool) -> Self {
+    pub fn follow_symlinks(mut self, follow: bool) -> Self {
         self.follow_symlinks = follow;
         self
     }
 
     /// Set maximum depth
-    pub fn max_depth(self: mut Self, depth: usize) -> Self {
+    pub fn max_depth(mut self, depth: usize) -> Self {
         self.max_depth = Some(depth);
         self
     }
