@@ -68,7 +68,7 @@ is the intended fix.
 | qcsv | 595 | data | CSV-to-JSON converter |
 | qcut | 476 | text | Field/character extraction (GNU cut) |
 | qdate | 156 | system | Display current date and time |
-| qdb | 5,892 | database | SQL database engine with REPL |
+| qdb | 5,946 | database | SQL database engine with REPL |
 | qdiff | 718 | file | Unified diff (LCS-based) |
 | qdirname | 146 | path | Extract directory component from pathname |
 | qecho | 131 | system | Print arguments to stdout |
@@ -170,7 +170,7 @@ of C, proving the self-hosted compiler can handle substantial BuildLang code.
 
 ## Database Engine (qdb)
 
-The most complex program at 5,892 lines. A SQL database engine with:
+The most complex program at 5,946 lines. A SQL database engine with:
 
 **SQL support:**
 - CREATE TABLE, INSERT, SELECT, UPDATE, DELETE, DROP TABLE
@@ -183,7 +183,7 @@ The most complex program at 5,892 lines. A SQL database engine with:
 - UNION and UNION ALL, with column-count and per-branch shape checks (fail-closed on mismatch)
 - GROUP BY with aggregates: COUNT(*), COUNT(col), COUNT(DISTINCT col), SUM, AVG, MIN, MAX
 - HAVING, DISTINCT, LIMIT/OFFSET
-- ORDER BY a column name, a positional ordinal (ORDER BY 2, counting select columns from 1), or a projection alias (ORDER BY the AS name), with an optional secondary tie-break key; a key that names no column fails closed instead of leaving the rows unsorted
+- ORDER BY a column name, a positional ordinal (ORDER BY 2, counting select columns from 1), or a projection alias (ORDER BY the AS name), with an optional secondary tie-break key. Single-table, JOIN, and UNION selects each resolve an ordinal or column key and fail closed on a key that names nothing, instead of leaving the rows unsorted: a JOIN key binds to whichever joined table owns the column, and a UNION key binds to an output-column position (only the first branch's names reach the merged headers, so an ordinal is the portable way to order a union)
 - ORDER BY on grouped output also accepts the group column or an aggregate term (ORDER BY SUM(salary))
 - Column aliases (SELECT col AS alias)
 
@@ -201,6 +201,7 @@ single `DB` struct due to the flat-struct constraint. The SQL parser is embedded
 **Known limitations:**
 - DISTINCT inside an aggregate is supported only for COUNT (COUNT(DISTINCT col)); SUM(DISTINCT ...), AVG(DISTINCT ...), and COUNT(DISTINCT *) fail closed with an error rather than silently ignoring the keyword
 - Grouped ORDER BY resolves the key to the group column, an aggregate output, or a select alias; a key that matches none of these fails closed with an error rather than sorting by an unselected column
+- A JOIN ORDER BY resolves a column name (in either joined table) or a positional ordinal, but not a projection alias; ordering a join by an AS name fails closed rather than sorting by an unselected column
 - Cross-process transactions do not roll back: each CLI statement is its own process and auto-commit checkpoints, so a later ROLLBACK cannot undo an earlier write
 - No query optimizer; all scans are sequential unless an index matches exactly
 - File format is not binary-compatible with SQLite

@@ -4,6 +4,43 @@ All notable changes to the BuildLang program suite.
 
 ## [Unreleased]
 
+### qdb: JOIN and UNION ORDER BY Resolve Ordinals and Fail Closed (2026-09-05)
+
+**The JOIN and UNION sort paths now resolve a positional ordinal and fail closed
+on an unknown key, matching the single-table path.** This closes the follow-up
+the entry below left open.
+- The single-table ORDER BY was already fail-closed and ordinal-aware, but the
+  JOIN and UNION sort paths still resolved a key only by name and silently
+  returned scan order for an ordinal (`ORDER BY 1`), an out-of-range position, or
+  an unknown name. A union has no other portable key: only the first branch's
+  column names reach the merged headers, so `ORDER BY 2` was the intended way to
+  order it and it did nothing.
+- UNION: a new helper, `resolve_union_order_key`, maps the key to an output-column
+  position. A bare integer is a 1-based ordinal into the merged columns; anything
+  else matches a merged header name (which reflects a first-branch `AS` alias).
+  Both the primary and the secondary key route through it, and a position outside
+  `1..ncol` or an unmatched name fails closed.
+- JOIN: the resolution preamble now takes an ordinal as the Nth projected column
+  and maps it back to whichever source table owns that column, reusing the
+  existing `sel_table`/`sel_col` projection arrays, so ordinal ordering shares the
+  named-key path's numeric comparison, stable tie-break, and LEFT JOIN
+  null-extension. A name still resolves against either joined table.
+- Honest carve-out: a JOIN ORDER BY resolves a source-table column name or an
+  ordinal, but not a projection alias (`... AS k ... ORDER BY k`), which fails
+  closed rather than sorting by an unselected column. Single-table and UNION
+  selects do resolve an alias. This is safe (fail-closed, never a wrong order) and
+  is documented as a known limitation, not silently ignored.
+- Both read-only paths (`exec_select_join` is `~ Console`, no Process effect) fail
+  closed with an error message and a bare return that leaves the table intact,
+  rather than a process exit, so the effect signatures are unchanged.
+- Tests added: `join_order_ordinal_left`, `join_order_ordinal_sec`,
+  `union_order_ordinal_desc`, `union_order_ordinal_two`, `union_order_ordinal_name`,
+  and four fail-closed cases (`join_order_ordinal_oor_closed`,
+  `join_order_unknown_closed`, `union_order_ordinal_oor_closed`,
+  `union_order_unknown_closed`).
+- db.bld: 5,946 lines. Gate: pass=115 fail=0 xfail=1 xpass=0 (the one XFAIL is
+  cross-process ROLLBACK, a documented process-model null).
+
 ### qdb: ORDER BY Resolves Ordinals and Aliases, Fails Closed on Unknown Keys (2026-09-05)
 
 **The non-grouped single-table ORDER BY now resolves a positional ordinal and a
