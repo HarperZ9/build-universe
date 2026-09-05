@@ -13,7 +13,7 @@ use std::simd::{simd_f32x8, simd_i32x8};
 // ============================================================================
 
 /// Image pixel type
-enum ImageType {
+pub enum ImageType {
     RGB8,       // 8-bit per channel RGB
     RGBA8,      // 8-bit per channel RGBA
     RGB16,      // 16-bit per channel RGB
@@ -27,7 +27,7 @@ enum ImageType {
 }
 
 /// Image structure
-struct Image {
+pub struct Image {
     width: u32,
     height: u32,
     image_type: ImageType,
@@ -272,7 +272,7 @@ impl Image {
 }
 
 /// Floating-point pixel representation
-struct Pixel {
+pub struct Pixel {
     r: f32,
     g: f32,
     b: f32,
@@ -644,7 +644,7 @@ impl Pixel {
 }
 
 /// Blend modes
-enum BlendMode {
+pub enum BlendMode {
     Normal,
     Multiply,
     Screen,
@@ -664,7 +664,7 @@ enum BlendMode {
 }
 
 /// Image metadata
-struct ImageMetadata {
+pub struct ImageMetadata {
     dpi_x: f32,
     dpi_y: f32,
     creation_date: Option<String>,
@@ -715,12 +715,12 @@ impl ImageMetadata {
 // ============================================================================
 
 /// Filter trait
-trait ImageFilter {
+pub trait ImageFilter {
     fn apply(self, image: &mut Image);
 }
 
 /// Convolution kernel
-struct ConvolutionKernel {
+pub struct ConvolutionKernel {
     values: Array<f32>,
     width: usize,
     height: usize,
@@ -844,7 +844,7 @@ impl ConvolutionKernel {
 }
 
 /// Gaussian blur filter
-struct GaussianBlur {
+pub struct GaussianBlur {
     radius: f32,
     kernel: Array<f32>,
 
@@ -933,7 +933,7 @@ impl ImageFilter for GaussianBlur {
 }
 
 /// Box blur filter
-struct BoxBlur {
+pub struct BoxBlur {
     radius: u32,
 
 }
@@ -1006,7 +1006,7 @@ impl ImageFilter for BoxBlur {
 }
 
 /// Brightness/Contrast filter
-struct BrightnessContrast {
+pub struct BrightnessContrast {
     brightness: f32,  // -1.0 to 1.0
     contrast: f32,    // 0.0 to 2.0
 
@@ -1042,7 +1042,7 @@ impl ImageFilter for BrightnessContrast {
 }
 
 /// Hue/Saturation/Lightness filter
-struct HueSaturationLightness {
+pub struct HueSaturationLightness {
     hue: f32,         // -180 to 180 degrees
     saturation: f32,  // -1.0 to 1.0
     lightness: f32,   // -1.0 to 1.0
@@ -1090,7 +1090,7 @@ impl ImageFilter for HueSaturationLightness {
 }
 
 /// Levels adjustment
-struct Levels {
+pub struct Levels {
     input_black: f32,
     input_white: f32,
     input_gamma: f32,
@@ -1157,7 +1157,7 @@ impl ImageFilter for Levels {
 }
 
 /// Curves adjustment
-struct Curves {
+pub struct Curves {
     r_curve: Array<f32>,
     g_curve: Array<f32>,
     b_curve: Array<f32>,
@@ -1272,7 +1272,7 @@ impl ImageFilter for Curves {
 }
 
 /// Color balance adjustment
-struct ColorBalance {
+pub struct ColorBalance {
     shadows_cyan_red: f32,
     shadows_magenta_green: f32,
     shadows_yellow_blue: f32,
@@ -1358,7 +1358,7 @@ impl ImageFilter for ColorBalance {
 }
 
 /// Invert colors filter
-struct Invert {}
+pub struct Invert {}
 
 impl ImageFilter for Invert {
 }
@@ -1380,7 +1380,7 @@ impl Invert {
 }
 
 /// Grayscale filter
-struct Grayscale {
+pub struct Grayscale {
     method: GrayscaleMethod,
 
 }
@@ -1391,7 +1391,7 @@ impl Grayscale {
     }
 }
 
-enum GrayscaleMethod {
+pub enum GrayscaleMethod {
     Luminosity,
     Average,
     Lightness,
@@ -1428,7 +1428,7 @@ impl ImageFilter for Grayscale {
 }
 
 /// Sepia tone filter
-struct Sepia {
+pub struct Sepia {
     intensity: f32,
 
 }
@@ -1465,7 +1465,7 @@ impl ImageFilter for Sepia {
 }
 
 /// Posterize filter
-struct Posterize {
+pub struct Posterize {
     levels: u32,
 
 }
@@ -1495,7 +1495,7 @@ impl ImageFilter for Posterize {
 }
 
 /// Threshold filter
-struct Threshold {
+pub struct Threshold {
     level: f32,
 
 }
@@ -1521,7 +1521,7 @@ impl ImageFilter for Threshold {
 }
 
 /// Vignette filter
-struct Vignette {
+pub struct Vignette {
     radius: f32,
     softness: f32,
     color: Pixel,
@@ -1570,7 +1570,7 @@ impl ImageFilter for Vignette {
 }
 
 /// Noise generator
-struct NoiseGenerator {
+pub struct NoiseGenerator {
     amount: f32,
     monochrome: bool,
     seed: u64,
@@ -1636,7 +1636,7 @@ impl ImageFilter for NoiseGenerator {
 // ============================================================================
 
 /// Scaling algorithm
-enum ScaleAlgorithm {
+pub enum ScaleAlgorithm {
     NearestNeighbor,
     Bilinear,
     Bicubic,
@@ -1645,7 +1645,7 @@ enum ScaleAlgorithm {
 }
 
 /// Image scaler
-struct ImageScaler {
+pub struct ImageScaler {
     algorithm: ScaleAlgorithm,
 
 }
@@ -1825,7 +1825,7 @@ impl ImageScaler {
 // ============================================================================
 
 /// Image histogram
-struct Histogram {
+pub struct Histogram {
     r: [u32; 256],
     g: [u32; 256],
     b: [u32; 256],
@@ -1923,7 +1923,7 @@ impl Histogram {
 }
 
 /// Histogram equalization
-struct HistogramEqualization {}
+pub struct HistogramEqualization {}
 
 impl ImageFilter for HistogramEqualization {
 }
@@ -1980,7 +1980,7 @@ impl HistogramEqualization {
 }
 
 /// Auto levels
-struct AutoLevels {
+pub struct AutoLevels {
     clip_percentage: f32,
 
 }
@@ -2040,7 +2040,7 @@ impl ImageFilter for AutoLevels {
 // ============================================================================
 
 /// Structuring element for morphological operations
-struct StructuringElement {
+pub struct StructuringElement {
     kernel: Array<bool>,
     width: usize,
     height: usize,
@@ -2085,7 +2085,7 @@ impl StructuringElement {
 }
 
 /// Erosion operation
-struct Erode {
+pub struct Erode {
     element: StructuringElement,
 
 }
@@ -2134,7 +2134,7 @@ impl ImageFilter for Erode {
 }
 
 /// Dilation operation
-struct Dilate {
+pub struct Dilate {
     element: StructuringElement,
 
 }
@@ -2183,7 +2183,7 @@ impl ImageFilter for Dilate {
 }
 
 /// Opening operation (erosion followed by dilation)
-struct Opening {
+pub struct Opening {
     element: StructuringElement,
 
 }
@@ -2204,7 +2204,7 @@ impl ImageFilter for Opening {
 }
 
 /// Closing operation (dilation followed by erosion)
-struct Closing {
+pub struct Closing {
     element: StructuringElement,
 
 }
@@ -2229,7 +2229,7 @@ impl ImageFilter for Closing {
 // ============================================================================
 
 /// Layer for image compositing
-struct Layer {
+pub struct Layer {
     image: Image,
     x: i32,
     y: i32,
@@ -2271,7 +2271,7 @@ impl Layer {
 }
 
 /// Image compositor
-struct Compositor {
+pub struct Compositor {
     width: u32,
     height: u32,
     background: Pixel,
@@ -2338,50 +2338,3 @@ impl Compositor {
 // EXPORTS
 // ============================================================================
 
-export {
-    // Core types
-    ImageType,
-    Image,
-    Pixel,
-    BlendMode,
-    ImageMetadata,
-
-    // Filters
-    ImageFilter,
-    ConvolutionKernel,
-    GaussianBlur,
-    BoxBlur,
-    BrightnessContrast,
-    HueSaturationLightness,
-    Levels,
-    Curves,
-    ColorBalance,
-    Invert,
-    Grayscale,
-    GrayscaleMethod,
-    Sepia,
-    Posterize,
-    Threshold,
-    Vignette,
-    NoiseGenerator,
-
-    // Scaling
-    ScaleAlgorithm,
-    ImageScaler,
-
-    // Histogram
-    Histogram,
-    HistogramEqualization,
-    AutoLevels,
-
-    // Morphology
-    StructuringElement,
-    Erode,
-    Dilate,
-    Opening,
-    Closing,
-
-    // Compositing
-    Layer,
-    Compositor,
-};

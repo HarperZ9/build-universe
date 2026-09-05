@@ -13,7 +13,7 @@ use std::simd::{simd_f32x8, simd_i32x8};
 // ============================================================================
 
 /// Pixel format enumeration
-enum PixelFormat {
+pub enum PixelFormat {
     RGB24,          // 8-bit RGB
     RGBA32,         // 8-bit RGBA
     BGR24,          // 8-bit BGR
@@ -35,7 +35,7 @@ enum PixelFormat {
 }
 
 /// Color space enumeration
-enum ColorSpace {
+pub enum ColorSpace {
     SRGB,           // Standard RGB
     LinearRGB,      // Linear RGB
     AdobeRGB,       // Adobe RGB (1998)
@@ -52,7 +52,7 @@ enum ColorSpace {
 }
 
 /// Color transfer function
-enum TransferFunction {
+pub enum TransferFunction {
     Linear,
     SRGB,
     Gamma22,
@@ -70,7 +70,7 @@ enum TransferFunction {
 }
 
 /// Color matrix coefficients
-struct ColorMatrix {
+pub struct ColorMatrix {
     coefficients: [[f64; 3]; 3],
 }
 
@@ -141,7 +141,7 @@ impl ColorMatrix {
 // ============================================================================
 
 /// Video frame representation
-struct VideoFrame {
+pub struct VideoFrame {
     width: u32,
     height: u32,
     format: PixelFormat,
@@ -329,7 +329,7 @@ impl VideoFrame {
 // ============================================================================
 
 /// Pool of reusable video frames
-struct FramePool {
+pub struct FramePool {
     frames: Queue<VideoFrame>,
     width: u32,
     height: u32,
@@ -387,7 +387,7 @@ impl FramePool {
 // ============================================================================
 
 /// Pixel format converter
-struct PixelFormatConverter {
+pub struct PixelFormatConverter {
     source_format: PixelFormat,
     target_format: PixelFormat,
     color_matrix: ColorMatrix,
@@ -706,7 +706,7 @@ impl PixelFormatConverter {
 // ============================================================================
 
 /// Scaling algorithm
-enum ScaleAlgorithm {
+pub enum ScaleAlgorithm {
     NearestNeighbor,
     Bilinear,
     Bicubic,
@@ -721,7 +721,7 @@ enum ScaleAlgorithm {
 }
 
 /// Video scaler
-struct VideoScaler {
+pub struct VideoScaler {
     algorithm: ScaleAlgorithm,
     source_width: u32,
     source_height: u32,
@@ -1053,13 +1053,13 @@ impl VideoScaler {
 // ============================================================================
 
 /// Base filter trait
-trait VideoFilter {
+pub trait VideoFilter {
     fn process(mut self, frame: &mut VideoFrame);
     fn reset(mut self);
 }
 
 /// Brightness/Contrast filter
-struct BrightnessContrastFilter {
+pub struct BrightnessContrastFilter {
     brightness: f32,  // -1.0 to 1.0
     contrast: f32,    // 0.0 to 2.0
 
@@ -1117,7 +1117,7 @@ impl VideoFilter for BrightnessContrastFilter {
 }
 
 /// Saturation filter
-struct SaturationFilter {
+pub struct SaturationFilter {
     saturation: f32,  // 0.0 to 2.0
 
 }
@@ -1174,7 +1174,7 @@ impl VideoFilter for SaturationFilter {
 }
 
 /// Hue rotation filter
-struct HueRotationFilter {
+pub struct HueRotationFilter {
     degrees: f32,
 
 }
@@ -1262,7 +1262,7 @@ impl VideoFilter for HueRotationFilter {
 }
 
 /// Gaussian blur filter
-struct GaussianBlurFilter {
+pub struct GaussianBlurFilter {
     radius: f32,
     kernel: Array<f32>,
     kernel_size: usize,
@@ -1378,7 +1378,7 @@ impl VideoFilter for GaussianBlurFilter {
 }
 
 /// Sharpening filter
-struct SharpenFilter {
+pub struct SharpenFilter {
     amount: f32,
     threshold: u8,
 
@@ -1449,7 +1449,7 @@ impl VideoFilter for SharpenFilter {
 }
 
 /// Edge detection filter
-struct EdgeDetectionFilter {
+pub struct EdgeDetectionFilter {
     method: EdgeMethod,
 
 }
@@ -1460,7 +1460,7 @@ impl EdgeDetectionFilter {
     }
 }
 
-enum EdgeMethod {
+pub enum EdgeMethod {
     Sobel,
     Prewitt,
     Roberts,
@@ -1538,7 +1538,7 @@ impl VideoFilter for EdgeDetectionFilter {
 }
 
 /// Color correction with curves
-struct CurvesFilter {
+pub struct CurvesFilter {
     r_curve: Array<u8>,
     g_curve: Array<u8>,
     b_curve: Array<u8>,
@@ -1635,14 +1635,14 @@ impl VideoFilter for CurvesFilter {
 // ============================================================================
 
 /// Motion vector
-struct MotionVector {
+pub struct MotionVector {
     x: i16,
     y: i16,
     sad: u32,  // Sum of Absolute Differences
 }
 
 /// Block matching motion estimator
-struct MotionEstimator {
+pub struct MotionEstimator {
     block_size: usize,
     search_range: usize,
     method: MotionEstimationMethod,
@@ -1930,7 +1930,7 @@ impl MotionEstimator {
     }
 }
 
-enum MotionEstimationMethod {
+pub enum MotionEstimationMethod {
     FullSearch,
     ThreeStep,
     Diamond,
@@ -1942,7 +1942,7 @@ enum MotionEstimationMethod {
 // ============================================================================
 
 /// Motion-compensated frame interpolation
-struct FrameInterpolator {
+pub struct FrameInterpolator {
     motion_estimator: MotionEstimator,
     blend_mode: BlendMode,
 
@@ -2047,7 +2047,7 @@ impl FrameInterpolator {
     }
 }
 
-enum BlendMode {
+pub enum BlendMode {
     Linear,
     MotionCompensated,
     OpticalFlow,
@@ -2058,7 +2058,7 @@ enum BlendMode {
 // ============================================================================
 
 /// Deinterlacing methods
-enum DeinterlaceMethod {
+pub enum DeinterlaceMethod {
     Bob,        // Double frame rate, show each field
     Weave,      // Combine fields (may cause combing)
     Blend,      // Average fields
@@ -2067,7 +2067,7 @@ enum DeinterlaceMethod {
 }
 
 /// Deinterlacer
-struct Deinterlacer {
+pub struct Deinterlacer {
     method: DeinterlaceMethod,
     top_field_first: bool,
     prev_frame: Option<VideoFrame>,
@@ -2253,7 +2253,7 @@ impl Deinterlacer {
 // ============================================================================
 
 /// Video clip on timeline
-struct VideoClip {
+pub struct VideoClip {
     source_path: String,
     source_start: i64,    // Start time in source
     source_end: i64,      // End time in source
@@ -2316,7 +2316,7 @@ impl VideoClip {
 }
 
 /// Transition between clips
-struct Transition {
+pub struct Transition {
     kind: TransitionType,
     duration: i64,
     position: TransitionPosition,
@@ -2333,7 +2333,7 @@ impl Transition {
     }
 }
 
-enum TransitionType {
+pub enum TransitionType {
     Cut,
     Dissolve,
     Fade,
@@ -2344,19 +2344,19 @@ enum TransitionType {
     Iris { shape: IrisShape },
 }
 
-enum TransitionPosition {
+pub enum TransitionPosition {
     Start,
     End,
 }
 
-enum Direction {
+pub enum Direction {
     Left,
     Right,
     Up,
     Down,
 }
 
-enum IrisShape {
+pub enum IrisShape {
     Circle,
     Rectangle,
     Diamond,
@@ -2364,7 +2364,7 @@ enum IrisShape {
 }
 
 /// Video track containing clips
-struct VideoTrack {
+pub struct VideoTrack {
     name: String,
     clips: Array<VideoClip>,
     enabled: bool,
@@ -2407,7 +2407,7 @@ impl VideoTrack {
     }
 }
 
-enum TrackBlendMode {
+pub enum TrackBlendMode {
     Normal,
     Add,
     Multiply,
@@ -2417,7 +2417,7 @@ enum TrackBlendMode {
 }
 
 /// Timeline composition
-struct Timeline {
+pub struct Timeline {
     video_tracks: Array<VideoTrack>,
     audio_tracks: Array<AudioTrack>,
     duration: i64,
@@ -2551,7 +2551,7 @@ impl Timeline {
 }
 
 /// Audio track placeholder
-struct AudioTrack {
+pub struct AudioTrack {
     name: String,
     clips: Array<AudioClip>,
     enabled: bool,
@@ -2576,7 +2576,7 @@ impl AudioTrack {
     }
 }
 
-struct AudioClip {
+pub struct AudioClip {
     timeline_start: i64,
     duration: i64,
 
@@ -2593,7 +2593,7 @@ impl AudioClip {
 // ============================================================================
 
 /// Codec type enumeration
-enum VideoCodec {
+pub enum VideoCodec {
     H264,
     H265,
     VP8,
@@ -2606,7 +2606,7 @@ enum VideoCodec {
 }
 
 /// Encoder configuration
-struct EncoderConfig {
+pub struct EncoderConfig {
     codec: VideoCodec,
     width: u32,
     height: u32,
@@ -2680,7 +2680,7 @@ impl EncoderConfig {
 }
 
 /// Encoded packet
-struct VideoPacket {
+pub struct VideoPacket {
     data: Buffer<u8>,
     pts: i64,
     dts: i64,
@@ -2702,7 +2702,7 @@ impl VideoPacket {
 }
 
 /// Video encoder interface
-trait VideoEncoder {
+pub trait VideoEncoder {
     fn configure(mut self, config: &EncoderConfig) -> Result<(), String>;
     fn encode(mut self, frame: &VideoFrame) -> Result<Array<VideoPacket>, String>;
     fn flush(mut self) -> Result<Array<VideoPacket>, String>;
@@ -2710,7 +2710,7 @@ trait VideoEncoder {
 }
 
 /// Video decoder interface
-trait VideoDecoder {
+pub trait VideoDecoder {
     fn decode(mut self, packet: &VideoPacket) -> Result<Array<VideoFrame>, String>;
     fn flush(mut self) -> Result<Array<VideoFrame>, String>;
     fn reset(mut self);
@@ -2720,65 +2720,3 @@ trait VideoDecoder {
 // EXPORTS
 // ============================================================================
 
-export {
-    // Pixel formats and color
-    PixelFormat,
-    ColorSpace,
-    TransferFunction,
-    ColorMatrix,
-
-    // Video frame
-    VideoFrame,
-    FramePool,
-
-    // Format conversion
-    PixelFormatConverter,
-
-    // Scaling
-    ScaleAlgorithm,
-    VideoScaler,
-
-    // Filters
-    VideoFilter,
-    BrightnessContrastFilter,
-    SaturationFilter,
-    HueRotationFilter,
-    GaussianBlurFilter,
-    SharpenFilter,
-    EdgeDetectionFilter,
-    EdgeMethod,
-    CurvesFilter,
-
-    // Motion
-    MotionVector,
-    MotionEstimator,
-    MotionEstimationMethod,
-
-    // Frame interpolation
-    FrameInterpolator,
-    BlendMode,
-
-    // Deinterlacing
-    DeinterlaceMethod,
-    Deinterlacer,
-
-    // Timeline
-    VideoClip,
-    Transition,
-    TransitionType,
-    TransitionPosition,
-    Direction,
-    IrisShape,
-    VideoTrack,
-    TrackBlendMode,
-    Timeline,
-    AudioTrack,
-    AudioClip,
-
-    // Codec interface
-    VideoCodec,
-    EncoderConfig,
-    VideoPacket,
-    VideoEncoder,
-    VideoDecoder,
-};
