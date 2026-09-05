@@ -36,6 +36,9 @@ struct Image {
     icc_profile: Option<Buffer<u8>>,
     metadata: ImageMetadata,
 
+}
+
+impl Image {
     fn new(width: u32, height: u32, image_type: ImageType) -> Self {
         let (bytes_per_pixel, stride) = Self::calculate_stride(width, image_type);
         let data = Buffer::zeroed(stride as usize * height as usize);
@@ -275,6 +278,9 @@ struct Pixel {
     b: f32,
     a: f32,
 
+}
+
+impl Pixel {
     fn new(r: f32, g: f32, b: f32, a: f32) -> Self {
         Self { r, g, b, a }
     }
@@ -670,6 +676,9 @@ struct ImageMetadata {
     exif: HashMap<String, String>,
     xmp: HashMap<String, String>,
 
+}
+
+impl ImageMetadata {
     fn new() -> Self {
         Self {
             dpi_x: 72.0,
@@ -718,6 +727,9 @@ struct ConvolutionKernel {
     divisor: f32,
     offset: f32,
 
+}
+
+impl ConvolutionKernel {
     fn new(values: Array<f32>, width: usize, height: usize) -> Self {
         let divisor: f32 = values.iter().sum();
         let divisor = if divisor.abs() < 0.0001 { 1.0 } else { divisor };
@@ -836,6 +848,9 @@ struct GaussianBlur {
     radius: f32,
     kernel: Array<f32>,
 
+}
+
+impl GaussianBlur {
     fn new(radius: f32) -> Self {
         let radius = radius.max(0.1);
         let size = (radius * 6.0).ceil() as usize | 1;
@@ -921,6 +936,9 @@ impl ImageFilter for GaussianBlur {
 struct BoxBlur {
     radius: u32,
 
+}
+
+impl BoxBlur {
     fn new(radius: u32) -> Self {
         Self { radius }
     }
@@ -992,6 +1010,9 @@ struct BrightnessContrast {
     brightness: f32,  // -1.0 to 1.0
     contrast: f32,    // 0.0 to 2.0
 
+}
+
+impl BrightnessContrast {
     fn new(brightness: f32, contrast: f32) -> Self {
         Self {
             brightness: brightness.clamp(-1.0, 1.0),
@@ -1026,6 +1047,9 @@ struct HueSaturationLightness {
     saturation: f32,  // -1.0 to 1.0
     lightness: f32,   // -1.0 to 1.0
 
+}
+
+impl HueSaturationLightness {
     fn new(hue: f32, saturation: f32, lightness: f32) -> Self {
         Self {
             hue: hue.clamp(-180.0, 180.0),
@@ -1073,6 +1097,9 @@ struct Levels {
     output_black: f32,
     output_white: f32,
 
+}
+
+impl Levels {
     fn new() -> Self {
         Self {
             input_black: 0.0,
@@ -1136,6 +1163,9 @@ struct Curves {
     b_curve: Array<f32>,
     master_curve: Array<f32>,
 
+}
+
+impl Curves {
     fn new() -> Self {
         let identity = Self::create_identity_curve();
         Self {
@@ -1254,6 +1284,9 @@ struct ColorBalance {
     highlights_yellow_blue: f32,
     preserve_luminosity: bool,
 
+}
+
+impl ColorBalance {
     fn new() -> Self {
         Self {
             shadows_cyan_red: 0.0,
@@ -1328,6 +1361,9 @@ impl ImageFilter for ColorBalance {
 struct Invert {}
 
 impl ImageFilter for Invert {
+}
+
+impl Invert {
     fn apply(self, image: &mut Image) {
         for y in 0..image.height {
             for x in 0..image.width {
@@ -1347,6 +1383,9 @@ impl ImageFilter for Invert {
 struct Grayscale {
     method: GrayscaleMethod,
 
+}
+
+impl Grayscale {
     fn new(method: GrayscaleMethod) -> Self {
         Self { method }
     }
@@ -1392,6 +1431,9 @@ impl ImageFilter for Grayscale {
 struct Sepia {
     intensity: f32,
 
+}
+
+impl Sepia {
     fn new(intensity: f32) -> Self {
         Self { intensity: intensity.clamp(0.0, 1.0) }
     }
@@ -1426,6 +1468,9 @@ impl ImageFilter for Sepia {
 struct Posterize {
     levels: u32,
 
+}
+
+impl Posterize {
     fn new(levels: u32) -> Self {
         Self { levels: levels.max(2).min(256) }
     }
@@ -1453,6 +1498,9 @@ impl ImageFilter for Posterize {
 struct Threshold {
     level: f32,
 
+}
+
+impl Threshold {
     fn new(level: f32) -> Self {
         Self { level: level.clamp(0.0, 1.0) }
     }
@@ -1478,6 +1526,9 @@ struct Vignette {
     softness: f32,
     color: Pixel,
 
+}
+
+impl Vignette {
     fn new(radius: f32, softness: f32) -> Self {
         Self {
             radius: radius.clamp(0.0, 2.0),
@@ -1524,6 +1575,9 @@ struct NoiseGenerator {
     monochrome: bool,
     seed: u64,
 
+}
+
+impl NoiseGenerator {
     fn new(amount: f32) -> Self {
         Self {
             amount: amount.clamp(0.0, 1.0),
@@ -1594,6 +1648,9 @@ enum ScaleAlgorithm {
 struct ImageScaler {
     algorithm: ScaleAlgorithm,
 
+}
+
+impl ImageScaler {
     fn new(algorithm: ScaleAlgorithm) -> Self {
         Self { algorithm }
     }
@@ -1775,6 +1832,9 @@ struct Histogram {
     luminance: [u32; 256],
     total_pixels: u32,
 
+}
+
+impl Histogram {
     fn from_image(image: &Image) -> Self {
         let mut hist = Self {
             r: [0; 256],
@@ -1866,6 +1926,9 @@ struct Histogram {
 struct HistogramEqualization {}
 
 impl ImageFilter for HistogramEqualization {
+}
+
+impl HistogramEqualization {
     fn apply(self, image: &mut Image) {
         let hist = Histogram::from_image(image);
 
@@ -1920,6 +1983,9 @@ impl ImageFilter for HistogramEqualization {
 struct AutoLevels {
     clip_percentage: f32,
 
+}
+
+impl AutoLevels {
     fn new(clip_percentage: f32) -> Self {
         Self { clip_percentage: clip_percentage.clamp(0.0, 0.5) }
     }
@@ -1979,6 +2045,9 @@ struct StructuringElement {
     width: usize,
     height: usize,
 
+}
+
+impl StructuringElement {
     fn square(size: usize) -> Self {
         let mut kernel = Array::with_capacity(size * size);
         for _ in 0..size * size {
@@ -2019,6 +2088,9 @@ struct StructuringElement {
 struct Erode {
     element: StructuringElement,
 
+}
+
+impl Erode {
     fn new(element: StructuringElement) -> Self {
         Self { element }
     }
@@ -2065,6 +2137,9 @@ impl ImageFilter for Erode {
 struct Dilate {
     element: StructuringElement,
 
+}
+
+impl Dilate {
     fn new(element: StructuringElement) -> Self {
         Self { element }
     }
@@ -2111,6 +2186,9 @@ impl ImageFilter for Dilate {
 struct Opening {
     element: StructuringElement,
 
+}
+
+impl Opening {
     fn new(element: StructuringElement) -> Self {
         Self { element }
     }
@@ -2129,6 +2207,9 @@ impl ImageFilter for Opening {
 struct Closing {
     element: StructuringElement,
 
+}
+
+impl Closing {
     fn new(element: StructuringElement) -> Self {
         Self { element }
     }
@@ -2157,6 +2238,9 @@ struct Layer {
     visible: bool,
     name: String,
 
+}
+
+impl Layer {
     fn new(image: Image) -> Self {
         Self {
             image,
@@ -2193,6 +2277,9 @@ struct Compositor {
     background: Pixel,
     layers: Array<Layer>,
 
+}
+
+impl Compositor {
     fn new(width: u32, height: u32) -> Self {
         Self {
             width,

@@ -72,7 +72,9 @@ enum TransferFunction {
 /// Color matrix coefficients
 struct ColorMatrix {
     coefficients: [[f64; 3]; 3],
+}
 
+impl ColorMatrix {
     fn identity() -> Self {
         Self {
             coefficients: [
@@ -153,6 +155,9 @@ struct VideoFrame {
     interlaced: bool,
     top_field_first: bool,
 
+}
+
+impl VideoFrame {
     fn new(width: u32, height: u32, format: PixelFormat) -> Self {
         let (planes, sizes) = Self::calculate_plane_sizes(width, height, format);
         let mut data = Array::with_capacity(planes);
@@ -332,6 +337,9 @@ struct FramePool {
     max_frames: usize,
     allocated: usize,
 
+}
+
+impl FramePool {
     fn new(width: u32, height: u32, format: PixelFormat, max_frames: usize) -> Self {
         Self {
             frames: Queue::new(),
@@ -385,6 +393,9 @@ struct PixelFormatConverter {
     color_matrix: ColorMatrix,
     dither: bool,
 
+}
+
+impl PixelFormatConverter {
     fn new(source: PixelFormat, target: PixelFormat) -> Self {
         Self {
             source_format: source,
@@ -719,6 +730,9 @@ struct VideoScaler {
     horizontal_filter: Array<f32>,
     vertical_filter: Array<f32>,
 
+}
+
+impl VideoScaler {
     fn new(
         src_w: u32, src_h: u32,
         dst_w: u32, dst_h: u32,
@@ -1049,6 +1063,9 @@ struct BrightnessContrastFilter {
     brightness: f32,  // -1.0 to 1.0
     contrast: f32,    // 0.0 to 2.0
 
+}
+
+impl BrightnessContrastFilter {
     fn new(brightness: f32, contrast: f32) -> Self {
         Self {
             brightness: brightness.clamp(-1.0, 1.0),
@@ -1103,6 +1120,9 @@ impl VideoFilter for BrightnessContrastFilter {
 struct SaturationFilter {
     saturation: f32,  // 0.0 to 2.0
 
+}
+
+impl SaturationFilter {
     fn new(saturation: f32) -> Self {
         Self {
             saturation: saturation.clamp(0.0, 2.0),
@@ -1157,6 +1177,9 @@ impl VideoFilter for SaturationFilter {
 struct HueRotationFilter {
     degrees: f32,
 
+}
+
+impl HueRotationFilter {
     fn new(degrees: f32) -> Self {
         Self {
             degrees: degrees % 360.0,
@@ -1244,6 +1267,9 @@ struct GaussianBlurFilter {
     kernel: Array<f32>,
     kernel_size: usize,
 
+}
+
+impl GaussianBlurFilter {
     fn new(radius: f32) -> Self {
         let radius = radius.max(0.1);
         let kernel_size = (radius * 6.0).ceil() as usize | 1;  // Odd size
@@ -1356,6 +1382,9 @@ struct SharpenFilter {
     amount: f32,
     threshold: u8,
 
+}
+
+impl SharpenFilter {
     fn new(amount: f32, threshold: u8) -> Self {
         Self {
             amount: amount.clamp(0.0, 10.0),
@@ -1423,6 +1452,9 @@ impl VideoFilter for SharpenFilter {
 struct EdgeDetectionFilter {
     method: EdgeMethod,
 
+}
+
+impl EdgeDetectionFilter {
     fn new(method: EdgeMethod) -> Self {
         Self { method }
     }
@@ -1511,6 +1543,9 @@ struct CurvesFilter {
     g_curve: Array<u8>,
     b_curve: Array<u8>,
 
+}
+
+impl CurvesFilter {
     fn new() -> Self {
         let mut identity = Array::with_capacity(256);
         for i in 0..256 {
@@ -1612,6 +1647,9 @@ struct MotionEstimator {
     search_range: usize,
     method: MotionEstimationMethod,
 
+}
+
+impl MotionEstimator {
     fn new(block_size: usize, search_range: usize) -> Self {
         Self {
             block_size,
@@ -1908,6 +1946,9 @@ struct FrameInterpolator {
     motion_estimator: MotionEstimator,
     blend_mode: BlendMode,
 
+}
+
+impl FrameInterpolator {
     fn new() -> Self {
         Self {
             motion_estimator: MotionEstimator::new(16, 32),
@@ -2031,6 +2072,9 @@ struct Deinterlacer {
     top_field_first: bool,
     prev_frame: Option<VideoFrame>,
 
+}
+
+impl Deinterlacer {
     fn new(method: DeinterlaceMethod) -> Self {
         Self {
             method,
@@ -2220,6 +2264,9 @@ struct VideoClip {
     effects: Array<Box<dyn VideoFilter>>,
     transitions: Array<Transition>,
 
+}
+
+impl VideoClip {
     fn new(path: &str) -> Self {
         Self {
             source_path: path.to_string(),
@@ -2274,6 +2321,9 @@ struct Transition {
     duration: i64,
     position: TransitionPosition,
 
+}
+
+impl Transition {
     fn new(kind: TransitionType, duration: i64) -> Self {
         Self {
             kind,
@@ -2321,6 +2371,9 @@ struct VideoTrack {
     locked: bool,
     blend_mode: TrackBlendMode,
 
+}
+
+impl VideoTrack {
     fn new(name: &str) -> Self {
         Self {
             name: name.to_string(),
@@ -2372,6 +2425,9 @@ struct Timeline {
     width: u32,
     height: u32,
 
+}
+
+impl Timeline {
     fn new(width: u32, height: u32, frame_rate: f32) -> Self {
         Self {
             video_tracks: Array::new(),
@@ -2502,6 +2558,9 @@ struct AudioTrack {
     volume: f32,
     pan: f32,
 
+}
+
+impl AudioTrack {
     fn new(name: &str) -> Self {
         Self {
             name: name.to_string(),
@@ -2521,6 +2580,9 @@ struct AudioClip {
     timeline_start: i64,
     duration: i64,
 
+}
+
+impl AudioClip {
     fn timeline_end(self) -> i64 {
         self.timeline_start + self.duration
     }
@@ -2559,6 +2621,9 @@ struct EncoderConfig {
     color_space: ColorSpace,
     threads: u32,
 
+}
+
+impl EncoderConfig {
     fn h264_default(width: u32, height: u32) -> Self {
         Self {
             codec: VideoCodec::H264,
@@ -2622,6 +2687,9 @@ struct VideoPacket {
     duration: i64,
     keyframe: bool,
 
+}
+
+impl VideoPacket {
     fn new(size: usize) -> Self {
         Self {
             data: Buffer::zeroed(size),
