@@ -4,6 +4,35 @@ All notable changes to the BuildLang program suite.
 
 ## [Unreleased]
 
+### qdb: ORDER BY Resolves Ordinals and Aliases, Fails Closed on Unknown Keys (2026-09-05)
+
+**The non-grouped single-table ORDER BY now resolves a positional ordinal and a
+projection alias, and fails closed when a key names no column.**
+- The plain SELECT sort path resolved the ORDER BY key only against real table
+  columns. A key that did not match, a positional ordinal (`ORDER BY 2`, standard
+  SQL-92), an unknown name (`ORDER BY nonesuch`), or a projection alias on a plain
+  select (`SELECT salary AS s ... ORDER BY s`), silently returned discovery order
+  with no error. A secondary tie-break key (`ORDER BY dept, s`) failed the same
+  silent way. The grouped path already failed closed on an unresolved key; the
+  non-grouped path did not, so the two disagreed.
+- A single helper, `resolve_order_key`, now maps a key to a table column index by
+  three forms: a column name (bare or dotted), a positional ordinal (the Nth
+  select column, or the Nth table column under `SELECT *`), and a projection
+  alias whose underlying select item is a plain column. Both the primary and the
+  secondary key route through it, and an unresolved key prints an error and exits
+  non-zero instead of leaving the rows in discovery order.
+- An ordinal or alias that points at an aggregate select item does not resolve on
+  this path (it never sorts by an aggregate value), so such a key fails closed.
+- Tests added: `order_ordinal_proj`, `order_alias_plain`, `order_secondary_ord`,
+  `order_secondary_alias`, `order_ordinal_star`, and four fail-closed cases
+  (`order_unknown_closed`, `order_ordinal_oor_closed`, `order_ordinal_zero_closed`,
+  `order_secondary_closed`).
+- Scope: the JOIN and UNION sort paths still ignore an ordinal or unknown key the
+  same silent way. They resolve differently (two tables for a join, output-column
+  position for a union) and are left as separate follow-ups, not folded in here.
+- db.bld: 5,892 lines. Gate: pass=106 fail=0 xfail=1 xpass=0 (the one XFAIL is
+  cross-process ROLLBACK, a documented process-model null).
+
 ### qdb: Numeric Type Aliases Sort Numerically (2026-09-05)
 
 **A column declared with a common SQL integer or real alias now orders and

@@ -68,7 +68,7 @@ is the intended fix.
 | qcsv | 595 | data | CSV-to-JSON converter |
 | qcut | 476 | text | Field/character extraction (GNU cut) |
 | qdate | 156 | system | Display current date and time |
-| qdb | 5,832 | database | SQL database engine with REPL |
+| qdb | 5,892 | database | SQL database engine with REPL |
 | qdiff | 718 | file | Unified diff (LCS-based) |
 | qdirname | 146 | path | Extract directory component from pathname |
 | qecho | 131 | system | Print arguments to stdout |
@@ -170,7 +170,7 @@ of C, proving the self-hosted compiler can handle substantial BuildLang code.
 
 ## Database Engine (qdb)
 
-The most complex program at 5,832 lines. A SQL database engine with:
+The most complex program at 5,892 lines. A SQL database engine with:
 
 **SQL support:**
 - CREATE TABLE, INSERT, SELECT, UPDATE, DELETE, DROP TABLE
@@ -183,7 +183,8 @@ The most complex program at 5,832 lines. A SQL database engine with:
 - UNION and UNION ALL, with column-count and per-branch shape checks (fail-closed on mismatch)
 - GROUP BY with aggregates: COUNT(*), COUNT(col), COUNT(DISTINCT col), SUM, AVG, MIN, MAX
 - HAVING, DISTINCT, LIMIT/OFFSET
-- ORDER BY, including grouped output by the group column, an aggregate term (ORDER BY SUM(salary)), or a projection alias (ORDER BY the AS name)
+- ORDER BY a column name, a positional ordinal (ORDER BY 2, counting select columns from 1), or a projection alias (ORDER BY the AS name), with an optional secondary tie-break key; a key that names no column fails closed instead of leaving the rows unsorted
+- ORDER BY on grouped output also accepts the group column or an aggregate term (ORDER BY SUM(salary))
 - Column aliases (SELECT col AS alias)
 
 **Storage and reliability:**
