@@ -20,13 +20,16 @@ C is then compiled with any standard C compiler (MSVC `cl.exe` or `gcc`).
 
 ### Why Flat Structs
 
-BuildLang's C backend has a known limitation: struct field assignment on local
-variables doesn't emit correct C in all contexts. As a workaround, all programs
-use a "flat struct" pattern where state lives in a single struct passed via `&mut`
-references to helper functions. This trades readability for reliability.
+buildc 1.2.0 lowers struct field assignment on a local value (`let mut p = ...;
+p.x = 10`) correctly. An earlier release did not, so programs threaded a single
+`&mut` struct through helper functions instead, and `qdb` keeps that pattern: all
+engine state lives in one `DB` struct (105 fields) rather than separate `Parser`,
+`Storage`, and `Index` types. That single-struct layout is now a retained design
+choice, not a compiler requirement.
 
-Example from `qdb` -- all parser state, storage, indexes, and WAL live in one
-`DB` struct (~50 fields) rather than separate `Parser`, `Storage`, `Index` types.
+The flattened layout inside the struct, parallel `Vec<i32>` arrays rather than
+nested collections, is still required, because `Vec<String>` and typed vectors
+beyond `Vec<i32>`/`Vec<f64>` have incomplete codegen. See Why String Pools below.
 
 ### Why String Pools
 
@@ -287,9 +290,15 @@ This causes subtle bugs when mixing string literals with string operations.
 The var_map save/restore fix resolved this. Three sequential while loops now
 generate correct C with proper basic block chains. Verified.
 
-### Monitoring: Vec<String> Codegen
-Only `Vec<i32>` and `Vec<f64>` have complete codegen. Programs that need string
-arrays use the string pool pattern (string buffer + parallel index arrays).
+### Monitoring: Vec Element-Type Codegen
+Only `Vec<i32>` and `Vec<f64>` have complete codegen. `Vec<String>` fails to
+compile: the backend emits `build_hvec_push_i32` and MSVC rejects the
+`BuildString`-to-`int32_t` conversion. `Vec<i64>` compiles but silently truncates
+to 32 bits (a pushed `5000000000` reads back as `705032704`). Root cause: the
+vec-literal type handler infers a fresh element variable that defaults to `i32`
+when no annotation pins it. Programs that need string arrays use the string pool
+pattern (string buffer plus parallel `Vec<i32>` index arrays); programs that need
+64-bit values keep them in scalar fields rather than vectors.
 
 ## Known Issues
 
