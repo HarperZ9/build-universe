@@ -4,6 +4,30 @@ All notable changes to the BuildLang program suite.
 
 ## [Unreleased]
 
+### qdb: Grouped ORDER BY by Alias + Fail-Closed Resolution (2026-09-05)
+
+**Grouped ORDER BY now resolves a projection alias.**
+- `SELECT dept, SUM(salary) AS s FROM emp GROUP BY dept ORDER BY s DESC`
+  previously left rows in group-discovery order (a silent wrong answer). The
+  grouped-sort path in `exec_select_group` now resolves the order key in two
+  steps: an aggregate/plain match by func + arg, then a projection-alias match
+  against `p_aliases`. The sort type is derived from the matched output column,
+  not the parsed key.
+- An order key that matches none of the grouped column, an aggregate output, or
+  a select alias now fails closed with an error instead of emitting rows in
+  arbitrary order.
+- Tests added: `group_ord_alias_sum_desc`, `group_ord_alias_sum_asc`,
+  `group_ord_alias_cnt_desc`, `group_ord_unresolved_closed`.
+- db.bld: 5,705 lines. Gate: pass=88 fail=0 xfail=1 xpass=0 (the one XFAIL is
+  cross-process ROLLBACK, a documented process-model null).
+
+**README reconciled to the current engine.** The qdb section now documents
+capabilities the engine already shipped: INNER/LEFT JOIN, UNION and UNION ALL,
+and the boolean-expression-tree WHERE parser (parenthesized grouping and NOT
+BETWEEN evaluate exactly, no longer flat DNF). Removed the stale limitation
+claiming grouped ORDER BY on an aggregate term leaves rows unsorted, and
+narrowed the XFAIL-divergence note to cross-process ROLLBACK only.
+
 ### Documentation Site + Build Scripts (2026-03-27)
 
 **GitHub Pages site created (docs/index.html):**

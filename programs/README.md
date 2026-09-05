@@ -170,17 +170,19 @@ of C, proving the self-hosted compiler can handle substantial BuildLang code.
 
 ## Database Engine (qdb)
 
-The most complex program at 4,940 lines. A SQL database engine with:
+The most complex program at 5,705 lines. A SQL database engine with:
 
 **SQL support:**
 - CREATE TABLE, INSERT, SELECT, UPDATE, DELETE, DROP TABLE
 - ALTER TABLE ADD COLUMN
 - UPDATE SET col = col OP literal, where OP is `+`, `-`, `*`, or `/` (arithmetic RHS, fail-closed on bad operand or division by zero)
-- WHERE as disjunctive normal form: N conditions joined by AND/OR/NOT, with comparisons, LIKE, IN, IS NULL/IS NOT NULL, BETWEEN
+- WHERE as a boolean-expression tree: AND/OR/NOT with parenthesized grouping, over comparisons, LIKE, IN, IS NULL/IS NOT NULL, BETWEEN/NOT BETWEEN
 - Scalar subqueries in WHERE clauses
-- JOIN (nested-loop) with table aliases
+- INNER and LEFT JOIN (nested-loop) with table aliases; LEFT JOIN fills unmatched right rows with NULL
+- UNION and UNION ALL, with column-count and per-branch shape checks (fail-closed on mismatch)
 - GROUP BY with aggregates: COUNT(*), COUNT(col), SUM, AVG, MIN, MAX
-- HAVING, DISTINCT, ORDER BY (including on GROUP BY output), LIMIT/OFFSET
+- HAVING, DISTINCT, LIMIT/OFFSET
+- ORDER BY, including grouped output by the group column, an aggregate term (ORDER BY SUM(salary)), or a projection alias (ORDER BY the AS name)
 - Column aliases (SELECT col AS alias)
 
 **Storage and reliability:**
@@ -195,8 +197,7 @@ single `DB` struct due to the flat-struct constraint. The SQL parser is embedded
 (not shared with qsql) because there is no multi-file import support.
 
 **Known limitations:**
-- Grouped ORDER BY sorts by the GROUP BY column only; ordering by an aggregate term (ORDER BY COUNT(*)) leaves rows in group-discovery order
-- WHERE parenthesized grouping and NOT BETWEEN return empty rather than wrong rows (the flat DNF parser cannot express them)
+- Grouped ORDER BY resolves the key to the group column, an aggregate output, or a select alias; a key that matches none of these fails closed with an error rather than sorting by an unselected column
 - Cross-process transactions do not roll back: each CLI statement is its own process and auto-commit checkpoints, so a later ROLLBACK cannot undo an earlier write
 - No query optimizer; all scans are sequential unless an index matches exactly
 - File format is not binary-compatible with SQLite
@@ -229,17 +230,17 @@ bash programs/tests/run_tests.sh
 (interactive, network-dependent, or long-running). Zero failures.
 
 The qdb engine has its own end-to-end harness over the full SQL surface
-(DDL, projection, DNF WHERE, ORDER BY/LIMIT/OFFSET/DISTINCT, aggregates,
-GROUP BY/HAVING, UPDATE arithmetic with fail-closed guards, DELETE, INDEX,
-JOIN, ALTER/DROP). Build `qdb.exe` first, then:
+(DDL, projection, boolean-tree WHERE, ORDER BY/LIMIT/OFFSET/DISTINCT,
+aggregates, GROUP BY/HAVING, UPDATE arithmetic with fail-closed guards,
+DELETE, INDEX, INNER/LEFT JOIN, UNION, ALTER/DROP). Build `qdb.exe` first,
+then:
 
 ```bash
 bash programs/tests/test_qdb.sh
 ```
 
-Divergences from full SQL (parenthesized WHERE grouping, NOT BETWEEN,
-cross-process transactions, aggregate-keyed grouped ORDER BY) are asserted
-as XFAIL, so a closed null reports XPASS instead of silently passing.
+One divergence from full SQL (cross-process ROLLBACK) is asserted as XFAIL,
+so a closed null reports XPASS instead of silently passing.
 
 ## Project Status
 
