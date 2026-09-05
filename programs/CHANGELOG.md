@@ -4,6 +4,33 @@ All notable changes to the BuildLang program suite.
 
 ## [Unreleased]
 
+### qdb: Numeric Type Aliases Sort Numerically (2026-09-05)
+
+**A column declared with a common SQL integer or real alias now orders and
+right-aligns as a number, matching INTEGER/REAL.**
+- The engine recognized only the exact tokens `INTEGER` and `REAL` as numeric.
+  Every other spelling (`INT`, `BIGINT`, `SMALLINT`, `TINYINT`, `MEDIUMINT`,
+  `FLOAT`, `DOUBLE`, `NUMERIC`, `DECIMAL`) fell through to the TEXT storage code,
+  so a column such as `salary INT` compared lexicographically. `ORDER BY salary
+  DESC` returned `90, 80, 70, 120, 100` instead of `120, 100, 90, 80, 70`: a
+  silent wrong answer, plus left-justified output for what is really a number.
+- A single classifier, `type_code_for(type_up)`, now maps a declared type name to
+  its storage code (0 INTEGER, 1 REAL, 2 TEXT) and recognizes the aliases. It
+  replaces the three inline `INTEGER`/`REAL` checks at the schema-load, CREATE
+  TABLE, and ALTER TABLE ADD COLUMN sites, so all three agree by construction.
+- WHERE was already correct: `eval_where` auto-detects a numeric operand at
+  comparison time regardless of the declared type, so the blast radius was
+  ORDER BY and column alignment only.
+- Tests added: `alias_int_order_desc`, `alias_int_order_asc`,
+  `alias_bigint_order_asc`, `alias_float_order_desc`.
+- db.bld: 5,832 lines. Gate: pass=97 fail=0 xfail=1 xpass=0 (the one XFAIL is
+  cross-process ROLLBACK, a documented process-model null).
+
+**README reconciled.** The qdb line count was corrected to 5,832 in both the
+program table and the section prose (the table row still read 4,940 and the prose
+5,705), and a SQL-support bullet now records that integer and real type aliases
+are recognized.
+
 ### qdb: COUNT(DISTINCT col) + Fail-Closed DISTINCT Guards (2026-09-05)
 
 **COUNT(DISTINCT col) now counts distinct non-NULL values, grouped and non-grouped.**

@@ -68,7 +68,7 @@ is the intended fix.
 | qcsv | 595 | data | CSV-to-JSON converter |
 | qcut | 476 | text | Field/character extraction (GNU cut) |
 | qdate | 156 | system | Display current date and time |
-| qdb | 4,940 | database | SQL database engine with REPL |
+| qdb | 5,832 | database | SQL database engine with REPL |
 | qdiff | 718 | file | Unified diff (LCS-based) |
 | qdirname | 146 | path | Extract directory component from pathname |
 | qecho | 131 | system | Print arguments to stdout |
@@ -170,10 +170,11 @@ of C, proving the self-hosted compiler can handle substantial BuildLang code.
 
 ## Database Engine (qdb)
 
-The most complex program at 5,705 lines. A SQL database engine with:
+The most complex program at 5,832 lines. A SQL database engine with:
 
 **SQL support:**
 - CREATE TABLE, INSERT, SELECT, UPDATE, DELETE, DROP TABLE
+- Column types INTEGER, REAL, and TEXT, with the common SQL aliases (INT, BIGINT, SMALLINT, FLOAT, DOUBLE, NUMERIC, and similar) recognized so a numeric column orders and right-aligns as a number
 - ALTER TABLE ADD COLUMN
 - UPDATE SET col = col OP literal, where OP is `+`, `-`, `*`, or `/` (arithmetic RHS, fail-closed on bad operand or division by zero)
 - WHERE as a boolean-expression tree: AND/OR/NOT with parenthesized grouping, over comparisons, LIKE, IN, IS NULL/IS NOT NULL, BETWEEN/NOT BETWEEN
