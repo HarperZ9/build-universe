@@ -100,7 +100,7 @@ fn pad_left(s: String, width: i32) -> String {
 }
 
 // --- Output: default tabular format ---
-fn output_table(t: &Tok) {
+fn output_table(t: &Tok) ~ Console {
     let mut i: i32 = 0;
     while i < t.count {
         let ttype = vec_get(t.t_types, i);
@@ -122,7 +122,7 @@ fn output_table(t: &Tok) {
 }
 
 // --- Output: JSON format ---
-fn output_json(t: &Tok) {
+fn output_json(t: &Tok) ~ Console {
     println!("[");
     let mut i: i32 = 0;
     while i < t.count {
@@ -165,7 +165,7 @@ fn output_json(t: &Tok) {
 }
 
 // --- Output: count by type ---
-fn output_count(t: &Tok) {
+fn output_count(t: &Tok) ~ Console {
     // Count each type using simple counters
     let mut n_kw: i32 = 0;
     let mut n_id: i32 = 0;
@@ -204,7 +204,7 @@ fn output_count(t: &Tok) {
 }
 
 // --- Help ---
-fn print_help() {
+fn print_help() ~ Console {
     println!("qtok - BuildLang tokenizer (self-hosting compiler step 1)");
     println!("");
     println!("Usage:");
@@ -222,7 +222,7 @@ fn print_help() {
 }
 
 // --- Main ---
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     // Parse flags

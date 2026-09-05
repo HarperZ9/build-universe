@@ -189,7 +189,7 @@ fn selection_sort(s: &mut Sort, numeric: bool, reverse: bool) {
 }
 
 // --- Output sorted lines ---
-fn output_lines(s: &Sort, unique: bool) {
+fn output_lines(s: &Sort, unique: bool) ~ Console {
     let n = vec_len(s.sorted);
     let mut i: i64 = 0;
     let mut prev = "";
@@ -211,7 +211,7 @@ fn output_lines(s: &Sort, unique: bool) {
 }
 
 // --- Help ---
-fn print_help() {
+fn print_help() ~ Console {
     println!("qsort — Sort lines of text");
     println!("");
     println!("Usage:");
@@ -228,7 +228,7 @@ fn print_help() {
 }
 
 // --- Main ---
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     // Parse flags

@@ -752,7 +752,7 @@ fn wrap_html(body: String) -> String {
 }
 
 // --- Help ---
-fn print_help() {
+fn print_help() ~ Console {
     println!("qmd - Markdown to HTML converter");
     println!("");
     println!("Usage:");
@@ -772,7 +772,7 @@ fn print_help() {
 }
 
 // --- Main ---
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     // Parse arguments

@@ -343,7 +343,7 @@ fn tk_is_punct(s: &SQL, p: String) -> i32 {
     0
 }
 
-fn expect_kw(s: &mut SQL, kw: String) {
+fn expect_kw(s: &mut SQL, kw: String) ~ Console + Process {
     if tk_is_kw(s, kw) == 0 {
         println!("Error: expected keyword '{}', got '{}'", kw, s.tk_val);
         process_exit(1);
@@ -351,7 +351,7 @@ fn expect_kw(s: &mut SQL, kw: String) {
     next_token(s);
 }
 
-fn expect_punct(s: &mut SQL, p: String) {
+fn expect_punct(s: &mut SQL, p: String) ~ Console + Process {
     if tk_is_punct(s, p) == 0 {
         println!("Error: expected '{}', got '{}'", p, s.tk_val);
         process_exit(1);
@@ -385,7 +385,7 @@ fn op_decode(op: i32) -> String {
 // PARSER — recursive descent
 // =============================================================================
 
-fn parse_sql(s: &mut SQL) {
+fn parse_sql(s: &mut SQL) ~ Console + Process {
     next_token(s);
 
     if tk_is_kw(s, "SELECT") == 1 { parse_select(s); return; }
@@ -400,7 +400,7 @@ fn parse_sql(s: &mut SQL) {
 }
 
 // --- SELECT col1, col2 FROM table [WHERE ...] [ORDER BY ...] [LIMIT n] ---
-fn parse_select(s: &mut SQL) {
+fn parse_select(s: &mut SQL) ~ Console + Process {
     s.stmt_type = 0;
     next_token(s);
 
@@ -449,7 +449,7 @@ fn parse_select(s: &mut SQL) {
 }
 
 // --- INSERT INTO table [(cols)] VALUES (val1, val2, ...) ---
-fn parse_insert(s: &mut SQL) {
+fn parse_insert(s: &mut SQL) ~ Console + Process {
     s.stmt_type = 1;
     next_token(s);
     expect_kw(s, "INTO");
@@ -500,7 +500,7 @@ fn parse_insert(s: &mut SQL) {
 }
 
 // --- CREATE TABLE name (col1 type1 [PRIMARY KEY], ...) ---
-fn parse_create(s: &mut SQL) {
+fn parse_create(s: &mut SQL) ~ Console + Process {
     s.stmt_type = 2;
     next_token(s);
     expect_kw(s, "TABLE");
@@ -546,7 +546,7 @@ fn parse_create(s: &mut SQL) {
 }
 
 // --- UPDATE table SET col = val WHERE ... ---
-fn parse_update(s: &mut SQL) {
+fn parse_update(s: &mut SQL) ~ Console + Process {
     s.stmt_type = 3;
     next_token(s);
 
@@ -579,7 +579,7 @@ fn parse_update(s: &mut SQL) {
 }
 
 // --- DELETE FROM table [WHERE ...] ---
-fn parse_delete(s: &mut SQL) {
+fn parse_delete(s: &mut SQL) ~ Console + Process {
     s.stmt_type = 4;
     next_token(s);
     expect_kw(s, "FROM");
@@ -596,7 +596,7 @@ fn parse_delete(s: &mut SQL) {
 }
 
 // --- DROP TABLE name ---
-fn parse_drop(s: &mut SQL) {
+fn parse_drop(s: &mut SQL) ~ Console + Process {
     s.stmt_type = 5;
     next_token(s);
     expect_kw(s, "TABLE");
@@ -628,7 +628,7 @@ fn parse_where(s: &mut SQL) {
 }
 
 // --- ORDER BY col [ASC|DESC] ---
-fn parse_order_by(s: &mut SQL) {
+fn parse_order_by(s: &mut SQL) ~ Console + Process {
     next_token(s);
     expect_kw(s, "BY");
     s.has_order = 1;
@@ -679,7 +679,7 @@ fn parse_limit(s: &mut SQL) {
 // OUTPUT — print parsed statement
 // =============================================================================
 
-fn print_parsed(s: &SQL) {
+fn print_parsed(s: &SQL) ~ Console {
     let st = s.stmt_type;
 
     if st == 0 { print_select(s); return; }
@@ -690,7 +690,7 @@ fn print_parsed(s: &SQL) {
     if st == 5 { print_drop(s); return; }
 }
 
-fn print_select(s: &SQL) {
+fn print_select(s: &SQL) ~ Console {
     println!("Parsed SELECT statement");
 
     // Columns
@@ -734,7 +734,7 @@ fn print_select(s: &SQL) {
     }
 }
 
-fn print_insert(s: &SQL) {
+fn print_insert(s: &SQL) ~ Console {
     println!("Parsed INSERT statement");
 
     // Table
@@ -768,7 +768,7 @@ fn print_insert(s: &SQL) {
     println!("  values: {}", out);
 }
 
-fn print_create(s: &SQL) {
+fn print_create(s: &SQL) ~ Console {
     println!("Parsed CREATE TABLE statement");
 
     // Table
@@ -794,7 +794,7 @@ fn print_create(s: &SQL) {
     println!("  columns: {}", out);
 }
 
-fn print_update(s: &SQL) {
+fn print_update(s: &SQL) ~ Console {
     println!("Parsed UPDATE statement");
 
     // Table
@@ -815,7 +815,7 @@ fn print_update(s: &SQL) {
     }
 }
 
-fn print_delete(s: &SQL) {
+fn print_delete(s: &SQL) ~ Console {
     println!("Parsed DELETE statement");
 
     // Table
@@ -831,7 +831,7 @@ fn print_delete(s: &SQL) {
     }
 }
 
-fn print_drop(s: &SQL) {
+fn print_drop(s: &SQL) ~ Console {
     println!("Parsed DROP TABLE statement");
 
     let tname = sp_get(s, s.table_id);
@@ -842,7 +842,7 @@ fn print_drop(s: &SQL) {
 // MAIN
 // =============================================================================
 
-fn main() {
+fn main() ~ Console + Environment + Process {
     let nargs = args_count();
 
     if nargs > 1 {

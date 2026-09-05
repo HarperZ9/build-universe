@@ -56,7 +56,7 @@ fn expand_line(line: String, tab_width: i32) -> String {
 }
 
 // --- Process content line by line ---
-fn process(content: String, tab_width: i32) {
+fn process(content: String, tab_width: i32) ~ Console {
     let lr = lr_new(content);
     let mut i = 0;
     while i < lr.count {
@@ -69,7 +69,7 @@ fn process(content: String, tab_width: i32) {
 }
 
 // --- Help ---
-fn print_help() {
+fn print_help() ~ Console {
     println!("qexpand — convert tabs to spaces");
     println!("");
     println!("Usage:");
@@ -88,7 +88,7 @@ fn print_help() {
 }
 
 // --- Main ---
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
     let mut tab_width: i32 = 8;
     let mut filename = "";

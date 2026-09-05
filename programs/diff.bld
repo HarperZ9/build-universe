@@ -274,7 +274,7 @@ fn backtrack(d: &mut Diff) {
 }
 
 // --- Output unified diff format ---
-fn output_unified(d: &Diff) {
+fn output_unified(d: &Diff) ~ Console {
     let n = d.op_n;
     if n == 0 { return; }
 
@@ -449,7 +449,7 @@ fn output_unified(d: &Diff) {
 }
 
 // --- Output context diff format ---
-fn output_context(d: &Diff) {
+fn output_context(d: &Diff) ~ Console {
     let n = d.op_n;
     if n == 0 { return; }
 
@@ -614,7 +614,7 @@ fn output_context(d: &Diff) {
 }
 
 // --- Help ---
-fn print_help() {
+fn print_help() ~ Console {
     println!("qdiff — compare files line by line");
     println!("");
     println!("Usage:");
@@ -632,7 +632,7 @@ fn print_help() {
 }
 
 // --- Main ---
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     if nargs < 2 {

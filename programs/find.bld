@@ -23,7 +23,7 @@
 // Algorithm: Iterative DFS with a string-pool stack (same pattern as qloc).
 // =============================================================================
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("Usage: qfind [PATH] [OPTIONS]...");
     println!("Recursively search for files matching criteria.");
     println!("");
@@ -106,7 +106,7 @@ fn matches_pattern(filename: String, pattern: String) -> bool {
     fname_low == pat_low
 }
 
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     // Defaults

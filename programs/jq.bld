@@ -225,14 +225,14 @@ fn jp_next(j: &mut JP) {
 }
 
 // --- Parser ---
-fn jp_expect(j: &mut JP, exp: i32) {
+fn jp_expect(j: &mut JP, exp: i32) ~ Console + Process {
     if j.tk != exp { println!("Error: expected token {} got {} at pos {}", exp, j.tk, j.tp); process_exit(1); }
     jp_next(j);
 }
 
-fn jp_parse(j: &mut JP) -> i32 { jp_value(j) }
+fn jp_parse(j: &mut JP) -> i32 ~ Console + Process { jp_value(j) }
 
-fn jp_value(j: &mut JP) -> i32 {
+fn jp_value(j: &mut JP) -> i32 ~ Console + Process {
     let k = j.tk;
     if k == 10 { jp_next(j); return jp_ar(j, 0, 0, 0, 0, 0); }
     if k == 8  { jp_next(j); return jp_ar(j, 1, 0, 0, 0, 0); }
@@ -246,7 +246,7 @@ fn jp_value(j: &mut JP) -> i32 {
     0
 }
 
-fn jp_array(j: &mut JP) -> i32 {
+fn jp_array(j: &mut JP) -> i32 ~ Console + Process {
     jp_next(j);
     if j.tk == 3 { jp_next(j); let s = vec_len(j.ch); return jp_ar(j, 5, 0, s, 0, 0); }
     let frame = vec_len(j.tmp_vals);
@@ -275,7 +275,7 @@ fn jp_array(j: &mut JP) -> i32 {
     jp_ar(j, 5, 0, start, n, 0)
 }
 
-fn jp_object(j: &mut JP) -> i32 {
+fn jp_object(j: &mut JP) -> i32 ~ Console + Process {
     jp_next(j);
     if j.tk == 1 { jp_next(j); let ks = vec_len(j.ok); let vs = vec_len(j.ch); return jp_ar(j, 6, 0, vs, 0, ks); }
     let frame_v = vec_len(j.tmp_vals);
@@ -449,7 +449,7 @@ fn compact(j: &JP, ch: Vec<i32>, ok: Vec<i32>, id: i32) -> String {
 
 // Parse a single pipe segment (e.g. ".a.b" or "keys" or ".[]") into steps.
 // Returns the number of steps added for this segment.
-fn parse_segment(j: &mut JP, seg: String) -> i32 {
+fn parse_segment(j: &mut JP, seg: String) -> i32 ~ Console + Process {
     let slen = seg.len();
     if slen == 0 { return 0; }
     let first = seg.char_at(0);
@@ -561,7 +561,7 @@ fn parse_segment(j: &mut JP, seg: String) -> i32 {
 
 // Parse a full query with pipes into pipe segments.
 // Populates j.ps_starts, j.ps_counts, j.ps_n.
-fn parse_query(j: &mut JP, query: String) {
+fn parse_query(j: &mut JP, query: String) ~ Console + Process {
     let qlen = query.len();
     if qlen == 0 {
         // Single identity segment
@@ -641,7 +641,7 @@ fn parse_query(j: &mut JP, query: String) {
 
 // Execute one step of field access on a set of nodes.
 // field_sid = string-pool ID of the field name to look up.
-fn exec_field(j: &mut JP, ch: Vec<i32>, ok: Vec<i32>, nodes: Vec<i32>, node_count: i32, field_sid: i32) -> Vec<i32> {
+fn exec_field(j: &mut JP, ch: Vec<i32>, ok: Vec<i32>, nodes: Vec<i32>, node_count: i32, field_sid: i32) -> Vec<i32> ~ Console + Process {
     let mut result: Vec<i32> = vec![];
     let field_name = jp_sp_get(j, field_sid);
     let mut ni = 0;
@@ -679,7 +679,7 @@ fn exec_field(j: &mut JP, ch: Vec<i32>, ok: Vec<i32>, nodes: Vec<i32>, node_coun
 }
 
 // Execute one step of array iteration on a set of nodes.
-fn exec_iter(j: &mut JP, ch: Vec<i32>, nodes: Vec<i32>, node_count: i32) -> Vec<i32> {
+fn exec_iter(j: &mut JP, ch: Vec<i32>, nodes: Vec<i32>, node_count: i32) -> Vec<i32> ~ Console + Process {
     let mut result: Vec<i32> = vec![];
     let mut ni = 0;
     while ni < node_count {
@@ -704,7 +704,7 @@ fn exec_iter(j: &mut JP, ch: Vec<i32>, nodes: Vec<i32>, node_count: i32) -> Vec<
 }
 
 // Execute one step of array indexing on a set of nodes.
-fn exec_index(j: &mut JP, ch: Vec<i32>, nodes: Vec<i32>, node_count: i32, idx: i32) -> Vec<i32> {
+fn exec_index(j: &mut JP, ch: Vec<i32>, nodes: Vec<i32>, node_count: i32, idx: i32) -> Vec<i32> ~ Console + Process {
     let mut result: Vec<i32> = vec![];
     let mut ni = 0;
     while ni < node_count {
@@ -731,7 +731,7 @@ fn exec_index(j: &mut JP, ch: Vec<i32>, nodes: Vec<i32>, node_count: i32, idx: i
 
 // Execute builtin: keys — for each object node, produce an array of its keys.
 // Returns new arena node IDs.
-fn exec_keys(j: &mut JP, ok: Vec<i32>, nodes: Vec<i32>, node_count: i32) -> Vec<i32> {
+fn exec_keys(j: &mut JP, ok: Vec<i32>, nodes: Vec<i32>, node_count: i32) -> Vec<i32> ~ Console + Process {
     let mut result: Vec<i32> = vec![];
     let mut ni = 0;
     while ni < node_count {
@@ -763,7 +763,7 @@ fn exec_keys(j: &mut JP, ok: Vec<i32>, nodes: Vec<i32>, node_count: i32) -> Vec<
 }
 
 // Execute builtin: values — for each object node, produce an array of its values.
-fn exec_values(j: &mut JP, ch: Vec<i32>, nodes: Vec<i32>, node_count: i32) -> Vec<i32> {
+fn exec_values(j: &mut JP, ch: Vec<i32>, nodes: Vec<i32>, node_count: i32) -> Vec<i32> ~ Console + Process {
     let mut result: Vec<i32> = vec![];
     let mut ni = 0;
     while ni < node_count {
@@ -792,7 +792,7 @@ fn exec_values(j: &mut JP, ch: Vec<i32>, nodes: Vec<i32>, node_count: i32) -> Ve
 }
 
 // Execute builtin: length — for arrays/strings/objects, return count as number.
-fn exec_length(j: &mut JP, nodes: Vec<i32>, node_count: i32) -> Vec<i32> {
+fn exec_length(j: &mut JP, nodes: Vec<i32>, node_count: i32) -> Vec<i32> ~ Console + Process {
     let mut result: Vec<i32> = vec![];
     let mut ni = 0;
     while ni < node_count {
@@ -864,7 +864,7 @@ fn add_first_kind(j: &JP, ch: Vec<i32>, st: i32, cnt: i32) -> i32 {
 }
 
 // Execute builtin: add — for number arrays, sum; for string arrays, concatenate.
-fn exec_add(j: &mut JP, ch: Vec<i32>, nodes: Vec<i32>, node_count: i32) -> Vec<i32> {
+fn exec_add(j: &mut JP, ch: Vec<i32>, nodes: Vec<i32>, node_count: i32) -> Vec<i32> ~ Console + Process {
     let mut result: Vec<i32> = vec![];
     let mut ni = 0;
     while ni < node_count {
@@ -898,7 +898,7 @@ fn exec_add(j: &mut JP, ch: Vec<i32>, nodes: Vec<i32>, node_count: i32) -> Vec<i
 }
 
 // Execute a single step on the current node set.
-fn execute_step(j: &mut JP, ch: Vec<i32>, ok: Vec<i32>, current: Vec<i32>, cur_count: i32, qidx: i32) -> Vec<i32> {
+fn execute_step(j: &mut JP, ch: Vec<i32>, ok: Vec<i32>, current: Vec<i32>, cur_count: i32, qidx: i32) -> Vec<i32> ~ Console + Process {
     let stype = vec_get(j.qt, qidx);
     let sdata = vec_get(j.qd, qidx);
     if stype == 0 {
@@ -931,7 +931,7 @@ fn execute_step(j: &mut JP, ch: Vec<i32>, ok: Vec<i32>, current: Vec<i32>, cur_c
 }
 
 // Execute one pipe segment (a sequence of steps) on a set of input nodes.
-fn execute_segment(j: &mut JP, ch: Vec<i32>, ok: Vec<i32>, inputs: Vec<i32>, input_count: i32, seg_idx: i32) -> Vec<i32> {
+fn execute_segment(j: &mut JP, ch: Vec<i32>, ok: Vec<i32>, inputs: Vec<i32>, input_count: i32, seg_idx: i32) -> Vec<i32> ~ Console + Process {
     let qstart = vec_get(j.ps_starts, seg_idx);
     let step_count = vec_get(j.ps_counts, seg_idx);
     let mut current = inputs;
@@ -949,7 +949,7 @@ fn execute_segment(j: &mut JP, ch: Vec<i32>, ok: Vec<i32>, inputs: Vec<i32>, inp
 // Execute the full pipeline: for each pipe segment, feed results from the
 // previous segment. When array iteration produces multiple results, each
 // result is piped individually to the next segment.
-fn execute_pipeline(j: &mut JP, ch: Vec<i32>, ok: Vec<i32>, root: i32) -> Vec<i32> {
+fn execute_pipeline(j: &mut JP, ch: Vec<i32>, ok: Vec<i32>, root: i32) -> Vec<i32> ~ Console + Process {
     let num_segments = j.ps_n;
     if num_segments == 0 {
         let mut r: Vec<i32> = vec![];
@@ -990,7 +990,7 @@ fn execute_pipeline(j: &mut JP, ch: Vec<i32>, ok: Vec<i32>, root: i32) -> Vec<i3
 // MAIN
 // ═══════════════════════════════════════════════════════════════════════════════
 
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let ac = args_count();
 
     // --help / -h

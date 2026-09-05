@@ -11,7 +11,7 @@
 // year/month/day/hour/minute/second via arithmetic.
 // =============================================================================
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("qdate -- display the current date and time");
     println!("");
     println!("Usage:");
@@ -125,7 +125,7 @@ fn format_date(ts: i64, show_time: bool) -> String {
     date_str
 }
 
-fn main() {
+fn main() ~ Console + Environment + Process + Clock {
     let nargs = args_count();
     let ts = time_unix();
 

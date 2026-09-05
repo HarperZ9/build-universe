@@ -62,7 +62,7 @@ fn format_offset(t: &Tables, off: i64) -> String {
     b0 + b1 + b2 + b3 + b4 + b5 + b6 + b7
 }
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("qstrings -- extract printable ASCII strings from files");
     println!("");
     println!("Usage:");
@@ -77,7 +77,7 @@ fn print_help() {
     println!("Useful for inspecting binaries, executables, and data files.");
 }
 
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let t = tables_new();
     let nargs = args_count();
 

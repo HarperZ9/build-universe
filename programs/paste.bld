@@ -105,7 +105,7 @@ fn get_line(s: &Paste, f: i32, li: i32) -> String {
 }
 
 // --- Normal mode: merge files line by line ---
-fn output_normal(s: &Paste, delim: String) {
+fn output_normal(s: &Paste, delim: String) ~ Console {
     // Find max line count across all files
     let mut max_lines: i32 = 0;
     let mut fi: i32 = 0;
@@ -136,7 +136,7 @@ fn output_normal(s: &Paste, delim: String) {
 }
 
 // --- Serial mode: join all lines from each file into one line ---
-fn output_serial(s: &Paste, delim: String) {
+fn output_serial(s: &Paste, delim: String) ~ Console {
     let mut fi: i32 = 0;
     while fi < s.file_n {
         let fc = vec_get(s.file_counts, fi);
@@ -176,7 +176,7 @@ fn extract_opt_val(arg: String, prefix_len: i32) -> String {
 }
 
 // --- Help ---
-fn print_help() {
+fn print_help() ~ Console {
     println!("qpaste — merge lines of files");
     println!("");
     println!("Usage:");
@@ -224,7 +224,7 @@ fn fnpool_get(fp: &FnPool, idx: i32) -> String {
 }
 
 // --- Main ---
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     if nargs < 2 {

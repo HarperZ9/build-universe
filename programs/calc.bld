@@ -468,7 +468,7 @@ fn parse_expression(c: &mut Calc, v: &mut Vars) -> f64 {
 // EVALUATE
 // =============================================================================
 
-fn eval_expr(expr: String, v: &mut Vars, show_err: bool) -> f64 {
+fn eval_expr(expr: String, v: &mut Vars, show_err: bool) -> f64 ~ Console {
     let elen = expr.len();
     let mut c = Calc {
         input: expr,
@@ -513,7 +513,7 @@ fn eval_ok(expr: String, v: &mut Vars) -> bool {
 // OUTPUT
 // =============================================================================
 
-fn print_result(val: f64) {
+fn print_result(val: f64) ~ Console {
     println!("{}", val);
 }
 
@@ -618,7 +618,7 @@ fn extract_ident(line: String) -> String {
 // HELP
 // =============================================================================
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("qcalc - Mathematical expression calculator");
     println!("");
     println!("Usage:");
@@ -665,7 +665,7 @@ fn str_eq(s: String, t: String) -> bool {
 // MAIN
 // =============================================================================
 
-fn main() {
+fn main() ~ Console + Environment + Process {
     let nargs = args_count();
     let mut v = vars_new();
 

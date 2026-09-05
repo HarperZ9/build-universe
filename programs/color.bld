@@ -159,7 +159,7 @@ fn delta_e_ok(a: &OKLab, b: &OKLab) -> f64 {
 
 // --- Entry point ---
 
-fn convert(r: f64, g: f64, b: f64) -> Lab {
+fn convert(r: f64, g: f64, b: f64) -> Lab ~ Console {
     let rgb = RGB::new(r, g, b);
     let lin = rgb.to_linear();
     let xyz = XYZ::from_linear_rgb(&lin);
@@ -173,7 +173,7 @@ fn convert(r: f64, g: f64, b: f64) -> Lab {
     lab
 }
 
-fn main() {
+fn main() ~ Console {
     println!("=== BuildLang Color Space Converter ===");
     println!("=== Cross-validation: CIE 1976 + Ottosson 2020 ===");
     println!("");

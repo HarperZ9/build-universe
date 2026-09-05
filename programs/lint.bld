@@ -12,7 +12,7 @@
 //   qlint --help               usage
 // =============================================================================
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("qlint - BuildLang source linter");
     println!("");
     println!("Usage:");
@@ -137,7 +137,7 @@ fn find_marker(line: String) -> String {
 }
 
 // Lint a single file. Returns the number of warnings found.
-fn lint_file(filepath: String) -> i64 {
+fn lint_file(filepath: String) -> i64 ~ Console + FileSystem {
     let content = read_file(filepath);
     let clen = content.len();
     let mut warnings: i64 = 0;
@@ -315,7 +315,7 @@ fn lint_file(filepath: String) -> i64 {
 
 // Recursively collect .bld files from a directory
 fn lint_directory(dirpath: String, total_warnings: Vec<i32>,
-                  total_files: Vec<i32>) {
+                  total_files: Vec<i32>) ~ Console + FileSystem {
     let dir_stack = vec_new_str();
     vec_push_str(dir_stack, dirpath);
 
@@ -366,7 +366,7 @@ fn lint_directory(dirpath: String, total_warnings: Vec<i32>,
     }
 }
 
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     if nargs < 2 {

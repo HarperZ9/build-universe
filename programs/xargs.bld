@@ -276,7 +276,7 @@ fn replace_all(template: String, placeholder: String, replacement: String) -> St
 
 // --- Build command string for a set of args ---
 // cmd_prefix is the initial command (e.g., "echo")
-fn build_cmd_prefix(argc: i32, argv_start: i32, argv_end: i32) -> String {
+fn build_cmd_prefix(argc: i32, argv_start: i32, argv_end: i32) -> String ~ Environment {
     // Collect the initial command parts from argv
     let mut prefix = "";
     let mut i = argv_start;
@@ -292,7 +292,7 @@ fn build_cmd_prefix(argc: i32, argv_start: i32, argv_end: i32) -> String {
 }
 
 // --- Help ---
-fn print_help() {
+fn print_help() ~ Console {
     println!("qxargs — build and print commands from standard input");
     println!("");
     println!("Usage:");
@@ -371,7 +371,7 @@ fn extract_opt_val(arg: String, prefix_len: i32) -> String {
 }
 
 // --- Main ---
-fn main() {
+fn main() ~ Console + Environment + Process {
     let nargs = args_count();
 
     // Defaults

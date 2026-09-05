@@ -385,7 +385,7 @@ fn is_numeric(s: String) -> bool {
 }
 
 // --- Help message ---
-fn print_help() {
+fn print_help() ~ Console {
     println!("qcsv — CSV-to-JSON converter");
     println!("");
     println!("Usage:");
@@ -516,7 +516,7 @@ fn build_pretty_arrays(csv: &CSV) -> String {
 // MAIN
 // =============================================================================
 
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     // --- Parse arguments ---

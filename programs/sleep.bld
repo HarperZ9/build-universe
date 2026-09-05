@@ -10,7 +10,7 @@
 // Implementation: clock_ms() busy-wait loop until elapsed >= target.
 // =============================================================================
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("qsleep -- delay for a specified amount of time");
     println!("");
     println!("Usage:");
@@ -76,7 +76,7 @@ fn parse_duration_ms(s: String) -> i64 {
     whole_ms + frac_ms
 }
 
-fn main() {
+fn main() ~ Console + Environment + Process + Clock {
     let nargs = args_count();
 
     if nargs < 2 {

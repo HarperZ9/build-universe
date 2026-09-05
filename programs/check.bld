@@ -177,12 +177,12 @@ fn ck_expect_text(c: &mut Checker, text: String) -> bool {
 // ---------------------------------------------------------------------------
 // Error/warning reporting
 // ---------------------------------------------------------------------------
-fn report_error(c: &mut Checker, line: i32, msg: String) {
+fn report_error(c: &mut Checker, line: i32, msg: String) ~ Console {
     println!("{}:{}: error: {}", c.filename, line, msg);
     c.err_count = c.err_count + 1;
 }
 
-fn report_warn(c: &mut Checker, line: i32, msg: String) {
+fn report_warn(c: &mut Checker, line: i32, msg: String) ~ Console {
     println!("{}:{}: warning: {}", c.filename, line, msg);
     c.warn_count = c.warn_count + 1;
 }
@@ -202,7 +202,7 @@ fn fn_find(c: &Checker, name: String) -> i32 {
     0 - 1
 }
 
-fn fn_register(c: &mut Checker, name: String, arity: i32, line: i32) {
+fn fn_register(c: &mut Checker, name: String, arity: i32, line: i32) ~ Console {
     let existing = fn_find(c, name);
     if existing >= 0 {
         report_error(c, line, "duplicate function definition '" + name + "'");
@@ -236,7 +236,7 @@ fn st_find(c: &Checker, name: String) -> i32 {
     0 - 1
 }
 
-fn st_register(c: &mut Checker, name: String, line: i32) -> i32 {
+fn st_register(c: &mut Checker, name: String, line: i32) -> i32 ~ Console {
     let existing = st_find(c, name);
     if existing >= 0 {
         report_error(c, line, "duplicate struct definition '" + name + "'");
@@ -307,7 +307,7 @@ fn en_find(c: &Checker, name: String) -> i32 {
     0 - 1
 }
 
-fn en_register(c: &mut Checker, name: String, line: i32) {
+fn en_register(c: &mut Checker, name: String, line: i32) ~ Console {
     let existing = en_find(c, name);
     if existing >= 0 {
         report_error(c, line, "duplicate enum definition '" + name + "'");
@@ -368,7 +368,7 @@ fn scope_enter(c: &mut Checker) {
     c.scope_depth = c.scope_depth + 1;
 }
 
-fn scope_exit(c: &mut Checker) {
+fn scope_exit(c: &mut Checker) ~ Console {
     // Check for unused variables at this depth, then pop them
     let mut i: i32 = c.var_count - 1;
     while i >= 0 {
@@ -590,7 +590,7 @@ fn collect_fn_params_arity(c: &mut Checker) -> i32 {
     arity
 }
 
-fn pass1_fn(c: &mut Checker) {
+fn pass1_fn(c: &mut Checker) ~ Console {
     // "fn" already consumed. Next is the function name.
     let line = ck_line(c);
     let name = ck_text(c);
@@ -613,7 +613,7 @@ fn pass1_fn(c: &mut Checker) {
     }
 }
 
-fn pass1_struct(c: &mut Checker) {
+fn pass1_struct(c: &mut Checker) ~ Console {
     // "struct" already consumed
     let line = ck_line(c);
     let name = ck_text(c);
@@ -638,7 +638,7 @@ fn pass1_struct(c: &mut Checker) {
     }
 }
 
-fn pass1_enum(c: &mut Checker) {
+fn pass1_enum(c: &mut Checker) ~ Console {
     // "enum" already consumed
     let line = ck_line(c);
     let name = ck_text(c);
@@ -650,7 +650,7 @@ fn pass1_enum(c: &mut Checker) {
     }
 }
 
-fn pass1_impl(c: &mut Checker) {
+fn pass1_impl(c: &mut Checker) ~ Console {
     // "impl" already consumed
     // Skip type name
     skip_type(c);
@@ -674,7 +674,7 @@ fn pass1_impl(c: &mut Checker) {
     }
 }
 
-fn pass1_item(c: &mut Checker) {
+fn pass1_item(c: &mut Checker) ~ Console {
     let k = ck_kind(c);
     let txt = ck_text(c);
 
@@ -747,7 +747,7 @@ fn pass1_item(c: &mut Checker) {
     if !ck_at_end(c) { ck_adv(c); }
 }
 
-fn pass1(c: &mut Checker) {
+fn pass1(c: &mut Checker) ~ Console {
     c.pos = 0;
     let mut go = true;
     while go {
@@ -879,7 +879,7 @@ fn skip_postfix(c: &mut Checker) {
 }
 
 // Check an expression for variable references and function calls
-fn check_expr(c: &mut Checker) {
+fn check_expr(c: &mut Checker) ~ Console {
     let mut go = true;
     while go {
         if ck_at_end(c) { go = false; }
@@ -1110,7 +1110,7 @@ fn check_expr(c: &mut Checker) {
 }
 
 // Check statements inside a block (between { and })
-fn check_block_inner(c: &mut Checker) {
+fn check_block_inner(c: &mut Checker) ~ Console {
     let mut go = true;
     while go {
         if ck_at_end(c) || ck_kind(c) == TK_RBRACE() { go = false; }
@@ -1118,7 +1118,7 @@ fn check_block_inner(c: &mut Checker) {
     }
 }
 
-fn check_block(c: &mut Checker) {
+fn check_block(c: &mut Checker) ~ Console {
     if ck_kind(c) != TK_LBRACE() { return; }
     ck_adv(c);
     scope_enter(c);
@@ -1127,7 +1127,7 @@ fn check_block(c: &mut Checker) {
     ck_expect_kind(c, TK_RBRACE());
 }
 
-fn check_statement(c: &mut Checker) {
+fn check_statement(c: &mut Checker) ~ Console {
     let k = ck_kind(c);
     let txt = ck_text(c);
 
@@ -1317,7 +1317,7 @@ fn check_fn_params(c: &mut Checker) {
     }
 }
 
-fn pass2_fn(c: &mut Checker) {
+fn pass2_fn(c: &mut Checker) ~ Console {
     // "fn" already consumed. Next is the function name.
     ck_adv(c); // skip name
     // Reset variable state for this function
@@ -1350,7 +1350,7 @@ fn pass2_fn(c: &mut Checker) {
     scope_exit(c);
 }
 
-fn pass2_impl(c: &mut Checker) {
+fn pass2_impl(c: &mut Checker) ~ Console {
     // "impl" already consumed
     skip_type(c);
     if ck_kind(c) == TK_LBRACE() {
@@ -1372,7 +1372,7 @@ fn pass2_impl(c: &mut Checker) {
     }
 }
 
-fn pass2_item(c: &mut Checker) {
+fn pass2_item(c: &mut Checker) ~ Console {
     let k = ck_kind(c);
     let txt = ck_text(c);
 
@@ -1450,7 +1450,7 @@ fn pass2_item(c: &mut Checker) {
     if !ck_at_end(c) { ck_adv(c); }
 }
 
-fn pass2(c: &mut Checker) {
+fn pass2(c: &mut Checker) ~ Console {
     c.pos = 0;
     let mut go = true;
     while go {
@@ -1462,7 +1462,7 @@ fn pass2(c: &mut Checker) {
 // ===========================================================================
 // CHECK A SINGLE FILE
 // ===========================================================================
-fn check_file(filename: String) -> i32 {
+fn check_file(filename: String) -> i32 ~ Console + FileSystem {
     let exists = file_exists(filename);
     if !exists {
         println!("qcheck: {}: No such file or directory", filename);
@@ -1520,7 +1520,7 @@ fn should_skip_dir(name: String) -> bool {
     false
 }
 
-fn check_dir_recursive(dirpath: String) -> i32 {
+fn check_dir_recursive(dirpath: String) -> i32 ~ Console + FileSystem {
     let dir_stack = vec_new_str();
     vec_push_str(dir_stack, dirpath);
     let mut total_errors: i32 = 0;
@@ -1566,7 +1566,7 @@ fn check_dir_recursive(dirpath: String) -> i32 {
 // ===========================================================================
 // HELP
 // ===========================================================================
-fn print_help() {
+fn print_help() ~ Console {
     println!("qcheck - BuildLang type checker (self-hosting tool #5)");
     println!("");
     println!("Usage:");
@@ -1586,7 +1586,7 @@ fn print_help() {
 // ===========================================================================
 // MAIN
 // ===========================================================================
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     if nargs < 2 {

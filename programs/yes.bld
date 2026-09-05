@@ -11,7 +11,7 @@
 // Without -n, defaults to 1000 iterations to avoid infinite loops in testing.
 // =============================================================================
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("qyes -- output a string repeatedly until killed");
     println!("");
     println!("Usage:");
@@ -25,7 +25,7 @@ fn print_help() {
     println!("Without -n, prints 1000 times.");
 }
 
-fn main() {
+fn main() ~ Console + Environment + Process {
     let nargs = args_count();
 
     let mut text = "y";

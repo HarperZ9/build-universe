@@ -11,7 +11,7 @@
 
 include!("stdlib/lines.bld");
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("qtac -- concatenate and print files in reverse");
     println!("");
     println!("Usage:");
@@ -38,7 +38,7 @@ fn strip_cr(line: String) -> String {
 }
 
 // Process one input source (file contents or stdin).
-fn process_input(content: String) {
+fn process_input(content: String) ~ Console {
     if content.len() == 0 {
         return;
     }
@@ -59,7 +59,7 @@ fn process_input(content: String) {
     }
 }
 
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     // Parse args: collect filenames

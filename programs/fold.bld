@@ -13,7 +13,7 @@ fn strip_cr(line: String) -> String {
 }
 
 // --- Fold a single line at exact column boundary ---
-fn fold_line_hard(line: String, width: i32) {
+fn fold_line_hard(line: String, width: i32) ~ Console {
     let len = line.len();
     if len <= width {
         println!("{}", line);
@@ -60,7 +60,7 @@ fn find_last_space(line: String, start: i32, limit: i32) -> i32 {
 }
 
 // --- Fold a single line breaking at spaces ---
-fn fold_line_soft(line: String, width: i32) {
+fn fold_line_soft(line: String, width: i32) ~ Console {
     let len = line.len();
     if len <= width {
         println!("{}", line);
@@ -93,7 +93,7 @@ fn fold_line_soft(line: String, width: i32) {
 }
 
 // --- Process content line by line ---
-fn process(content: String, width: i32, soft_wrap: bool) {
+fn process(content: String, width: i32, soft_wrap: bool) ~ Console {
     let lr = lr_new(content);
     let mut i = 0;
     while i < lr.count {
@@ -109,7 +109,7 @@ fn process(content: String, width: i32, soft_wrap: bool) {
 }
 
 // --- Help ---
-fn print_help() {
+fn print_help() ~ Console {
     println!("qfold — wrap long lines to fit a specified width");
     println!("");
     println!("Usage: qfold [OPTIONS] [FILE]");
@@ -123,7 +123,7 @@ fn print_help() {
 }
 
 // --- Main ---
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
     let mut width: i32 = 80;
     let mut soft_wrap = false;

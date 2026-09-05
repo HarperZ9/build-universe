@@ -2343,7 +2343,7 @@ fn extract_include_path(line: String) -> String {
     ""
 }
 
-fn preprocess(source: String, base_dir: String) -> String {
+fn preprocess(source: String, base_dir: String) -> String ~ FileSystem {
     let slen = source.len();
     let mut result = "";
     let mut included = "";
@@ -2395,7 +2395,7 @@ fn path_dir(path: String) -> String {
 // ===========================================================================
 // HELP
 // ===========================================================================
-fn print_help() {
+fn print_help() ~ Console {
     println!("qcodegen - BuildLang to C code generator (self-hosting tool #6)");
     println!("");
     println!("Usage:");
@@ -2418,7 +2418,7 @@ fn print_help() {
 // ===========================================================================
 // MAIN
 // ===========================================================================
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     let mut filename = "";

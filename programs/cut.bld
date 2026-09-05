@@ -227,7 +227,7 @@ fn get_field(s: &Cut, idx: i32) -> String {
 }
 
 // --- Process one line in field mode (-f) ---
-fn process_line_fields(s: &mut Cut, line: String, delim: String) {
+fn process_line_fields(s: &mut Cut, line: String, delim: String) ~ Console {
     split_line(s, line, delim);
     let mut out = "";
     let mut first = true;
@@ -249,7 +249,7 @@ fn process_line_fields(s: &mut Cut, line: String, delim: String) {
 }
 
 // --- Process one line in character mode (-c) ---
-fn process_line_chars(s: &Cut, line: String) {
+fn process_line_chars(s: &Cut, line: String) ~ Console {
     let llen = line.len();
     let mut out = "";
     let mut i: i32 = 0;
@@ -267,7 +267,7 @@ fn process_line_chars(s: &Cut, line: String) {
 
 // --- Process input content line by line ---
 fn process_content(s: &mut Cut, content: String, delim: String,
-                   char_mode: bool) {
+                   char_mode: bool) ~ Console {
     let lr = lr_new(content);
     let mut i: i32 = 0;
     while i < lr.count {
@@ -295,7 +295,7 @@ fn process_content(s: &mut Cut, content: String, delim: String,
 }
 
 // --- Help ---
-fn print_help() {
+fn print_help() ~ Console {
     println!("qcut — remove sections from each line of files");
     println!("");
     println!("Usage:");
@@ -336,7 +336,7 @@ fn extract_opt_val(arg: String, prefix_len: i32) -> String {
 }
 
 // --- Main ---
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     if nargs < 2 {

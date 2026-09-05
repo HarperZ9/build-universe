@@ -134,7 +134,7 @@ fn count_digits(fmt: String, pos: i32, flen: i32) -> i32 {
     count
 }
 
-fn format_spec(spec: String, arg_val: String, width: i32, zero_pad: bool, prec: i32) {
+fn format_spec(spec: String, arg_val: String, width: i32, zero_pad: bool, prec: i32) ~ Console {
     if spec == "s" {
         let r = if width > 0 { pad_left(arg_val, width, " ") } else { arg_val };
         print!("{}", r);
@@ -169,7 +169,7 @@ fn format_spec(spec: String, arg_val: String, width: i32, zero_pad: bool, prec: 
     }
 }
 
-fn do_printf(fmt_raw: String, arg_start: i32, nargs: i32) {
+fn do_printf(fmt_raw: String, arg_start: i32, nargs: i32) ~ Console + Environment {
     let fmt = process_escapes(fmt_raw);
     let flen = fmt.len();
     let mut pos: i32 = 0;
@@ -205,7 +205,7 @@ fn do_printf(fmt_raw: String, arg_start: i32, nargs: i32) {
     }
 }
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("qprintf — format and print data");
     println!("");
     println!("Usage: qprintf FORMAT [ARG...]");
@@ -215,7 +215,7 @@ fn print_help() {
     println!("Escapes:    \\n (newline), \\t (tab), \\\\ (backslash)");
 }
 
-fn main() {
+fn main() ~ Console + Environment + Process {
     let nargs = args_count();
     if nargs < 2 { print_help(); process_exit(0); }
     let first = args_get(1);

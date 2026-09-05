@@ -11,7 +11,7 @@
 // for each dir call list_dir and check for match.
 // =============================================================================
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("qwhich -- locate a command on PATH");
     println!("");
     println!("Usage:");
@@ -42,7 +42,7 @@ fn name_matches(filename: String, target: String) -> bool {
 
 // Search a single directory for the target command.
 // Returns the full path if found, or "" if not.
-fn search_dir(dir: String, target: String) -> String {
+fn search_dir(dir: String, target: String) -> String ~ FileSystem {
     let dir_exists = is_dir(dir);
     if !dir_exists { return ""; }
 
@@ -63,7 +63,7 @@ fn search_dir(dir: String, target: String) -> String {
     ""
 }
 
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     if nargs < 2 {

@@ -1807,7 +1807,7 @@ fn generate(cg: &mut CG) -> String {
 // ===========================================================================
 // HELP
 // ===========================================================================
-fn print_help() {
+fn print_help() ~ Console {
     println!("qc - Self-Hosted BuildLang Compiler");
     println!("Tokenizer + Parser + C Code Generator in one binary.");
     println!("");
@@ -1831,7 +1831,7 @@ fn print_help() {
 // ===========================================================================
 // MAIN
 // ===========================================================================
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     let mut filename = "";

@@ -182,14 +182,14 @@ fn jp_next(j: &mut JP) {
 }
 
 // --- Parser ---
-fn jp_expect(j: &mut JP, exp: i32) {
+fn jp_expect(j: &mut JP, exp: i32) ~ Console + Process {
     if j.tk != exp { println!("Error: expected token {} got {} at pos {}", exp, j.tk, j.tp); process_exit(1); }
     jp_next(j);
 }
 
-fn jp_parse(j: &mut JP) -> i32 { jp_value(j) }
+fn jp_parse(j: &mut JP) -> i32 ~ Console + Process { jp_value(j) }
 
-fn jp_value(j: &mut JP) -> i32 {
+fn jp_value(j: &mut JP) -> i32 ~ Console + Process {
     let k = j.tk;
     if k == 10 { jp_next(j); return jp_ar(j, 0, 0, 0, 0, 0); }
     if k == 8  { jp_next(j); return jp_ar(j, 1, 0, 0, 0, 0); }
@@ -208,7 +208,7 @@ fn jp_value(j: &mut JP) -> i32 {
 // frames), then -2 (end). Extraction scans forward, tracking depth, collecting
 // only entries at depth == 1 (our direct children).
 
-fn jp_array(j: &mut JP) -> i32 {
+fn jp_array(j: &mut JP) -> i32 ~ Console + Process {
     jp_next(j);
     if j.tk == 3 { jp_next(j); let s = vec_len(j.ch); return jp_ar(j, 5, 0, s, 0, 0); }
     let frame = vec_len(j.tmp_vals);
@@ -238,7 +238,7 @@ fn jp_array(j: &mut JP) -> i32 {
     jp_ar(j, 5, 0, start, n, 0)
 }
 
-fn jp_object(j: &mut JP) -> i32 {
+fn jp_object(j: &mut JP) -> i32 ~ Console + Process {
     jp_next(j);
     if j.tk == 1 { jp_next(j); let ks = vec_len(j.ok); let vs = vec_len(j.ch); return jp_ar(j, 6, 0, vs, 0, ks); }
     let frame_v = vec_len(j.tmp_vals);
@@ -405,7 +405,7 @@ fn compact(j: &JP, ch: Vec<i32>, ok: Vec<i32>, id: i32) -> String {
 }
 
 // --- Main ---
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let ac = args_count();
     let input = if ac > 1 { read_file(args_get(1)) } else { read_all() };
     let trimmed = input.trim();

@@ -274,7 +274,7 @@ fn build_output(s: &mut Join, line1: String, line2: String, delim: String,
 
 // --- Sorted-merge join ---
 fn merge_join(s: &mut Join, delim: String, out_delim: String,
-              field1: i32, field2: i32) {
+              field1: i32, field2: i32) ~ Console {
     let mut i1: i32 = 0;
     let mut i2: i32 = 0;
 
@@ -416,7 +416,7 @@ fn extract_opt_val(arg: String, prefix_len: i32) -> String {
 }
 
 // --- Help ---
-fn print_help() {
+fn print_help() ~ Console {
     println!("qjoin — join lines of two files on a common field");
     println!("");
     println!("Usage:");
@@ -440,7 +440,7 @@ fn print_help() {
 }
 
 // --- Main ---
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     if nargs < 2 {

@@ -159,7 +159,7 @@ fn apply(p: &Patch, rev: bool) -> String {
     r + "\n"
 }
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("qpatch — apply unified diff patches");
     println!("Usage: qpatch [--dry-run] [-R] FILE DIFF");
     println!("  -R         reverse patch (unapply)");
@@ -167,7 +167,7 @@ fn print_help() {
     println!("  --help     display this help");
 }
 
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
     if nargs < 2 { print_help(); process_exit(0); }
     let mut p = patch_new();

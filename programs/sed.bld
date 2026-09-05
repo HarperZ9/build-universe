@@ -81,7 +81,7 @@ fn sp_get(s: &Sed, start: i32, len: i32) -> String {
 }
 
 // --- Help ---
-fn print_help() {
+fn print_help() ~ Console {
     println!("qsed — stream editor for filtering and transforming text");
     println!("");
     println!("Usage:");
@@ -561,7 +561,7 @@ fn parse_all_commands(s: &mut Sed) {
 }
 
 // --- Parse arguments ---
-fn parse_args(s: &mut Sed) {
+fn parse_args(s: &mut Sed) ~ Console + Environment + Process {
     let nargs = args_count();
     let mut i: i32 = 1;
     while i < nargs {
@@ -615,7 +615,7 @@ fn parse_args(s: &mut Sed) {
 }
 
 // --- Main ---
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     if nargs < 2 {

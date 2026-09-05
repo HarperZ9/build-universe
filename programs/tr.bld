@@ -18,7 +18,7 @@
 //   Mixed: 'a-zA-Z' -> all letters
 // =============================================================================
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("qtr - translate, delete, or squeeze characters");
     println!("");
     println!("Usage:");
@@ -194,7 +194,7 @@ fn do_squeeze(input: String, set: String) -> String {
     result
 }
 
-fn main() {
+fn main() ~ Console + Environment + Process {
     let nargs = args_count();
 
     if nargs < 2 {

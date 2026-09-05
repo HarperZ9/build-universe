@@ -51,7 +51,7 @@ fn byte_to_hex(t: &Tables, b: i64) -> String {
 }
 
 // --- Help ---
-fn print_help() {
+fn print_help() ~ Console {
     println!("qcmp — byte-by-byte file comparison");
     println!("");
     println!("Usage:");
@@ -69,7 +69,7 @@ fn print_help() {
 }
 
 // --- Main ---
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let t = tables_new();
     let nargs = args_count();
 

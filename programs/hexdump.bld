@@ -91,7 +91,7 @@ fn byte_to_ascii(t: &Tables, code: i64) -> String {
 // Hex dump engine — processes data 16 bytes at a time
 // ---------------------------------------------------------------------------
 
-fn hexdump(t: &Tables, data: String, max_bytes: i64) {
+fn hexdump(t: &Tables, data: String, max_bytes: i64) ~ Console {
     let total_len = data.len();
     let limit = if max_bytes > 0 && max_bytes < total_len { max_bytes } else { total_len };
 
@@ -159,7 +159,7 @@ fn hexdump(t: &Tables, data: String, max_bytes: i64) {
 // Parse a decimal number string to i64
 // ---------------------------------------------------------------------------
 
-fn parse_number(t: &Tables, s: String) -> i64 {
+fn parse_number(t: &Tables, s: String) -> i64 ~ Console + Process {
     let slen = s.len();
     let mut result: i64 = 0;
     let mut i: i64 = 0;
@@ -180,7 +180,7 @@ fn parse_number(t: &Tables, s: String) -> i64 {
 // CLI
 // ---------------------------------------------------------------------------
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("qhex — hex dump utility");
     println!("");
     println!("Usage:");
@@ -193,7 +193,7 @@ fn print_help() {
     println!("  00000000: 4865 6c6c 6f2c 2057 6f72 6c64 210a       Hello, World!.");
 }
 
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let t = tables_new();
     let nargs = args_count();
 

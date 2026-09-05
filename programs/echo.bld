@@ -17,7 +17,7 @@
 //   \n  newline   \t  tab   \\  backslash   \0  null
 // =============================================================================
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("qecho -- display a line of text");
     println!("");
     println!("Usage:");
@@ -67,7 +67,7 @@ fn process_escapes(s: String) -> String {
     result
 }
 
-fn main() {
+fn main() ~ Console + Environment + Process {
     let nargs = args_count();
 
     if nargs < 2 {

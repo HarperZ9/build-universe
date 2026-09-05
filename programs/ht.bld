@@ -59,7 +59,7 @@ fn split_lines(input: String, starts: Vec<i32>, lens: Vec<i32>) -> i64 {
 
 // --- Print lines from index `from` to `to` (exclusive) ---
 fn print_range(input: String, starts: Vec<i32>, lens: Vec<i32>,
-               from: i64, to: i64) {
+               from: i64, to: i64) ~ Console {
     let mut i = from;
     while i < to {
         let st = vec_get(starts, i);
@@ -71,7 +71,7 @@ fn print_range(input: String, starts: Vec<i32>, lens: Vec<i32>,
 }
 
 // --- Help ---
-fn print_help() {
+fn print_help() ~ Console {
     println!("qht - combined head/tail utility");
     println!("");
     println!("Usage:");
@@ -110,7 +110,7 @@ fn parse_num(s: String) -> i64 {
 }
 
 // --- Main ---
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     // Parse flags
