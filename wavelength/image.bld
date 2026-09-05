@@ -33,7 +33,7 @@ struct Image {
     image_type: ImageType,
     data: Buffer<u8>,
     stride: u32,
-    icc_profile: ?Buffer<u8>,
+    icc_profile: Option<Buffer<u8>>,
     metadata: ImageMetadata,
 
     fn new(width: u32, height: u32, image_type: ImageType) -> Self {
@@ -661,12 +661,12 @@ enum BlendMode {
 struct ImageMetadata {
     dpi_x: f32,
     dpi_y: f32,
-    creation_date: ?String,
-    modification_date: ?String,
-    author: ?String,
-    copyright: ?String,
-    title: ?String,
-    description: ?String,
+    creation_date: Option<String>,
+    modification_date: Option<String>,
+    author: Option<String>,
+    copyright: Option<String>,
+    title: Option<String>,
+    description: Option<String>,
     exif: HashMap<String, String>,
     xmp: HashMap<String, String>,
 

@@ -231,11 +231,11 @@ struct VideoFrame {
         }
     }
 
-    fn plane(self, index: usize) -> ?&Buffer<u8> {
+    fn plane(self, index: usize) -> Option<&Buffer<u8>> {
         self.data.get(index)
     }
 
-    fn plane_mut(mut self, index: usize) -> ?&mut Buffer<u8> {
+    fn plane_mut(mut self, index: usize) -> Option<&mut Buffer<u8>> {
         self.data.get_mut(index)
     }
 
@@ -2029,7 +2029,7 @@ enum DeinterlaceMethod {
 struct Deinterlacer {
     method: DeinterlaceMethod,
     top_field_first: bool,
-    prev_frame: ?VideoFrame,
+    prev_frame: Option<VideoFrame>,
 
     fn new(method: DeinterlaceMethod) -> Self {
         Self {
@@ -2340,7 +2340,7 @@ struct VideoTrack {
         self.clips.sort_by(|a, b| a.timeline_start.cmp(&b.timeline_start));
     }
 
-    fn get_clip_at(self, time: i64) -> ?&VideoClip {
+    fn get_clip_at(self, time: i64) -> Option<&VideoClip> {
         for clip in self.clips.iter() {
             if time >= clip.timeline_start && time < clip.timeline_end() {
                 return Some(clip);
