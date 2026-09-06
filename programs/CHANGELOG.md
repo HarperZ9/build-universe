@@ -4,6 +4,33 @@ All notable changes to the BuildLang program suite.
 
 ## [Unreleased]
 
+### qdb: An Aggregate or GROUP BY Over a JOIN Fails Closed (2026-09-05)
+
+**An aggregate or a GROUP BY over a JOIN returned a silent wrong answer.** The
+join executor projects one output row per joined row and applies neither
+aggregation nor grouping, but it accepted queries that asked for both.
+- `SUM(emp.salary)` and `MIN(emp.salary)` over a join returned the per-row
+  column values with exit 0. A grouped join (`GROUP BY dep.loc` with a `SUM`)
+  returned the ungrouped rows. `COUNT(*)` and a grouped `COUNT(*)` tried to
+  resolve `"*"` as a column and reported `column '*' not found in either table`,
+  a misleading message for an unsupported operation.
+- `exec_select` dispatches any query carrying a JOIN to `exec_select_join`
+  before the aggregate and GROUP BY paths run, so the Fork above never reached
+  these. `exec_select_join` now rejects them up front with one accurate message,
+  `aggregates and GROUP BY over a JOIN are not supported`.
+- The guard detects a real aggregate by scanning `p_agg_funcs` for a non-zero
+  entry, not by testing `p_agg_count`. `p_agg_count` counts every projection
+  item including plain columns, so a count-based test would reject every plain
+  join; a two-column dotted projection over a join still returns rows.
+- Computing the aggregate over the assembled join rows is a larger change,
+  recorded as a known limitation rather than attempted.
+- Tests added: `join_agg_count_closed`, `join_agg_sum_closed`,
+  `join_agg_min_closed`, `join_group_sum_closed`, `join_group_cnt_closed`, and a
+  `join_multicol` non-regression proving a plain two-column join still returns
+  rows. Each fail-closed control is silent-wrong on the pre-fix binary and errors
+  after; `join_multicol` passes on both. The qdb gate is now 159 pass, 0 fail,
+  1 XFAIL, 0 XPASS.
+
 ### qdb: An Aggregate Over an Unknown Column Fails Closed (2026-09-05)
 
 **An aggregate whose argument named a column no table has returned a silent
@@ -22,9 +49,8 @@ condition columns; this guards the aggregate's own argument column.
   fabricated 0.
 - `COUNT(*)` (argument `"*"`) and the `DISTINCT` flag are skipped. A plain
   SELECT column keeps its own existing `column '<name>' not found` path, so the
-  helper only inspects aggregate arguments. The JOIN aggregate path already
-  reports `column '<name>' not found in either table` through its own
-  dotted-column resolver, so it needs no new guard.
+  helper only inspects aggregate arguments. An aggregate or GROUP BY over a JOIN
+  is a separate case, closed by the entry below.
 - Tests added: `agg_unknown_sum`, `agg_unknown_avg`, `agg_unknown_min`,
   `agg_unknown_count`, `agg_unknown_group`, `agg_unknown_having_sum`,
   `agg_unknown_having_count`, `agg_unknown_subquery`. Each is silent-wrong on

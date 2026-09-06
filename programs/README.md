@@ -68,7 +68,7 @@ is the intended fix.
 | qcsv | 595 | data | CSV-to-JSON converter |
 | qcut | 476 | text | Field/character extraction (GNU cut) |
 | qdate | 156 | system | Display current date and time |
-| qdb | 6,130 | database | SQL database engine with REPL |
+| qdb | 6,155 | database | SQL database engine with REPL |
 | qdiff | 718 | file | Unified diff (LCS-based) |
 | qdirname | 146 | path | Extract directory component from pathname |
 | qecho | 131 | system | Print arguments to stdout |
@@ -170,7 +170,7 @@ of C, proving the self-hosted compiler can handle substantial BuildLang code.
 
 ## Database Engine (qdb)
 
-The most complex program at 6,130 lines. A SQL database engine with:
+The most complex program at 6,155 lines. A SQL database engine with:
 
 **SQL support:**
 - CREATE TABLE, INSERT, SELECT, UPDATE, DELETE, DROP TABLE
@@ -186,7 +186,7 @@ The most complex program at 6,130 lines. A SQL database engine with:
 - GROUP BY with aggregates: COUNT(*), COUNT(col), COUNT(DISTINCT col), SUM, AVG, MIN, MAX
 - MIN and MAX order a TEXT column lexicographically; over an empty result set an aggregate MIN or MAX yields SQL NULL
 - HAVING on an aggregate, with the same operator fail-closed as WHERE: an arithmetic or doubled operator (`HAVING COUNT(*) + 0 > 1`, `HAVING COUNT(*) == 1`) errors rather than dropping every group silently
-- An aggregate over a column no table has fails closed with `no such column`, across a plain SELECT, a GROUP BY, a HAVING term, and a scalar subquery. Before this SUM, AVG, and COUNT(col) returned 0, MIN and MAX returned blank, a grouped aggregate returned 0 per group, and a subquery fed 0 into the outer comparison so every row matched, each a silent wrong answer. COUNT(*) is exempt, and the JOIN aggregate path already reports an unknown column through its own resolver
+- An aggregate over a column no table has fails closed with `no such column`, across a plain SELECT, a GROUP BY, a HAVING term, and a scalar subquery. Before this SUM, AVG, and COUNT(col) returned 0, MIN and MAX returned blank, a grouped aggregate returned 0 per group, and a subquery fed 0 into the outer comparison so every row matched, each a silent wrong answer. COUNT(*) is exempt. An aggregate or GROUP BY over a JOIN is a separate case: it fails closed with `aggregates and GROUP BY over a JOIN are not supported` (see Known limitations)
 - DISTINCT, LIMIT/OFFSET
 - ORDER BY a column name, a positional ordinal (ORDER BY 2, counting select columns from 1), or a projection alias (ORDER BY the AS name), with an optional secondary tie-break key. Single-table, JOIN, and UNION selects each resolve an ordinal or column key and fail closed on a key that names nothing, instead of leaving the rows unsorted: a JOIN key binds to whichever joined table owns the column, and a UNION key binds to an output-column position (only the first branch's names reach the merged headers, so an ordinal is the portable way to order a union)
 - ORDER BY on grouped output also accepts the group column or an aggregate term (ORDER BY SUM(salary))
@@ -207,6 +207,7 @@ single `DB` struct due to the flat-struct constraint. The SQL parser is embedded
 - DISTINCT inside an aggregate is supported only for COUNT (COUNT(DISTINCT col)); SUM(DISTINCT ...), AVG(DISTINCT ...), and COUNT(DISTINCT *) fail closed with an error rather than silently ignoring the keyword
 - Grouped ORDER BY resolves the key to the group column, an aggregate output, or a select alias; a key that matches none of these fails closed with an error rather than sorting by an unselected column
 - A JOIN ORDER BY resolves a column name (in either joined table) or a positional ordinal, but not a projection alias; ordering a join by an AS name fails closed rather than sorting by an unselected column
+- An aggregate (COUNT/SUM/AVG/MIN/MAX) or a GROUP BY over a JOIN fails closed with `aggregates and GROUP BY over a JOIN are not supported`. The join executor projects one row per joined row and applies neither aggregation nor grouping; earlier such a query returned per-row values or, for COUNT(*), a misleading `column '*' not found`. Computing the aggregate over the assembled join rows is a larger change, tracked here rather than attempted
 - Cross-process transactions do not roll back: each CLI statement is its own process and auto-commit checkpoints, so a later ROLLBACK cannot undo an earlier write
 - No query optimizer; all scans are sequential unless an index matches exactly
 - File format is not binary-compatible with SQLite
