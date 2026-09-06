@@ -4,6 +4,57 @@ All notable changes to the BuildLang program suite.
 
 ## [Unreleased]
 
+### qdb: WHERE Fails Closed on Arithmetic and Doubled Operators (2026-09-05)
+
+**A WHERE condition that used an arithmetic or doubled operator returned zero
+rows with exit 0 instead of an error: a silent wrong answer.** The leaf parser
+built a condition even when the operator token was not a comparison.
+- `op_encode` returns -1 for any token that is not one of `=`, `<`, `>`, `<=`,
+  `>=`, `<>`, `!=`. The parser stored that -1 in the leaf, and `eval_where`
+  treats -1 as always-false, so `WHERE salary + 10 > 100` and `WHERE salary % 2
+  = 0` matched nothing and dropped the real comparison with no diagnostic.
+- Two guards in `parse_condition` now fail closed. The first rejects an
+  operator that `op_encode` does not recognize, which covers arithmetic in a
+  condition and stray symbols like `%`. The second rejects an operator token in
+  the value position (token type 4), which catches the C-style `==` (two `=`
+  tokens, where the second would be read as the string value `"="`) and `><`.
+- A negative literal is a single number token, so `col > -5` is unaffected, and
+  a quoted string that looks like an operator (`sym = '<'`) is a string token, so
+  it still compares as a value.
+- Tests added: `where_arith_plus_closed`, `where_arith_pct_closed`,
+  `where_double_eq_closed`, `where_gtlt_closed`. Each fails on the pre-fix binary
+  and passes after the guards.
+
+### qdb: Empty-Set MIN and MAX Return SQL NULL (2026-09-05)
+
+**An aggregate MIN or MAX over an empty result set rendered a float sentinel as
+a plausible number instead of NULL: a silent wrong answer.** A non-grouped
+aggregate returns one row even when the WHERE matches nothing, and MIN/MAX seed
+their accumulators to `999999999` / `-999999999`.
+- Over zero rows `float_to_str` rendered those seeds as `12157520.92` /
+  `-12157520.92`, so `SELECT MIN(salary) FROM emp WHERE id > 999` handed back a
+  number for what is really NULL.
+- Fix at all three aggregate sites: when the match count is zero, MIN and MAX
+  return the empty string, which renders as SQL NULL and mirrors the text path.
+  COUNT stays 0; SUM and AVG stay 0 (a kept divergence from SQLite's NULL, where
+  0 is a real answer).
+- Tests added: `empty_min_num`, `empty_max_num` (the two controls, which fail on
+  the prior binary), plus `empty_count`, `empty_sum`, `empty_avg`.
+
+### qdb: MIN and MAX on a TEXT Column Order Lexicographically (2026-09-05)
+
+**MIN and MAX on a TEXT column returned 0 instead of the extreme string: a
+silent wrong answer.** Every cell went through `parse_float`, which coerces text
+like `alice` to 0.0, so with the numeric sentinels every text extreme collapsed
+to 0.
+- Fix at all three aggregate sites: read the column type code and, for TEXT,
+  track the extreme cell through `compare_vals` (which already orders TEXT
+  lexicographically) and return that string. The numeric path is unchanged; SUM
+  and AVG on text stay 0, matching SQLite coercion of non-numeric text.
+- Tests added: `min_name`, `max_name`, `min_dept`, `max_dept`,
+  `group_min_name`, `group_max_name`, `subq_min_name`, `subq_max_name`, plus
+  `max_salary` as a numeric-path guard.
+
 ### qdb: JOIN and UNION ORDER BY Resolve Ordinals and Fail Closed (2026-09-05)
 
 **The JOIN and UNION sort paths now resolve a positional ordinal and fail closed

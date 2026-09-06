@@ -68,7 +68,7 @@ is the intended fix.
 | qcsv | 595 | data | CSV-to-JSON converter |
 | qcut | 476 | text | Field/character extraction (GNU cut) |
 | qdate | 156 | system | Display current date and time |
-| qdb | 5,946 | database | SQL database engine with REPL |
+| qdb | 6,019 | database | SQL database engine with REPL |
 | qdiff | 718 | file | Unified diff (LCS-based) |
 | qdirname | 146 | path | Extract directory component from pathname |
 | qecho | 131 | system | Print arguments to stdout |
@@ -170,7 +170,7 @@ of C, proving the self-hosted compiler can handle substantial BuildLang code.
 
 ## Database Engine (qdb)
 
-The most complex program at 5,946 lines. A SQL database engine with:
+The most complex program at 6,019 lines. A SQL database engine with:
 
 **SQL support:**
 - CREATE TABLE, INSERT, SELECT, UPDATE, DELETE, DROP TABLE
@@ -178,10 +178,12 @@ The most complex program at 5,946 lines. A SQL database engine with:
 - ALTER TABLE ADD COLUMN
 - UPDATE SET col = col OP literal, where OP is `+`, `-`, `*`, or `/` (arithmetic RHS, fail-closed on bad operand or division by zero)
 - WHERE as a boolean-expression tree: AND/OR/NOT with parenthesized grouping, over comparisons, LIKE, IN, IS NULL/IS NOT NULL, BETWEEN/NOT BETWEEN
+- A WHERE comparison uses one of `=`, `<`, `>`, `<=`, `>=`, `<>`, `!=`. Arithmetic inside a condition (`salary + 10 > 100`) and a doubled operator (`salary == 100`) fail closed with an error rather than returning zero rows silently
 - Scalar subqueries in WHERE clauses
 - INNER and LEFT JOIN (nested-loop) with table aliases; LEFT JOIN fills unmatched right rows with NULL
 - UNION and UNION ALL, with column-count and per-branch shape checks (fail-closed on mismatch)
 - GROUP BY with aggregates: COUNT(*), COUNT(col), COUNT(DISTINCT col), SUM, AVG, MIN, MAX
+- MIN and MAX order a TEXT column lexicographically; over an empty result set an aggregate MIN or MAX yields SQL NULL
 - HAVING, DISTINCT, LIMIT/OFFSET
 - ORDER BY a column name, a positional ordinal (ORDER BY 2, counting select columns from 1), or a projection alias (ORDER BY the AS name), with an optional secondary tie-break key. Single-table, JOIN, and UNION selects each resolve an ordinal or column key and fail closed on a key that names nothing, instead of leaving the rows unsorted: a JOIN key binds to whichever joined table owns the column, and a UNION key binds to an output-column position (only the first branch's names reach the merged headers, so an ordinal is the portable way to order a union)
 - ORDER BY on grouped output also accepts the group column or an aggregate term (ORDER BY SUM(salary))
