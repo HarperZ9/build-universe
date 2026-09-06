@@ -4,6 +4,40 @@ All notable changes to the BuildLang program suite.
 
 ## [Unreleased]
 
+### qdb: GROUP BY Over a JOIN Folds Per Group (2026-09-05)
+
+**A grouped aggregate over a JOIN now computes per group instead of failing
+closed.** The entry below folded a scalar aggregate over the joined rows but kept
+`GROUP BY` over a JOIN fail-closed. This turns the grouped case into a correct
+result. HAVING, ORDER BY, and COUNT(DISTINCT) over a grouped JOIN still fail
+closed.
+- `exec_select_join` resolves the single group column against table1 then
+  table2, failing closed with `GROUP BY column '...' not found in either table`
+  when neither owns it. It assembles the matched pairs once, honoring WHERE and
+  LEFT JOIN null-extension, then enumerates the distinct group keys in first-seen
+  order.
+- Per group key it folds each projection item over that key's bucket, reusing the
+  scalar path's fold. COUNT(*) counts the bucket's pairs, COUNT(col) counts the
+  bucket's non-empty cells, SUM/AVG/MIN/MAX read the referenced column, a plain
+  column returns the bucket's first value, and a text-typed MIN/MAX compares
+  lexically. A WHERE that empties a group drops that group from the output.
+- The render mirrors the single-table grouped render: an alias-aware header, a
+  dashed separator, and one padded line per group.
+- The clauses that the grouped fold does not yet handle each fail closed with a
+  specific message: `HAVING over a grouped JOIN is not supported`, `ORDER BY over
+  a grouped JOIN is not supported`, `DISTINCT over a grouped JOIN is not
+  supported`, `LIMIT over a grouped JOIN is not supported`, and
+  `COUNT(DISTINCT) over a JOIN is not supported`. Each is an honest partial,
+  never a silent wrong grouping.
+- Tests added: `join_group_sum`, `join_group_cnt`, `join_group_minmax`,
+  `join_group_avg`, `join_group_where`, and `left_join_group_cnt`,
+  `left_join_group_cntnote` assert the folded per-group values; each is a
+  fail-closed error on the pre-fix binary (control run: 7 fail). `join_group_sum_closed`
+  and `join_group_cnt_closed` become the value assertions above; new
+  `join_group_having_closed`, `join_group_order_closed`, and `join_group_noagg_closed`
+  hold the remaining fail-closed cases. The qdb gate is now 178 pass, 0 fail,
+  1 XFAIL, 0 XPASS.
+
 ### qdb: A Scalar Aggregate Over a JOIN Folds the Joined Rows (2026-09-05)
 
 **A scalar aggregate over a JOIN with no GROUP BY now computes over the joined
