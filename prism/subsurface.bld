@@ -30,7 +30,7 @@ enum SSSTechnique {
     SeparableSSS,           // Separable gaussian approximation (Jimenez 2015)
     RayMarched,             // Ray-marched SSS
     DeferredTexturing,      // Deferred texturing approach
-    Random Walk,            // Path-traced random walk (offline)
+    RandomWalk,             // Path-traced random walk (offline)
 }
 
 enum SSSQuality {
