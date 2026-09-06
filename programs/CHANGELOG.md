@@ -4,6 +4,33 @@ All notable changes to the BuildLang program suite.
 
 ## [Unreleased]
 
+### qdb: LIMIT and OFFSET Over a Grouped JOIN Truncate the Groups (2026-09-05)
+
+**LIMIT and OFFSET over a grouped JOIN now truncate the group rows instead of
+failing closed.** The ORDER BY entry below still left LIMIT over a grouped JOIN
+fail-closed. This completes the top-n idiom: `ORDER BY SUM(emp.salary) DESC LIMIT
+3` returns the three highest-total groups. DISTINCT over a grouped JOIN and
+COUNT(DISTINCT) over any JOIN still fail closed.
+- After `exec_select_join` folds each group's row, applies the HAVING filter, and
+  runs the ORDER BY sort, it truncates the group rows with the same loop the
+  single-table grouped path uses: skip OFFSET whole group rows, then take up to
+  LIMIT, each row being `ncols` pool ids. The count `gkc` and the `grows` pool are
+  rewritten to the surviving rows, so every downstream width and render loop is
+  unchanged.
+- LIMIT runs after the sort, so it selects the top-n of the ordered groups; LIMIT
+  with no ORDER BY keeps group-discovery order. OFFSET skips whole groups, HAVING
+  runs before the truncation, and LIMIT 0 or an OFFSET past the last group leaves a
+  header with zero data rows rather than all groups or an error.
+- Tests added: `join_group_limit_topn` / `_desc_topn` (ORDER BY an aggregate then
+  LIMIT, both directions), `_offset` (LIMIT with OFFSET), `_noorder` (LIMIT keeps
+  discovery order), `_having` (HAVING then ORDER BY then LIMIT), `_zero_hdr` (LIMIT
+  0 renders the header), and `_zero_rows` (LIMIT 0 renders no data rows). The six
+  value and header assertions fail on the pre-fix binary, which answered every
+  LIMIT/OFFSET over a grouped JOIN with `LIMIT over a grouped JOIN is not
+  supported` (control run: 6 fail); `_zero_rows` passes on both binaries by design,
+  since the fail-closed message also renders no data rows. The qdb gate is now 197
+  pass, 0 fail, 1 XFAIL, 0 XPASS.
+
 ### qdb: ORDER BY Over a Grouped JOIN Sorts the Groups (2026-09-05)
 
 **ORDER BY over a grouped JOIN now sorts the folded groups instead of failing
