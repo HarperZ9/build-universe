@@ -4,6 +4,37 @@ All notable changes to the BuildLang program suite.
 
 ## [Unreleased]
 
+### qdb: A Statement Must Consume Its Whole Input (2026-09-05)
+
+**A token left over after a complete parse now fails closed instead of being
+silently dropped.** Before this, `SELECT name FROM emp WHERE salary > 80 EXTRA`
+ran the query and discarded `EXTRA`, returning a plausible answer to a
+malformed request; `DELETE FROM emp WHERE id = 1 EXTRA` deleted the row and
+discarded the tail, applying a half-specified write. A parser that stops early
+and keeps going is the silent-wrong-answer failure a query engine must never
+have. Every statement kind now checks that the cursor sits at end of input, at a
+lone trailing `;`, or (for SELECT) at a UNION keyword, and otherwise prints
+`unexpected trailing input near '<token>'` and exits non-zero.
+- The SELECT check lives in `parse_select`, after the OFFSET clause. It tolerates
+  a trailing `;` and a following UNION keyword; anything else is a clause qdb does
+  not parse or plain garbage. Because `exec_select_union` re-enters `parse_select`
+  per branch, the same check guards the tail after the final UNION branch, closing
+  that path for free.
+- Mutations get a backstop in `exec_sql` after the parse and before the WAL write,
+  so a rejected INSERT, UPDATE, DELETE, CREATE, or DROP mutates nothing. SELECT is
+  exempt there because its own check already ran inside `parse_select`.
+- `parse_order_by` now consumes an aggregate secondary key in full
+  (`ORDER BY x, SUM(col)`), parentheses included, so a well-formed grouped-JOIN
+  secondary sort no longer leaves a dangling `(` to trip the new end-of-input check.
+- A single bareword after a table name stays a legal alias (`SELECT id FROM emp e`),
+  so the guard rejects a second trailing bareword, not the first.
+- Gate: 214/0/1/0 (up from 204), db.bld 6,861 -> 6,913. Ten controls added: seven
+  errchk cases (SELECT WHERE/ORDER BY/LIMIT, DELETE, INSERT, UPDATE, CREATE, each
+  asserting the error text and the table left intact), one after-alias case, one
+  UNION final-branch case, and a positive companion proving a single alias still
+  renders. Rebuilt from the pre-fix HEAD, the nine trailing-garbage controls fail
+  (205/9), so each earns its place.
+
 ### qdb: A Positional Ordinal Orders Grouped Output on Both Paths (2026-09-05)
 
 **`ORDER BY 2` now orders a grouped result by its second output column, on both the

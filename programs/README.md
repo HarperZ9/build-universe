@@ -183,6 +183,7 @@ The most complex program at 6,861 lines. A SQL database engine with:
 - Scalar subqueries in WHERE clauses
 - INNER and LEFT JOIN (nested-loop) with table aliases; LEFT JOIN fills unmatched right rows with NULL
 - UNION and UNION ALL, with column-count and per-branch shape checks (fail-closed on mismatch)
+- A complete statement must consume its whole input. A token left over after the parse, whether a clause qdb does not support or plain garbage after LIMIT, WHERE, or a table alias, fails closed with `unexpected trailing input near '<token>'` rather than being dropped. A query would otherwise return a plausible wrong answer and a mutation would apply a half-specified write; the check runs before the WAL, so a rejected INSERT, UPDATE, DELETE, CREATE, or DROP changes nothing, and it re-runs on each UNION branch so a trailing token after the final branch is caught too. A single bareword after a table name is still a legal alias, not trailing garbage
 - GROUP BY with aggregates: COUNT(*), COUNT(col), COUNT(DISTINCT col), SUM, AVG, MIN, MAX
 - MIN and MAX order a TEXT column lexicographically; over an empty result set an aggregate MIN or MAX yields SQL NULL
 - HAVING on an aggregate, with the same operator fail-closed as WHERE: an arithmetic or doubled operator (`HAVING COUNT(*) + 0 > 1`, `HAVING COUNT(*) == 1`) errors rather than dropping every group silently
