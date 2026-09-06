@@ -4,6 +4,35 @@ All notable changes to the BuildLang program suite.
 
 ## [Unreleased]
 
+### qdb: A Scalar Aggregate Over a JOIN Folds the Joined Rows (2026-09-05)
+
+**A scalar aggregate over a JOIN with no GROUP BY now computes over the joined
+rows instead of failing closed.** The entry below made this case fail closed to
+stop a silent wrong answer. This turns the same case into a correct result;
+GROUP BY and COUNT(DISTINCT) over a JOIN stay fail-closed.
+- `exec_select_join` resolves both tables' columns first, then detects a real
+  aggregate by scanning `p_agg_funcs` for a non-zero entry (COUNT, SUM, AVG,
+  MIN, MAX), not by testing `p_agg_count`, which counts plain columns too.
+- For an aggregate query with no GROUP BY it assembles the matched pairs once,
+  honoring WHERE and LEFT JOIN null-extension, then folds each projection item.
+  COUNT(*) counts joined rows, COUNT(col) counts non-empty cells, and SUM, AVG,
+  MIN, MAX read the referenced table's column on each pair. The fold mirrors the
+  single-table aggregate: numeric MIN/MAX coerce empty cells to 0, a text-typed
+  MIN/MAX compares lexically, and MIN/MAX over zero rows yield SQL NULL. A LEFT
+  JOIN's unmatched right cells read as blank, so COUNT(right col) skips them.
+- GROUP BY over a JOIN fails closed with `GROUP BY over a JOIN is not
+  supported`. COUNT(DISTINCT ...) over a JOIN fails closed with `COUNT(DISTINCT)
+  over a JOIN is not supported`. Both are honest partials, never a silent wrong
+  grouping or count.
+- Tests added: `join_agg_count`, `join_agg_sum`, `join_agg_min`, `join_agg_max`,
+  `join_agg_avg`, `join_agg_countcol`, `join_agg_where_sum`, `join_agg_where_cnt`,
+  `join_agg_min_text`, `join_agg_max_text`, and `left_join_agg_cnt`,
+  `left_join_agg_cntnote`, `left_join_agg_sum` assert the folded values; each is
+  a fail-closed error on the pre-fix binary (control run: 13 fail). A new
+  `join_distinct_closed` joins `join_group_sum_closed` and `join_group_cnt_closed`
+  to hold the fail-closed cases. The qdb gate is now 170 pass, 0 fail, 1 XFAIL,
+  0 XPASS.
+
 ### qdb: An Aggregate or GROUP BY Over a JOIN Fails Closed (2026-09-05)
 
 **An aggregate or a GROUP BY over a JOIN returned a silent wrong answer.** The
