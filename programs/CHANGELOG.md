@@ -4,6 +4,33 @@ All notable changes to the BuildLang program suite.
 
 ## [Unreleased]
 
+### qdb: An Aggregate Over an Unknown Column Fails Closed (2026-09-05)
+
+**An aggregate whose argument named a column no table has returned a silent
+wrong answer instead of an error.** The WHERE and HAVING fixes below guard the
+condition columns; this guards the aggregate's own argument column.
+- `resolve_col` returns -1 for a name no column matches, and every aggregate
+  compute site then read zero cells. `SUM(badcol)`, `AVG(badcol)`, and
+  `COUNT(badcol)` returned 0. `MIN(badcol)` and `MAX(badcol)` returned blank. A
+  grouped `SUM(badcol)` returned 0 for each group. `HAVING SUM(badcol) > 0`
+  dropped every group. A scalar subquery `(SELECT AVG(badcol) FROM emp)` yielded
+  0, so `salary > 0` matched every row. Each ran with exit 0 and no diagnostic.
+- One helper, `agg_cols_ok`, validates each projection aggregate argument and
+  the HAVING aggregate argument once, before the aggregate dispatch. It is
+  guarded at three entry points: `exec_select` and `exec_select_group` return
+  early, and `exec_subquery_scalar` exits so the outer comparison never sees a
+  fabricated 0.
+- `COUNT(*)` (argument `"*"`) and the `DISTINCT` flag are skipped. A plain
+  SELECT column keeps its own existing `column '<name>' not found` path, so the
+  helper only inspects aggregate arguments. The JOIN aggregate path already
+  reports `column '<name>' not found in either table` through its own
+  dotted-column resolver, so it needs no new guard.
+- Tests added: `agg_unknown_sum`, `agg_unknown_avg`, `agg_unknown_min`,
+  `agg_unknown_count`, `agg_unknown_group`, `agg_unknown_having_sum`,
+  `agg_unknown_having_count`, `agg_unknown_subquery`. Each is silent-wrong on
+  the pre-fix binary and errors after. The qdb gate is now 153 pass, 0 fail,
+  1 XFAIL, 0 XPASS.
+
 ### qdb: HAVING Fails Closed on a Bad Operator (2026-09-05)
 
 **A HAVING clause with an arithmetic or doubled operator dropped every group
