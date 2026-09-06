@@ -4,6 +4,28 @@ All notable changes to the BuildLang program suite.
 
 ## [Unreleased]
 
+### qdb: HAVING Fails Closed on a Bad Operator (2026-09-05)
+
+**A HAVING clause with an arithmetic or doubled operator dropped every group
+and returned an empty result with exit 0: a silent wrong answer.** This is the
+HAVING side of the WHERE fix below.
+- `parse_having` stored `op_encode(op)` in `having_op`, and `op_encode` returns
+  -1 for any token that is not one of `=`, `<`, `>`, `<=`, `>=`, `<>`, `!=`.
+  `eval_where` treats -1 as always-false, so `HAVING COUNT(*) + 0 > 1` and
+  `HAVING SUM(salary) % 2 = 0` matched no group. `HAVING COUNT(*) == 1` was a
+  second path: `=` is one token, so the first parsed as a valid op and the
+  second landed in the value position, comparing the aggregate to the symbol
+  `"="`, which it never equals.
+- Two guards in `parse_having`, mirroring Fork 12's WHERE guards. The first
+  rejects an operator `op_encode` does not recognize. The second rejects an
+  operator token (type 4) in the value position, catching `==` and `><`.
+- A plain-column HAVING (`HAVING dept = 'eng'`) already failed closed earlier,
+  in `expect_punct`, because the token after the column is not `(`.
+- Tests added: `having_arith_plus_closed`, `having_arith_pct_closed`,
+  `having_double_eq_closed`, `having_gtlt_closed`. Each fails on the pre-fix
+  binary and passes after. The qdb gate is now 145 pass, 0 fail, 1 XFAIL,
+  0 XPASS.
+
 ### qdb: WHERE Fails Closed on an Unknown Column (2026-09-05)
 
 **A WHERE clause that named a column no table has returned a silent wrong
