@@ -4,6 +4,37 @@ All notable changes to the BuildLang program suite.
 
 ## [Unreleased]
 
+### qdb: HAVING Over a Grouped JOIN Filters Groups (2026-09-05)
+
+**HAVING over a grouped JOIN now folds its aggregate per group and keeps only the
+groups that pass, instead of failing closed.** The entry below folded a grouped
+aggregate over a JOIN but kept `HAVING` fail-closed. This filters the grouped
+output. ORDER BY, a bare GROUP BY with no aggregate, and COUNT(DISTINCT) over a
+JOIN still fail closed.
+- After `exec_select_join` enumerates the distinct group keys, it resolves the
+  HAVING aggregate's column against table1 then table2 (COUNT(*) needs none,
+  failing closed with `HAVING column '...' not found in either table` when
+  neither owns it), folds the HAVING aggregate over each key's bucket with
+  `join_having_agg`, and keeps only the keys whose value passes `eval_where`.
+  Trimming the group-key list leaves every downstream fold, width, and render loop
+  unchanged.
+- `join_having_agg` mirrors the projection fold: COUNT(*) counts bucket pairs,
+  COUNT(col) counts non-empty cells, SUM/AVG/MIN/MAX read the referenced column,
+  and a text-typed MIN/MAX compares lexically. The HAVING aggregate is independent
+  of the projected one, so `SELECT emp.dept, COUNT(*) ... HAVING MAX(emp.salary)
+  >= 120` filters on the max while displaying the count.
+- A bad HAVING operator is still rejected at parse time, so the executor never
+  sees a stray operator. When every group fails the test the result is an
+  empty-but-well-formed table: header, dashed separator, zero rows, exit 0.
+- Tests added: `join_group_having_sum`, `join_group_having_cnt`,
+  `join_group_having_maxcross` (HAVING aggregate differs from the projected one),
+  `join_group_having_text` (TEXT-typed HAVING), and `join_group_having_emptyhdr` /
+  `join_group_having_emptyrows` (all groups filtered leaves a header and zero
+  rows). The first five fail on the pre-fix binary; the empty-rows guard passes on
+  both because the fail-closed message also renders zero rows (control run: 5
+  fail). The former `join_group_having_closed` fail-closed assertion is replaced by
+  these value assertions. The qdb gate is now 183 pass, 0 fail, 1 XFAIL, 0 XPASS.
+
 ### qdb: GROUP BY Over a JOIN Folds Per Group (2026-09-05)
 
 **A grouped aggregate over a JOIN now computes per group instead of failing
