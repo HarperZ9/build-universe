@@ -6679,7 +6679,7 @@ impl Patcher {
         hunks
     }
 
-    fn apply_hunk(self, lines: mut [string], hunk: PatchHunk) -> Result<(), string> {
+    fn apply_hunk(self, lines: &mut [string], hunk: PatchHunk) -> Result<(), string> {
         let start = hunk.old_start.saturating_sub(1);
         let mut new_lines = vec![];
         for line in hunk.lines.iter() {
