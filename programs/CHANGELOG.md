@@ -4,6 +4,35 @@ All notable changes to the BuildLang program suite.
 
 ## [Unreleased]
 
+### qdb: WHERE Fails Closed on an Unknown Column (2026-09-05)
+
+**A WHERE clause that named a column no table has returned a silent wrong
+answer instead of an error.** A leaf condition stores its left side as a column
+ref resolved at eval time, and `resolve_col` returns -1 for a name no column
+matches.
+- `eval_cond_row` scored that unresolved leaf as false, so `WHERE nosuchcol = 5`
+  matched nothing and returned an empty result with exit 0. The IS NULL branch
+  scored it true instead, so `WHERE nosuchcol IS NULL` returned every row. Both
+  dropped the real intent with no diagnostic, on SELECT, aggregates, GROUP BY,
+  UPDATE, DELETE, and scalar subqueries.
+- One helper, `where_cols_ok`, validates every WHERE leaf column once before the
+  row scan and prints `Error: no such column: <name>`. It reuses `resolve_col`,
+  so a dotted `table.col` or an alias ref resolves exactly as it does during
+  evaluation, and it runs independently of row count, so an empty table is
+  covered too.
+- Guards at six single-table entry points call it: `exec_select` (one guard
+  covers both its index and full scans and the no-group aggregate path it
+  calls), `exec_select_group`, `exec_update`, `exec_delete`, and
+  `exec_subquery_scalar`. The five void paths return before any work; the
+  subquery, which returns a String and cannot abort just itself, exits the
+  statement. UPDATE and DELETE validate before mutating, so a bad column leaves
+  the table untouched. The JOIN path uses a separate evaluator and is unaffected.
+- Tests added: `where_unknown_select`, `where_unknown_agg`,
+  `where_unknown_group`, `where_unknown_update`, `where_unknown_delete`,
+  `where_unknown_isnull`, `where_unknown_dotted`, `where_unknown_subquery`. Each
+  fails on the pre-fix binary and passes after the guards. The qdb gate is now
+  141 pass, 0 fail, 1 XFAIL, 0 XPASS.
+
 ### qdb: WHERE Fails Closed on Arithmetic and Doubled Operators (2026-09-05)
 
 **A WHERE condition that used an arithmetic or doubled operator returned zero

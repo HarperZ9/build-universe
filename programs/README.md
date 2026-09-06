@@ -68,7 +68,7 @@ is the intended fix.
 | qcsv | 595 | data | CSV-to-JSON converter |
 | qcut | 476 | text | Field/character extraction (GNU cut) |
 | qdate | 156 | system | Display current date and time |
-| qdb | 6,019 | database | SQL database engine with REPL |
+| qdb | 6,061 | database | SQL database engine with REPL |
 | qdiff | 718 | file | Unified diff (LCS-based) |
 | qdirname | 146 | path | Extract directory component from pathname |
 | qecho | 131 | system | Print arguments to stdout |
@@ -170,7 +170,7 @@ of C, proving the self-hosted compiler can handle substantial BuildLang code.
 
 ## Database Engine (qdb)
 
-The most complex program at 6,019 lines. A SQL database engine with:
+The most complex program at 6,061 lines. A SQL database engine with:
 
 **SQL support:**
 - CREATE TABLE, INSERT, SELECT, UPDATE, DELETE, DROP TABLE
@@ -179,6 +179,7 @@ The most complex program at 6,019 lines. A SQL database engine with:
 - UPDATE SET col = col OP literal, where OP is `+`, `-`, `*`, or `/` (arithmetic RHS, fail-closed on bad operand or division by zero)
 - WHERE as a boolean-expression tree: AND/OR/NOT with parenthesized grouping, over comparisons, LIKE, IN, IS NULL/IS NOT NULL, BETWEEN/NOT BETWEEN
 - A WHERE comparison uses one of `=`, `<`, `>`, `<=`, `>=`, `<>`, `!=`. Arithmetic inside a condition (`salary + 10 > 100`) and a doubled operator (`salary == 100`) fail closed with an error rather than returning zero rows silently
+- A WHERE clause that names a column no target table has fails closed with `no such column` across SELECT, aggregates, GROUP BY, UPDATE, DELETE, and scalar subqueries. Before this a typo'd column returned an empty result, and IS NULL on it returned every row, both silent wrong answers; UPDATE and DELETE now leave the table untouched
 - Scalar subqueries in WHERE clauses
 - INNER and LEFT JOIN (nested-loop) with table aliases; LEFT JOIN fills unmatched right rows with NULL
 - UNION and UNION ALL, with column-count and per-branch shape checks (fail-closed on mismatch)
