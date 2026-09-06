@@ -68,7 +68,7 @@ is the intended fix.
 | qcsv | 595 | data | CSV-to-JSON converter |
 | qcut | 476 | text | Field/character extraction (GNU cut) |
 | qdate | 156 | system | Display current date and time |
-| qdb | 6,155 | database | SQL database engine with REPL |
+| qdb | 6,803 | database | SQL database engine with REPL |
 | qdiff | 718 | file | Unified diff (LCS-based) |
 | qdirname | 146 | path | Extract directory component from pathname |
 | qecho | 131 | system | Print arguments to stdout |
@@ -170,7 +170,7 @@ of C, proving the self-hosted compiler can handle substantial BuildLang code.
 
 ## Database Engine (qdb)
 
-The most complex program at 6,155 lines. A SQL database engine with:
+The most complex program at 6,803 lines. A SQL database engine with:
 
 **SQL support:**
 - CREATE TABLE, INSERT, SELECT, UPDATE, DELETE, DROP TABLE
@@ -186,10 +186,11 @@ The most complex program at 6,155 lines. A SQL database engine with:
 - GROUP BY with aggregates: COUNT(*), COUNT(col), COUNT(DISTINCT col), SUM, AVG, MIN, MAX
 - MIN and MAX order a TEXT column lexicographically; over an empty result set an aggregate MIN or MAX yields SQL NULL
 - HAVING on an aggregate, with the same operator fail-closed as WHERE: an arithmetic or doubled operator (`HAVING COUNT(*) + 0 > 1`, `HAVING COUNT(*) == 1`) errors rather than dropping every group silently
-- An aggregate over a column no table has fails closed with `no such column`, across a plain SELECT, a GROUP BY, a HAVING term, and a scalar subquery. Before this SUM, AVG, and COUNT(col) returned 0, MIN and MAX returned blank, a grouped aggregate returned 0 per group, and a subquery fed 0 into the outer comparison so every row matched, each a silent wrong answer. COUNT(*) is exempt. An aggregate over a JOIN is a separate path: a scalar aggregate, a GROUP BY, and a HAVING filter all fold over the joined rows (see the next three bullets); COUNT(DISTINCT) and ORDER BY over a grouped JOIN still fail closed (see Known limitations)
+- An aggregate over a column no table has fails closed with `no such column`, across a plain SELECT, a GROUP BY, a HAVING term, and a scalar subquery. Before this SUM, AVG, and COUNT(col) returned 0, MIN and MAX returned blank, a grouped aggregate returned 0 per group, and a subquery fed 0 into the outer comparison so every row matched, each a silent wrong answer. COUNT(*) is exempt. An aggregate over a JOIN is a separate path: a scalar aggregate, a GROUP BY, a HAVING filter, and an ORDER BY all fold or sort over the joined rows (see the following bullets); COUNT(DISTINCT) over a grouped JOIN still fails closed (see Known limitations)
 - A scalar aggregate (COUNT/SUM/AVG/MIN/MAX, with no GROUP BY) over a JOIN folds over the assembled join rows: COUNT(*) counts joined rows, COUNT(col) counts non-empty cells, and SUM/AVG/MIN/MAX read the referenced table's column on each matched pair. The fold honors WHERE and LEFT JOIN null-extension, and matches single-table aggregate semantics (numeric MIN/MAX coerce empty cells to 0, text MIN/MAX compare lexically, MIN/MAX over zero rows yield SQL NULL)
-- A GROUP BY over a JOIN folds the same way per group. The group column resolves against either joined table, the distinct keys keep first-seen order, and each group's bucket folds its projection items with the scalar path's rules. A WHERE that empties a group drops it from the output. ORDER BY, DISTINCT, and LIMIT over a grouped JOIN, and COUNT(DISTINCT) over any JOIN, each fail closed with a specific message
+- A GROUP BY over a JOIN folds the same way per group. The group column resolves against either joined table, the distinct keys keep first-seen order, and each group's bucket folds its projection items with the scalar path's rules. A WHERE that empties a group drops it from the output. DISTINCT and LIMIT over a grouped JOIN, and COUNT(DISTINCT) over any JOIN, each fail closed with a specific message
 - A HAVING over a grouped JOIN folds its aggregate over each group's bucket and keeps only the groups that pass, with the same COUNT/SUM/AVG/MIN/MAX rules as the projection fold. The HAVING aggregate is independent of the projected one, so `SELECT emp.dept, COUNT(*) ... HAVING MAX(emp.salary) >= 120` filters on the max while displaying the count. A bad HAVING operator is rejected at parse time, and a HAVING that filters every group leaves a header with zero rows rather than all groups or an error
+- An ORDER BY over a grouped JOIN sorts the folded groups after the HAVING filter. The key names the grouped column, an aggregate term (`ORDER BY SUM(emp.salary)`), or a projection alias; it resolves to an output column and a stable sort keeps equal keys in group-discovery order. COUNT sorts as an integer, SUM/AVG/MIN/MAX as a real, a plain key by its source type. A secondary key, a positional ordinal, or an unresolvable name fails closed with an accurate message rather than a silent wrong order
 - DISTINCT, LIMIT/OFFSET
 - ORDER BY a column name, a positional ordinal (ORDER BY 2, counting select columns from 1), or a projection alias (ORDER BY the AS name), with an optional secondary tie-break key. Single-table, JOIN, and UNION selects each resolve an ordinal or column key and fail closed on a key that names nothing, instead of leaving the rows unsorted: a JOIN key binds to whichever joined table owns the column, and a UNION key binds to an output-column position (only the first branch's names reach the merged headers, so an ordinal is the portable way to order a union)
 - ORDER BY on grouped output also accepts the group column or an aggregate term (ORDER BY SUM(salary))
@@ -209,8 +210,8 @@ single `DB` struct due to the flat-struct constraint. The SQL parser is embedded
 **Known limitations:**
 - DISTINCT inside an aggregate is supported only for COUNT (COUNT(DISTINCT col)); SUM(DISTINCT ...), AVG(DISTINCT ...), and COUNT(DISTINCT *) fail closed with an error rather than silently ignoring the keyword
 - Grouped ORDER BY resolves the key to the group column, an aggregate output, or a select alias; a key that matches none of these fails closed with an error rather than sorting by an unselected column
-- A JOIN ORDER BY resolves a column name (in either joined table) or a positional ordinal, but not a projection alias; ordering a join by an AS name fails closed rather than sorting by an unselected column
-- A scalar aggregate, a GROUP BY, and a HAVING over a JOIN all fold over the joined rows (see Features above). What remains fail-closed over a JOIN: ORDER BY over a grouped JOIN (`ORDER BY over a grouped JOIN is not supported`), DISTINCT or LIMIT over a grouped JOIN, and COUNT(DISTINCT ...) over any JOIN (`COUNT(DISTINCT) over a JOIN is not supported`). Each is tracked here rather than returning a silent wrong grouping, order, or count
+- A non-grouped JOIN ORDER BY resolves a column name (in either joined table) or a positional ordinal, but not a projection alias; ordering a non-grouped join by an AS name fails closed rather than sorting by an unselected column. A grouped JOIN ORDER BY is the separate path described in Features, and it does resolve an alias
+- A scalar aggregate, a GROUP BY, a HAVING, and an ORDER BY over a grouped JOIN all fold or sort over the joined rows (see Features above). What remains fail-closed over a JOIN: a secondary or positional-ordinal ORDER BY key over a grouped JOIN, DISTINCT or LIMIT over a grouped JOIN, and COUNT(DISTINCT ...) over any JOIN (`COUNT(DISTINCT) over a JOIN is not supported`). Each is tracked here rather than returning a silent wrong grouping, order, or count
 - Cross-process transactions do not roll back: each CLI statement is its own process and auto-commit checkpoints, so a later ROLLBACK cannot undo an earlier write
 - No query optimizer; all scans are sequential unless an index matches exactly
 - File format is not binary-compatible with SQLite

@@ -4,6 +4,36 @@ All notable changes to the BuildLang program suite.
 
 ## [Unreleased]
 
+### qdb: ORDER BY Over a Grouped JOIN Sorts the Groups (2026-09-05)
+
+**ORDER BY over a grouped JOIN now sorts the folded groups instead of failing
+closed.** The HAVING entry below still left ORDER BY over a grouped JOIN
+fail-closed. This sorts the grouped output. A secondary key, a positional
+ordinal, an unresolvable name, DISTINCT, and LIMIT over a grouped JOIN still fail
+closed, as does COUNT(DISTINCT) over any JOIN.
+- After `exec_select_join` folds each group's row and applies the HAVING filter,
+  it resolves the ORDER BY key to an output column: a same-kind match against the
+  projection's aggregate functions and argument columns, then a projection-alias
+  match. A key that resolves to none fails closed with `ORDER BY term '...' is not
+  a grouped column, aggregate, or alias`, and a secondary key fails closed with
+  its own message.
+- The sort type follows the resolved column. COUNT sorts as an integer,
+  SUM/AVG/MIN/MAX as a real, and a plain grouped column by its declared source
+  type, so a text key compares lexically. A stable selection sort over the folded
+  group rows keeps equal keys in group-discovery order, so `ORDER BY COUNT(*) ASC`
+  with a tie holds the discovery order of the tied groups.
+- The sort runs on the already-folded, already-HAVING-filtered group rows, so
+  WHERE, HAVING, and the empty-result path are untouched: an ORDER BY over a
+  result that HAVING emptied still renders a header and zero rows.
+- Tests added: `join_group_order_agg_asc` / `_agg_desc` (order by an aggregate,
+  both directions), `_col_desc` (order by the grouped column), `_real_max` (a
+  real-typed aggregate key), `_alias_asc` (order by a projection alias), and the
+  fail-closed trio `_secondary_closed`, `_ordinal_closed`, `_unresolv_closed`. All
+  eight fail on the pre-fix binary, which answered every ORDER BY over a grouped
+  JOIN with the blanket `ORDER BY over a grouped JOIN is not supported` (control
+  run: 8 fail). The former `join_group_order_closed` fail-closed assertion is
+  replaced by these. The qdb gate is now 190 pass, 0 fail, 1 XFAIL, 0 XPASS.
+
 ### qdb: HAVING Over a Grouped JOIN Filters Groups (2026-09-05)
 
 **HAVING over a grouped JOIN now folds its aggregate per group and keeps only the
