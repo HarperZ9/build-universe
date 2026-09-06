@@ -4,6 +4,28 @@ All notable changes to the BuildLang program suite.
 
 ## [Unreleased]
 
+### qdb: A Positional Ordinal Orders Grouped Output on Both Paths (2026-09-05)
+
+**`ORDER BY 2` now orders a grouped result by its second output column, on both the
+single-table grouped path and the grouped JOIN.** Before this a bare integer key
+was read as a column name, matched nothing, and failed closed with "not a grouped
+column, aggregate, or alias". The non-grouped and UNION paths already resolved
+ordinals, so `ORDER BY 2` worked everywhere except a grouped result; this closes
+that gap and brings the ordinal surface to parity across all four ORDER BY paths.
+- Both grouped sort blocks (`exec_select` single-table and `exec_select_join`) gain
+  one branch ahead of the name and alias resolution: a key that `is_int_str`
+  parses is a 1-based ordinal into the `ncols` output columns. In range it sets the
+  output column directly and takes the sort type from that column's own aggregate
+  func, so `ORDER BY 2` sorts a SUM numerically while `ORDER BY 1` sorts a text
+  group column as text. Out of range (position 0, or past the last column) fails
+  closed with "ORDER BY position N is out of range".
+- A secondary ORDER BY key over a grouped JOIN still fails closed (an honest
+  partial, candidate next fork); an unresolvable name still fails closed with its
+  own message. LIMIT/OFFSET compose after the ordinal sort unchanged.
+- Gate: 204/0/1/0 (up from 197), db.bld 6,833 -> 6,861. Seven assertions added
+  across the two paths; a false-success control built from the pre-fix HEAD fails
+  exactly the eight ordinal assertions (196/8), so each earns its place.
+
 ### qdb: LIMIT and OFFSET Over a Grouped JOIN Truncate the Groups (2026-09-05)
 
 **LIMIT and OFFSET over a grouped JOIN now truncate the group rows instead of
