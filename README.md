@@ -1,5 +1,5 @@
 <p align="center">
-  <img src=".github/assets/zentropy-banner.png" alt="Build Universe: Buildlang Module & Example Surface">
+  <img src=".github/assets/banner.png" alt="Build Universe: Buildlang Module & Example Surface">
 </p>
 
 # Build Universe v1.0.0
@@ -92,4 +92,4 @@ Fair-source, not open source. The source is published so you can read it, run it
 
 ---
 
-**[Zentropy Labs](https://github.com/ZentropyLabs-ai)** · order out of entropy. An independent lab building evidence-first tools that leave a re-checkable artifact behind. Built by Zain Dana Harper in Seattle. The full workbench is at [Project Telos](https://harperz9.github.io).
+Built by **[Zain Dana Harper](https://harperz9.github.io)** in Seattle: evidence-first tools that leave a re-checkable artifact behind. The full workbench is at [Project Telos](https://harperz9.github.io).
