@@ -1,20 +1,17 @@
-<p align="center">
-  <img src=".github/assets/banner.png" alt="Build Universe: Buildlang Module & Example Surface">
-</p>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/HarperZ9/build-universe/main/docs/art/hero-dark.svg">
+  <img src="https://raw.githubusercontent.com/HarperZ9/build-universe/main/docs/art/hero-light.svg" alt="build-universe: BuildLang compiler, standard library, and OS kernel in one repo. A fine lattice of lines bulges outward around a bright core, as if seen through a lens, inside a ring." width="100%">
+</picture>
 
-# Build Universe v1.0.0
+# build-universe
 
-> A physics-inspired compiler ecosystem: the BuildLang language and standard library, a Rust compiler that transpiles `.bld` to C, and a Rust OS kernel.
+BuildLang compiler, standard library, and OS kernel in one repo.
+
+[![version: 1.0.2](https://img.shields.io/badge/version-1.0.2-e6e1d6?style=flat-square&labelColor=1a1712)](https://github.com/HarperZ9/build-universe/releases/latest)
+[![CI](https://github.com/HarperZ9/build-universe/actions/workflows/ci.yml/badge.svg)](https://github.com/HarperZ9/build-universe/actions/workflows/ci.yml)
+[![license](https://img.shields.io/badge/license-FSL--1.1--MIT-e6e1d6?style=flat-square&labelColor=1a1712)](https://github.com/HarperZ9/build-universe/blob/main/LICENSE)
 
 [Project Telos](https://harperz9.github.io) | [gather](https://github.com/HarperZ9/gather) | [crucible](https://github.com/HarperZ9/crucible) | [index](https://github.com/HarperZ9/index) | [forum](https://github.com/HarperZ9/forum) | [telos](https://github.com/HarperZ9/telos) | [emet](https://github.com/HarperZ9/emet) | [buildlang](https://github.com/HarperZ9/buildlang)
-
-[![license: fair-source](https://img.shields.io/badge/license-fair--source-blue.svg)](LICENSE)
-![buildlang](https://img.shields.io/badge/buildlang-.bld-orange.svg)
-![version](https://img.shields.io/badge/version-1.0.0-informational.svg)
-![status: alpha](https://img.shields.io/badge/status-alpha-yellow.svg)
-![build: from source](https://img.shields.io/badge/build-from_source-lightgrey.svg)
-[![CI](https://github.com/HarperZ9/build-universe/actions/workflows/ci.yml/badge.svg)](https://github.com/HarperZ9/build-universe/actions/workflows/ci.yml)
-[![part of: Project Telos](https://img.shields.io/badge/part_of-Project_Telos-00b3a4.svg)](https://harperz9.github.io)
 
 An alpha compiler ecosystem, mixed-language by design. The pieces are not "all written in BuildLang":
 
