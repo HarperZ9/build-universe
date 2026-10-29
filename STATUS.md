@@ -16,6 +16,20 @@ source audit: real, correct, extractable logic vs scaffolding/showcase.
 - ~6 GB of local disk is Cargo target/ build cache (already git-ignored; the
   compiler dir buildlang/ is itself git-ignored, a separate repo).
 
+## BDB (qdb, programs/db.bld): verified 2026-10-29
+
+- Builds with buildc 1.4.0 (the effect annotations on this branch line satisfy the
+  1.4.0 effect checker; main's db.bld does not, with 33 undeclared-effect errors).
+- `programs/tests/test_qdb.sh` on that build: pass=214 fail=0 xfail=1 xpass=0.
+- KNOWN OPEN: a long REPL session crashes. Piping 5,000 single-row INSERTs into
+  the REPL ended in a segmentation fault after about 2,500 statements (2,549 and
+  2,507 rows stored in two runs; 2,464 on main in a third). Rows stored before the
+  crash are intact, and 4,000 rows load fine through single-command multi-row
+  INSERTs, so the trigger is per-statement growth in the REPL, not table size.
+  Cause not found. Opt-in repro: `programs/tests/repro_qdb_repl_bulk.sh`.
+- Name: the author wants this engine called BDB (Build DB). It is still qdb in
+  code, docs, tests and binaries; the rename waits for a planned checklist.
+
 ## Tier 1 — Load-bearing, real, extractable (the engine)
 
 | Component | Score | What is real |
