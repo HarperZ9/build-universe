@@ -4,6 +4,69 @@ All notable changes to the BuildLang program suite.
 
 ## [Unreleased]
 
+### qdb: Loading N Rows Costs O(N), Not O(N^2) (2026-11-02)
+
+**A bulk load is now linear in the rows loaded, and 70 to 170 times faster
+at 1,000 rows.** Before, every INSERT paid for everything already in the
+database, in five places. `sp_add` grew the string pool by concatenation, which
+copies the whole pool. `wal_write` read the whole WAL and wrote it back for each
+line. Every auto-commit statement rewrote the whole .db. `exec_insert` copied the
+whole cells array. And `update_indexes_for_table` re-sorted every index on the
+table with a selection sort, so an indexed load was closer to O(N^3).
+
+- The string pool is a `Vec<String>`; `sp_add` and `sp_get` are O(1).
+- The WAL is append-only (`append_file`). An auto-commit statement appends its
+  `TXID / OP / COMMIT` record in one write. Replay is one linear pass.
+- The .db is rewritten at a checkpoint: when the WAL outgrows the .db by 64 KB,
+  and at a clean exit, never inside an open BEGIN. Save cost is amortized
+  against WAL growth.
+- `db_save` builds its output in 64 KB chunks joined once; `db_load`,
+  `wal_replay` and `.wal` split their file once instead of slicing the rest of
+  the file per line.
+- INSERT into the last table appends cells in place.
+- Indexes refresh lazily on the next index read. Appended rows are sorted alone
+  and merged in; UPDATE, DELETE, ALTER and ROLLBACK trigger one full rebuild.
+  Index sorts use a stable merge sort whose tie order matches the old
+  selection sort exactly.
+
+Crash safety is at least as good as before. A statement is durable once its
+COMMIT line is in the WAL, the same point the engine relied on before. The old
+code truncated and rewrote both the WAL and the .db on every statement, so a
+crash during either could lose committed data; an append can tear only the last
+record, and a torn record has no COMMIT and is skipped. No write calls fsync,
+before or after.
+
+Trade-off: an index read right after writes pays for folding them in, so a
+workload that alternates INSERT with indexed SELECT is still superlinear
+(k = 1.52 over N = 1k..16k), though 170 times faster at 1k. The .db file now
+lags the WAL during a long REPL session; it is current again at every clean
+exit, and `.wal` reports the pending records.
+
+Measured with the new `benchmarks/bench_qdb_load.py` (k is the log-log slope of
+time against N; Windows 11, buildc 1.4.0, gcc 13.2 -O2, one run per size):
+
+| Scenario | Before: time at N | Before: k | After: time at N | After: k |
+|----------|-------------------|-----------|------------------|----------|
+| autocommit | 15.0 s at 1k, 97.8 s at 2k | 1.78 (N=500..2k) | 0.13 s at 1k, 27.6 s at 100k | 1.16 (N=1k..100k) |
+| txn | 10.0 s at 1k, 40.6 s at 4k | 1.01 (N=1k..4k) | 0.14 s at 1k, 18.5 s at 100k | 1.07 (N=1k..100k) |
+| txn_indexed | 21.3 s at 1k | 1.94 (N=250..1k) | 0.14 s at 1k, 15.0 s at 100k | 1.02 (N=1k..100k) |
+| interleaved | 32.7 s at 1k | 1.61 (N=250..1k) | 0.20 s at 1k, 13.3 s at 16k | 1.52 (N=1k..16k) |
+
+Verified:
+- `tests/test_qdb.sh`: 214 pass, 0 fail, 1 documented xfail, the same as before.
+- `tests/test_qdb_differential.py` (new): 8 seeded random workloads (indexes,
+  multi-row INSERT into either of two tables, UPDATE, DELETE, COMMIT and
+  ROLLBACK, indexed and range SELECTs, aggregates, GROUP BY), each run as one
+  REPL session and as one process per statement, through the build before this
+  change and the build after it: stdout and final .db byte-identical, 16 of 16.
+  A mutant that flips the merge sort's tie order fails 6 of 6 checks.
+- `tests/test_qdb_wal_recovery.py` (new): a WAL left by an abnormal exit, cut at
+  every byte offset (315 cuts) and at 202 offsets of a 98 KB WAL whose prefix
+  was already checkpointed into the .db; recovered rows match the rule "a
+  transaction is applied if and only if its COMMIT survives", 0 failures, and
+  the old build recovers the small case's 315 cuts identically. A mutant that
+  also replays the open transaction fails 399 checks.
+
 ### qdb: A Statement Must Consume Its Whole Input (2026-09-05)
 
 **A token left over after a complete parse now fails closed instead of being

@@ -44,6 +44,12 @@ sp_starts: [0, 5, 8]
 sp_lens:   [5, 3, 7]
 ```
 
+Growing one `String` by concatenation copies the whole buffer each time, so a
+pool built this way costs O(n^2) to fill. `qdb` now keeps its pool in a
+`Vec<String>`, which works under buildc 1.4.0 when the vector comes from a typed
+local (`let v: Vec<String> = vec![];`); a bare `vec![]` in a struct literal is
+built as a `Vec<i32>`.
+
 A call to `sp_get(state, id)` extracts `sp_buf.substring(sp_starts[id], sp_lens[id])`.
 
 ### Why Embedded Tokenizers
@@ -216,6 +222,8 @@ single `DB` struct due to the flat-struct constraint. The SQL parser is embedded
 - A scalar aggregate, a GROUP BY, a HAVING, an ORDER BY, and a LIMIT/OFFSET over a grouped JOIN all fold, sort, or truncate over the joined rows (see Features above). What remains fail-closed over a JOIN: a secondary ORDER BY key over a grouped JOIN, DISTINCT over a grouped JOIN, and COUNT(DISTINCT ...) over any JOIN (`COUNT(DISTINCT) over a JOIN is not supported`). Each is tracked here rather than returning a silent wrong grouping, order, or count
 - Cross-process transactions do not roll back: each CLI statement is its own process and auto-commit checkpoints, so a later ROLLBACK cannot undo an earlier write
 - No query optimizer; all scans are sequential unless an index matches exactly
+- Writes: a bulk load is linear in the rows loaded (about 0.13 s per 1,000 rows, 15 to 28 s per 100,000, see ARCHITECTURE.md, Write Cost). Still superlinear: an INSERT followed by an indexed SELECT on every row, INSERT into a table that is not the last one created, UPDATE, DELETE, and ORDER BY (selection sort)
+- During a REPL session, committed writes live in the append-only WAL and reach the .db at a checkpoint (when the WAL outgrows the .db, and at a clean exit). A crash loses nothing that was committed; the next start replays it
 - File format is not binary-compatible with SQLite
 
 ## Key-Value Store (qkv)
