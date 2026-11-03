@@ -17,7 +17,7 @@
 
 include!("stdlib/lines.bld");
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("Usage: qgrep [OPTION]... PATTERN [FILE]...");
     println!("Search for PATTERN in each FILE or standard input.");
     println!("");
@@ -36,7 +36,7 @@ fn print_help() {
 // Returns the count of matching lines.
 fn search_content(content: String, pattern: String, filename: String,
                   case_i: bool, show_ln: bool, count_only: bool,
-                  invert: bool, multi_file: bool) -> i64 {
+                  invert: bool, multi_file: bool) -> i64 ~ Console {
     // Prepare pattern for matching
     let search_pat = if case_i { pattern.to_lowercase() } else { pattern };
 
@@ -77,7 +77,7 @@ fn search_content(content: String, pattern: String, filename: String,
     match_count
 }
 
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     if nargs < 2 {

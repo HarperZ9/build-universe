@@ -183,7 +183,7 @@ fn kv_del_internal(store: &mut KVStore, key: String) -> bool {
 }
 
 // --- Append a line to the log file ---
-fn kv_append_log(store: &KVStore, line: String) {
+fn kv_append_log(store: &KVStore, line: String) ~ FileSystem {
     let existing = if file_exists(store.db_path) {
         read_file(store.db_path)
     } else {
@@ -194,7 +194,7 @@ fn kv_append_log(store: &KVStore, line: String) {
 }
 
 // --- Load: replay log file into memory ---
-fn kv_load(store: &mut KVStore) {
+fn kv_load(store: &mut KVStore) ~ FileSystem {
     if !file_exists(store.db_path) {
         return;
     }
@@ -262,7 +262,7 @@ fn kv_load(store: &mut KVStore) {
 }
 
 // --- Public SET: update memory + append log ---
-fn kv_set(store: &mut KVStore, key: String, value: String) {
+fn kv_set(store: &mut KVStore, key: String, value: String) ~ FileSystem {
     kv_set_internal(store, key, value);
     let line = "SET " + key + " " + value;
     kv_append_log(store, line);
@@ -282,7 +282,7 @@ fn kv_get(store: &KVStore, key: String) -> String {
 }
 
 // --- Public DEL: update memory + append log ---
-fn kv_del(store: &mut KVStore, key: String) -> bool {
+fn kv_del(store: &mut KVStore, key: String) -> bool ~ FileSystem {
     let ei = find_entry(store, key);
     if ei < 0 {
         return false;
@@ -294,7 +294,7 @@ fn kv_del(store: &mut KVStore, key: String) -> bool {
 }
 
 // --- KEYS: print all active keys ---
-fn kv_keys(store: &KVStore) {
+fn kv_keys(store: &KVStore) ~ Console {
     let n = vec_len(store.val_ids);
     let mut i: i64 = 0;
     while i < n {
@@ -308,7 +308,7 @@ fn kv_keys(store: &KVStore) {
 }
 
 // --- DUMP: print all key=value pairs ---
-fn kv_dump(store: &KVStore) {
+fn kv_dump(store: &KVStore) ~ Console {
     let n = vec_len(store.val_ids);
     let mut i: i64 = 0;
     while i < n {
@@ -323,7 +323,7 @@ fn kv_dump(store: &KVStore) {
 }
 
 // --- COMPACT: rewrite log with only current state ---
-fn kv_compact(store: &KVStore) {
+fn kv_compact(store: &KVStore) ~ FileSystem {
     let mut content = "";
     let n = vec_len(store.val_ids);
     let mut i: i64 = 0;
@@ -340,7 +340,7 @@ fn kv_compact(store: &KVStore) {
 }
 
 // --- IMPORT: read key=value lines from a file ---
-fn kv_import(store: &mut KVStore, filepath: String) {
+fn kv_import(store: &mut KVStore, filepath: String) ~ Console + FileSystem + Process {
     if !file_exists(filepath) {
         println!("qkv: {}: No such file or directory", filepath);
         process_exit(1);
@@ -404,7 +404,7 @@ fn kv_import(store: &mut KVStore, filepath: String) {
 }
 
 // --- Help ---
-fn print_help() {
+fn print_help() ~ Console {
     println!("qkv — Persistent key-value database");
     println!("");
     println!("Usage:");
@@ -426,7 +426,7 @@ fn print_help() {
 }
 
 // --- Main ---
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     if nargs < 2 {

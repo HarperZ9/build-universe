@@ -563,7 +563,7 @@ fn mark_built(m: &mut Make, tidx: i32) {
 }
 
 // --- Build a target (recursive dependency resolution) ---
-fn build_target(m: &mut Make, tidx: i32, depth: i32) -> bool {
+fn build_target(m: &mut Make, tidx: i32, depth: i32) -> bool ~ Console + FileSystem {
     if tidx < 0 || tidx >= m.t_n { return false; }
 
     // Already built?
@@ -623,7 +623,7 @@ fn build_target(m: &mut Make, tidx: i32, depth: i32) -> bool {
 }
 
 // --- Help ---
-fn print_help() {
+fn print_help() ~ Console {
     println!("qmake -- lightweight build tool");
     println!("");
     println!("Usage:");
@@ -657,7 +657,7 @@ fn print_help() {
 }
 
 // --- Main ---
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     let mut m = make_new();

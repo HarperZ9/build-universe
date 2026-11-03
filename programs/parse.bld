@@ -115,7 +115,7 @@ fn make_indent(n: i32) -> String {
     out
 }
 
-fn emit_line(p: &Parser, text: String) {
+fn emit_line(p: &Parser, text: String) ~ Console {
     let prefix = make_indent(p.indent);
     println!("{}{}", prefix, text);
 }
@@ -473,7 +473,7 @@ fn parse_if_expr_str(p: &mut Parser) -> String {
 // Statement parsing (prints AST lines)
 // ===========================================================================
 
-fn parse_block(p: &mut Parser, stats_only: bool) {
+fn parse_block(p: &mut Parser, stats_only: bool) ~ Console {
     if !expect_kind(p, TK_LBRACE()) { return; }
     let mut go = true;
     while go {
@@ -483,7 +483,7 @@ fn parse_block(p: &mut Parser, stats_only: bool) {
     expect_kind(p, TK_RBRACE());
 }
 
-fn parse_statement(p: &mut Parser, stats_only: bool) {
+fn parse_statement(p: &mut Parser, stats_only: bool) ~ Console {
     let k = pk(p);
     let txt = ptxt(p);
 
@@ -683,7 +683,7 @@ fn parse_params(p: &mut Parser) -> String {
     result
 }
 
-fn parse_function(p: &mut Parser, stats_only: bool) {
+fn parse_function(p: &mut Parser, stats_only: bool) ~ Console {
     p.fn_count = p.fn_count + 1;
     // "fn" already consumed. Parse name, params, return type, body.
     let name = ptxt(p);
@@ -712,7 +712,7 @@ fn parse_function(p: &mut Parser, stats_only: bool) {
     }
 }
 
-fn parse_struct(p: &mut Parser, stats_only: bool) {
+fn parse_struct(p: &mut Parser, stats_only: bool) ~ Console {
     p.struct_count = p.struct_count + 1;
     // "struct" already consumed
     let name = ptxt(p);
@@ -738,7 +738,7 @@ fn parse_struct(p: &mut Parser, stats_only: bool) {
     }
 }
 
-fn parse_enum(p: &mut Parser, stats_only: bool) {
+fn parse_enum(p: &mut Parser, stats_only: bool) ~ Console {
     p.enum_count = p.enum_count + 1;
     let name = ptxt(p);
     adv(p);
@@ -771,7 +771,7 @@ fn parse_enum(p: &mut Parser, stats_only: bool) {
     }
 }
 
-fn parse_impl(p: &mut Parser, stats_only: bool) {
+fn parse_impl(p: &mut Parser, stats_only: bool) ~ Console {
     p.impl_count = p.impl_count + 1;
     let type_name = parse_type_str(p);
     if !stats_only { emit_line(p, "impl " + type_name); }
@@ -800,7 +800,7 @@ fn parse_impl(p: &mut Parser, stats_only: bool) {
     }
 }
 
-fn parse_use(p: &mut Parser, stats_only: bool) {
+fn parse_use(p: &mut Parser, stats_only: bool) ~ Console {
     // "use" already consumed. Collect path to semicolon.
     let mut path = "";
     let mut go = true;
@@ -812,7 +812,7 @@ fn parse_use(p: &mut Parser, stats_only: bool) {
     if !stats_only { emit_line(p, "use " + path); }
 }
 
-fn parse_const(p: &mut Parser, stats_only: bool) {
+fn parse_const(p: &mut Parser, stats_only: bool) ~ Console {
     // "const" already consumed
     let name = ptxt(p); adv(p);
     let mut ty = "";
@@ -831,7 +831,7 @@ fn parse_const(p: &mut Parser, stats_only: bool) {
     }
 }
 
-fn parse_mod(p: &mut Parser, stats_only: bool) {
+fn parse_mod(p: &mut Parser, stats_only: bool) ~ Console {
     // "mod" already consumed
     let name = ptxt(p); adv(p);
     if !stats_only { emit_line(p, "mod " + name); }
@@ -848,7 +848,7 @@ fn parse_mod(p: &mut Parser, stats_only: bool) {
     } else if pk(p) == TK_SEMI() { adv(p); }
 }
 
-fn parse_item(p: &mut Parser, stats_only: bool) {
+fn parse_item(p: &mut Parser, stats_only: bool) ~ Console {
     let k = pk(p);
     let txt = ptxt(p);
 
@@ -936,7 +936,7 @@ fn parse_item(p: &mut Parser, stats_only: bool) {
     if !at_end(p) { adv(p); }
 }
 
-fn parse_module(p: &mut Parser, stats_only: bool) {
+fn parse_module(p: &mut Parser, stats_only: bool) ~ Console {
     let mut go = true;
     while go {
         if at_end(p) { go = false; }
@@ -947,7 +947,7 @@ fn parse_module(p: &mut Parser, stats_only: bool) {
 // ===========================================================================
 // Stats mode
 // ===========================================================================
-fn print_stats(p: &Parser, source: String, filename: String) {
+fn print_stats(p: &Parser, source: String, filename: String) ~ Console {
     // Count lines
     let slen = source.len();
     let mut lines: i32 = 1;
@@ -970,7 +970,7 @@ fn print_stats(p: &Parser, source: String, filename: String) {
 // ===========================================================================
 // Help
 // ===========================================================================
-fn print_help() {
+fn print_help() ~ Console {
     println!("qparse - BuildLang parser (self-hosting compiler step 2)");
     println!("");
     println!("Usage:");
@@ -987,7 +987,7 @@ fn print_help() {
 // ===========================================================================
 // Main
 // ===========================================================================
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     let mut mode: i32 = 0;  // 0=ast, 1=stats

@@ -20,7 +20,7 @@
 
 include!("stdlib/lines.bld");
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("qnl -- number lines of files");
     println!("");
     println!("Usage:");
@@ -94,7 +94,7 @@ fn strip_cr(line: String) -> String {
 }
 
 // Process content: split into lines, number them, print.
-fn process(content: String, number_all: bool, sep: String, width: i32) {
+fn process(content: String, number_all: bool, sep: String, width: i32) ~ Console {
     let lr = lr_new(content);
     let mut line_num: i32 = 0;
 
@@ -116,7 +116,7 @@ fn process(content: String, number_all: bool, sep: String, width: i32) {
     }
 }
 
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     let mut number_all = false;

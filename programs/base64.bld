@@ -121,7 +121,7 @@ fn strip_whitespace(input: String) -> String {
     result
 }
 
-fn decode(t: &Tables, raw_input: String) -> String {
+fn decode(t: &Tables, raw_input: String) -> String ~ Console + Process {
     let input = strip_whitespace(raw_input);
     let len = input.len();
     let mut result = "";
@@ -176,7 +176,7 @@ fn decode(t: &Tables, raw_input: String) -> String {
 // CLI
 // ---------------------------------------------------------------------------
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("qbase64 — Base64 encode/decode tool");
     println!("");
     println!("Usage:");
@@ -191,7 +191,7 @@ fn print_help() {
     println!("  echo -n \"SGVsbG8=\" | qbase64 -d");
 }
 
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     if nargs < 2 {

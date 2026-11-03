@@ -1,14 +1,27 @@
 @echo off
-REM Build all .bld programs to native binaries via buildc + MSVC
-REM Run from cmd.exe: cd C:\Users\Zain\BUILD-UNIVERSE\programs && build_all.bat
+setlocal enabledelayedexpansion
+REM Build all .bld programs to native binaries via buildc + MSVC.
+REM Run from cmd.exe inside this programs/ directory: build_all.bat
 REM
 REM Prerequisites:
-REM   - buildc.exe built (cargo build --release in buildlang/compiler)
-REM   - Visual Studio Build Tools 2022 installed
+REM   - buildc.exe on PATH, or set BUILDC to its full path before running
+REM     (build it with: cargo build --release, in the buildlang compiler crate)
+REM   - Visual Studio Build Tools 2022 (or newer) with the C++ toolset
 
 call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat" >nul 2>&1
 
-set BUILDC=..\buildlang\compiler\target\release\buildc.exe
+REM Resolve the compiler: honor an explicit BUILDC, else find buildc on PATH.
+if not defined BUILDC (
+    for /f "delims=" %%p in ('where buildc 2^>nul') do (
+        if not defined BUILDC set "BUILDC=%%p"
+    )
+)
+if not defined BUILDC (
+    echo ERROR: buildc not found. Put buildc.exe on PATH or set BUILDC to its path.
+    exit /b 1
+)
+echo Using compiler: %BUILDC%
+
 set PASS=0
 set FAIL=0
 set SKIP=0
@@ -24,7 +37,7 @@ for %%f in (*.bld) do (
         echo   SKIP %%~nf [test file]
     ) || (
         echo   Compiling %%~nf.bld...
-        %BUILDC% %%f >nul 2>&1
+        "%BUILDC%" %%f >nul 2>&1
         if exist "%%~nf.c" (
             cl /O2 /nologo /Fe:q%%~nf.exe %%~nf.c >nul 2>&1
             if exist "q%%~nf.exe" (

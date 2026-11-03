@@ -1,6 +1,6 @@
 include!("stdlib/string_utils.bld");
 
-fn main() {
+fn main() ~ Console {
     // Test functions from string_utils (which also pulls in chars)
     let trimmed = trim_left("  hello");
     println!("trimmed: '{}'", trimmed);

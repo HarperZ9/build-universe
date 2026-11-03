@@ -10,7 +10,7 @@
 //   qtee --help                             usage
 // =============================================================================
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("qtee - copy stdin to stdout and files");
     println!("");
     println!("Usage:");
@@ -24,7 +24,7 @@ fn print_help() {
     println!("If no FILE is given, just copy stdin to stdout.");
 }
 
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     // Parse flags and collect file count

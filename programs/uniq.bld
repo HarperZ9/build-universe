@@ -103,7 +103,7 @@ fn parse_lines(s: &mut Uniq) {
 
 // --- Emit one group based on flags ---
 fn emit_group(line: String, count: i64, flag_c: bool, flag_d: bool,
-              flag_u: bool) {
+              flag_u: bool) ~ Console {
     // -d: only duplicated lines (count > 1)
     if flag_d {
         if count <= 1 { return; }
@@ -135,7 +135,7 @@ fn lines_equal(s: &Uniq, id_a: i32, id_b: i32, flag_i: bool) -> bool {
 
 // --- Process lines: walk consecutive groups ---
 fn process_lines(s: &Uniq, flag_c: bool, flag_d: bool, flag_u: bool,
-                 flag_i: bool) {
+                 flag_i: bool) ~ Console {
     if s.line_n == 0 { return; }
 
     let mut group_start = vec_get(s.line_ids, 0);
@@ -164,7 +164,7 @@ fn process_lines(s: &Uniq, flag_c: bool, flag_d: bool, flag_u: bool,
 }
 
 // --- Help ---
-fn print_help() {
+fn print_help() ~ Console {
     println!("quniq — filter adjacent matching lines");
     println!("");
     println!("Usage:");
@@ -183,7 +183,7 @@ fn print_help() {
 }
 
 // --- Main ---
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     // Parse flags

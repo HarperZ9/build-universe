@@ -142,7 +142,7 @@ fn parse_lines(s: &mut Comm, content: String, which: i32) {
 // suppress1: suppress "only in file1" column
 // suppress2: suppress "only in file2" column
 // suppress3: suppress "in both" column
-fn merge_output(s: &Comm, suppress1: bool, suppress2: bool, suppress3: bool) {
+fn merge_output(s: &Comm, suppress1: bool, suppress2: bool, suppress3: bool) ~ Console {
     let tab = "\t";
     let mut i1: i32 = 0;
     let mut i2: i32 = 0;
@@ -212,7 +212,7 @@ fn merge_output(s: &Comm, suppress1: bool, suppress2: bool, suppress3: bool) {
 }
 
 // --- Help ---
-fn print_help() {
+fn print_help() ~ Console {
     println!("qcomm — compare two sorted files line by line");
     println!("");
     println!("Usage:");
@@ -238,7 +238,7 @@ fn print_help() {
 }
 
 // --- Main ---
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     if nargs < 2 {

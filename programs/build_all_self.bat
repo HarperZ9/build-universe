@@ -1,7 +1,7 @@
 @echo off
 REM Build all programs using the SELF-HOSTED compiler (qcodegen)
 REM This proves BuildLang compiles itself.
-REM Run from cmd.exe: cd C:\Users\Zain\BUILD-UNIVERSE\programs && build_all_self.bat
+REM Run from cmd.exe inside this programs/ directory: build_all_self.bat
 
 call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat" >nul 2>&1
 

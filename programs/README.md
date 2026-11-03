@@ -20,13 +20,16 @@ C is then compiled with any standard C compiler (MSVC `cl.exe` or `gcc`).
 
 ### Why Flat Structs
 
-BuildLang's C backend has a known limitation: struct field assignment on local
-variables doesn't emit correct C in all contexts. As a workaround, all programs
-use a "flat struct" pattern where state lives in a single struct passed via `&mut`
-references to helper functions. This trades readability for reliability.
+buildc 1.2.0 lowers struct field assignment on a local value (`let mut p = ...;
+p.x = 10`) correctly. An earlier release did not, so programs threaded a single
+`&mut` struct through helper functions instead, and `qdb` keeps that pattern: all
+engine state lives in one `DB` struct (105 fields) rather than separate `Parser`,
+`Storage`, and `Index` types. That single-struct layout is now a retained design
+choice, not a compiler requirement.
 
-Example from `qdb` -- all parser state, storage, indexes, and WAL live in one
-`DB` struct (~50 fields) rather than separate `Parser`, `Storage`, `Index` types.
+The flattened layout inside the struct, parallel `Vec<i32>` arrays rather than
+nested collections, is still required, because `Vec<String>` and typed vectors
+beyond `Vec<i32>`/`Vec<f64>` have incomplete codegen. See Why String Pools below.
 
 ### Why String Pools
 
@@ -65,7 +68,7 @@ is the intended fix.
 | qcsv | 595 | data | CSV-to-JSON converter |
 | qcut | 476 | text | Field/character extraction (GNU cut) |
 | qdate | 156 | system | Display current date and time |
-| qdb | 4,232 | database | SQL database engine with REPL |
+| qdb | 6,861 | database | SQL database engine with REPL |
 | qdiff | 718 | file | Unified diff (LCS-based) |
 | qdirname | 146 | path | Extract directory component from pathname |
 | qecho | 131 | system | Print arguments to stdout |
@@ -167,16 +170,32 @@ of C, proving the self-hosted compiler can handle substantial BuildLang code.
 
 ## Database Engine (qdb)
 
-The most complex program at 4,232 lines. A SQL database engine with:
+The most complex program at 6,861 lines. A SQL database engine with:
 
 **SQL support:**
 - CREATE TABLE, INSERT, SELECT, UPDATE, DELETE, DROP TABLE
+- Column types INTEGER, REAL, and TEXT, with the common SQL aliases (INT, BIGINT, SMALLINT, FLOAT, DOUBLE, NUMERIC, and similar) recognized so a numeric column orders and right-aligns as a number
 - ALTER TABLE ADD COLUMN
-- WHERE with AND/OR, LIKE, IN, IS NULL/IS NOT NULL, BETWEEN
+- UPDATE SET col = col OP literal, where OP is `+`, `-`, `*`, or `/` (arithmetic RHS, fail-closed on bad operand or division by zero)
+- WHERE as a boolean-expression tree: AND/OR/NOT with parenthesized grouping, over comparisons, LIKE, IN, IS NULL/IS NOT NULL, BETWEEN/NOT BETWEEN
+- A WHERE comparison uses one of `=`, `<`, `>`, `<=`, `>=`, `<>`, `!=`. Arithmetic inside a condition (`salary + 10 > 100`) and a doubled operator (`salary == 100`) fail closed with an error rather than returning zero rows silently
+- A WHERE clause that names a column no target table has fails closed with `no such column` across SELECT, aggregates, GROUP BY, UPDATE, DELETE, and scalar subqueries. Before this a typo'd column returned an empty result, and IS NULL on it returned every row, both silent wrong answers; UPDATE and DELETE now leave the table untouched
 - Scalar subqueries in WHERE clauses
-- JOIN (nested-loop) with table aliases
-- GROUP BY with aggregates: COUNT(*), SUM, AVG, MIN, MAX
-- HAVING, DISTINCT, ORDER BY, LIMIT
+- INNER and LEFT JOIN (nested-loop) with table aliases; LEFT JOIN fills unmatched right rows with NULL
+- UNION and UNION ALL, with column-count and per-branch shape checks (fail-closed on mismatch)
+- A complete statement must consume its whole input. A token left over after the parse, whether a clause qdb does not support or plain garbage after LIMIT, WHERE, or a table alias, fails closed with `unexpected trailing input near '<token>'` rather than being dropped. A query would otherwise return a plausible wrong answer and a mutation would apply a half-specified write; the check runs before the WAL, so a rejected INSERT, UPDATE, DELETE, CREATE, or DROP changes nothing, and it re-runs on each UNION branch so a trailing token after the final branch is caught too. A single bareword after a table name is still a legal alias, not trailing garbage
+- GROUP BY with aggregates: COUNT(*), COUNT(col), COUNT(DISTINCT col), SUM, AVG, MIN, MAX
+- MIN and MAX order a TEXT column lexicographically; over an empty result set an aggregate MIN or MAX yields SQL NULL
+- HAVING on an aggregate, with the same operator fail-closed as WHERE: an arithmetic or doubled operator (`HAVING COUNT(*) + 0 > 1`, `HAVING COUNT(*) == 1`) errors rather than dropping every group silently
+- An aggregate over a column no table has fails closed with `no such column`, across a plain SELECT, a GROUP BY, a HAVING term, and a scalar subquery. Before this SUM, AVG, and COUNT(col) returned 0, MIN and MAX returned blank, a grouped aggregate returned 0 per group, and a subquery fed 0 into the outer comparison so every row matched, each a silent wrong answer. COUNT(*) is exempt. An aggregate over a JOIN is a separate path: a scalar aggregate, a GROUP BY, a HAVING filter, and an ORDER BY all fold or sort over the joined rows (see the following bullets); COUNT(DISTINCT) over a grouped JOIN still fails closed (see Known limitations)
+- A scalar aggregate (COUNT/SUM/AVG/MIN/MAX, with no GROUP BY) over a JOIN folds over the assembled join rows: COUNT(*) counts joined rows, COUNT(col) counts non-empty cells, and SUM/AVG/MIN/MAX read the referenced table's column on each matched pair. The fold honors WHERE and LEFT JOIN null-extension, and matches single-table aggregate semantics (numeric MIN/MAX coerce empty cells to 0, text MIN/MAX compare lexically, MIN/MAX over zero rows yield SQL NULL)
+- A GROUP BY over a JOIN folds the same way per group. The group column resolves against either joined table, the distinct keys keep first-seen order, and each group's bucket folds its projection items with the scalar path's rules. A WHERE that empties a group drops it from the output. DISTINCT over a grouped JOIN, and COUNT(DISTINCT) over any JOIN, each fail closed with a specific message
+- A HAVING over a grouped JOIN folds its aggregate over each group's bucket and keeps only the groups that pass, with the same COUNT/SUM/AVG/MIN/MAX rules as the projection fold. The HAVING aggregate is independent of the projected one, so `SELECT emp.dept, COUNT(*) ... HAVING MAX(emp.salary) >= 120` filters on the max while displaying the count. A bad HAVING operator is rejected at parse time, and a HAVING that filters every group leaves a header with zero rows rather than all groups or an error
+- An ORDER BY over a grouped JOIN sorts the folded groups after the HAVING filter. The key names the grouped column, an aggregate term (`ORDER BY SUM(emp.salary)`), a projection alias, or a 1-based positional ordinal (`ORDER BY 2`); it resolves to an output column and a stable sort keeps equal keys in group-discovery order. COUNT sorts as an integer, SUM/AVG/MIN/MAX as a real, a plain key by its source type. A secondary key or an unresolvable name fails closed with an accurate message rather than a silent wrong order, and an out-of-range ordinal fails closed too
+- A LIMIT and OFFSET over a grouped JOIN truncate the group rows after the ORDER BY sort, so `ORDER BY SUM(emp.salary) DESC LIMIT 3` returns the top three groups. LIMIT without ORDER BY keeps group-discovery order, OFFSET skips whole groups, HAVING runs before the truncation, and LIMIT 0 or an OFFSET past the last group renders the header with zero data rows
+- DISTINCT, LIMIT/OFFSET
+- ORDER BY a column name, a positional ordinal (ORDER BY 2, counting select columns from 1), or a projection alias (ORDER BY the AS name), with an optional secondary tie-break key. Single-table, JOIN, and UNION selects each resolve an ordinal or column key and fail closed on a key that names nothing, instead of leaving the rows unsorted: a JOIN key binds to whichever joined table owns the column, and a UNION key binds to an output-column position (only the first branch's names reach the merged headers, so an ordinal is the portable way to order a union)
+- ORDER BY on grouped output also accepts the group column, an aggregate term (ORDER BY SUM(salary)), or a positional ordinal (ORDER BY 2), on both the single-table and JOIN grouped paths
 - Column aliases (SELECT col AS alias)
 
 **Storage and reliability:**
@@ -191,7 +210,11 @@ single `DB` struct due to the flat-struct constraint. The SQL parser is embedded
 (not shared with qsql) because there is no multi-file import support.
 
 **Known limitations:**
-- GROUP BY has rendering issues with some aggregate combinations
+- DISTINCT inside an aggregate is supported only for COUNT (COUNT(DISTINCT col)); SUM(DISTINCT ...), AVG(DISTINCT ...), and COUNT(DISTINCT *) fail closed with an error rather than silently ignoring the keyword
+- Grouped ORDER BY resolves the key to the group column, an aggregate output, a select alias, or a 1-based positional ordinal; a key that matches none of these fails closed with an error rather than sorting by an unselected column
+- A non-grouped JOIN ORDER BY resolves a column name (in either joined table) or a positional ordinal, but not a projection alias; ordering a non-grouped join by an AS name fails closed rather than sorting by an unselected column. A grouped JOIN ORDER BY is the separate path described in Features, and it does resolve an alias
+- A scalar aggregate, a GROUP BY, a HAVING, an ORDER BY, and a LIMIT/OFFSET over a grouped JOIN all fold, sort, or truncate over the joined rows (see Features above). What remains fail-closed over a JOIN: a secondary ORDER BY key over a grouped JOIN, DISTINCT over a grouped JOIN, and COUNT(DISTINCT ...) over any JOIN (`COUNT(DISTINCT) over a JOIN is not supported`). Each is tracked here rather than returning a silent wrong grouping, order, or count
+- Cross-process transactions do not roll back: each CLI statement is its own process and auto-commit checkpoints, so a later ROLLBACK cannot undo an earlier write
 - No query optimizer; all scans are sequential unless an index matches exactly
 - File format is not binary-compatible with SQLite
 
@@ -221,6 +244,19 @@ bash programs/tests/run_tests.sh
 
 96 automated tests cover 49 of 57 executables. 8 programs are skipped
 (interactive, network-dependent, or long-running). Zero failures.
+
+The qdb engine has its own end-to-end harness over the full SQL surface
+(DDL, projection, boolean-tree WHERE, ORDER BY/LIMIT/OFFSET/DISTINCT,
+aggregates, GROUP BY/HAVING, UPDATE arithmetic with fail-closed guards,
+DELETE, INDEX, INNER/LEFT JOIN, UNION, ALTER/DROP). Build `qdb.exe` first,
+then:
+
+```bash
+bash programs/tests/test_qdb.sh
+```
+
+One divergence from full SQL (cross-process ROLLBACK) is asserted as XFAIL,
+so a closed null reports XPASS instead of silently passing.
 
 ## Project Status
 
@@ -271,13 +307,18 @@ This causes subtle bugs when mixing string literals with string operations.
 The var_map save/restore fix resolved this. Three sequential while loops now
 generate correct C with proper basic block chains. Verified.
 
-### Monitoring: Vec<String> Codegen
-Only `Vec<i32>` and `Vec<f64>` have complete codegen. Programs that need string
-arrays use the string pool pattern (string buffer + parallel index arrays).
+### Monitoring: Vec Element-Type Codegen
+Only `Vec<i32>` and `Vec<f64>` have complete codegen. `Vec<String>` fails to
+compile: the backend emits `build_hvec_push_i32` and MSVC rejects the
+`BuildString`-to-`int32_t` conversion. `Vec<i64>` compiles but silently truncates
+to 32 bits (a pushed `5000000000` reads back as `705032704`). Root cause: the
+vec-literal type handler infers a fresh element variable that defaults to `i32`
+when no annotation pins it. Programs that need string arrays use the string pool
+pattern (string buffer plus parallel `Vec<i32>` index arrays); programs that need
+64-bit values keep them in scalar fields rather than vectors.
 
 ## Known Issues
 
-- GROUP BY has rendering issues with some aggregate combinations
 - Self-hosted compiler (qc) handles a subset of the language only
 - 3 programs (qc, json, test_hello) have `.c` output but no linked binary
   (requires manual MSVC invocation)

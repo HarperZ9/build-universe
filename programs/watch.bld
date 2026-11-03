@@ -19,7 +19,7 @@
 // Algorithm: Iterative DFS with vec_new_str stack (same as qfind/qloc).
 // =============================================================================
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("qwatch -- file snapshot & change detection tool");
     println!("");
     println!("Usage:");
@@ -53,7 +53,7 @@ fn has_extension(name: String, ext: String) -> bool {
 // Collect all files under a path into parallel vecs (paths + sizes).
 // If ext_filter is non-empty, only include files matching that extension.
 fn collect_files(root: String, ext_filter: String,
-                 paths: Vec<String>, sizes: Vec<i32>) {
+                 paths: Vec<String>, sizes: Vec<i32>) ~ FileSystem {
     let root_is_dir = is_dir(root);
 
     if !root_is_dir {
@@ -165,7 +165,7 @@ fn parse_state(content: String, paths: Vec<String>, sizes: Vec<i32>) {
 }
 
 // Print a right-aligned number with padding.
-fn print_padded_num(val: i64, width: i64) {
+fn print_padded_num(val: i64, width: i64) ~ Console {
     let s = to_string_i32(val);
     let slen = s.len();
     let pad = width - slen;
@@ -177,7 +177,7 @@ fn print_padded_num(val: i64, width: i64) {
     print!("{}", val);
 }
 
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     if nargs < 2 {

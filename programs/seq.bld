@@ -15,7 +15,7 @@
 //   3 args: seq FIRST INCREMENT LAST
 // =============================================================================
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("qseq -- print a sequence of numbers");
     println!("");
     println!("Usage:");
@@ -174,7 +174,7 @@ fn argpool_get(ap: &ArgPool, idx: i64) -> String {
     ap.buf.substring(st, ln)
 }
 
-fn main() {
+fn main() ~ Console + Environment + Process {
     let nargs = args_count();
 
     if nargs < 2 {

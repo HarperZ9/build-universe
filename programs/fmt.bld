@@ -361,7 +361,7 @@ fn format_source(input: String) -> String {
 // Help
 // ---------------------------------------------------------------------------
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("qfmt — code formatter for BuildLang source files");
     println!("");
     println!("Usage:");
@@ -382,7 +382,7 @@ fn print_help() {
 // Main
 // ---------------------------------------------------------------------------
 
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     let mut write_back = false;
@@ -435,8 +435,9 @@ fn main() {
 
     // Output
     if check_only {
-        let same = input.compare(formatted);
-        if same == 0 {
+        // `input` is a `str` from read_file/read_all; `.compare` is a String
+        // method, so compare for equality with `==` (lowers to build_string_eq).
+        if input == formatted {
             if has_file {
                 println!("{}: ok", filename);
             }

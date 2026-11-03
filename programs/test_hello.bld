@@ -5,7 +5,7 @@ fn factorial(n: i64) -> i64 {
     return n * factorial(n - 1);
 }
 
-fn main() {
+fn main() ~ Console {
     let x = factorial(10);
     println!("{}", x);
 

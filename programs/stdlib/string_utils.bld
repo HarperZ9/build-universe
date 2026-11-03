@@ -9,7 +9,7 @@ fn trim_left(s: String) -> String {
     while i < len {
         let c = s.char_at(i);
         if !is_whitespace(c) {
-            return s.substr(i, len);
+            return s.substring(i, len);
         }
         i = i + 1;
     }

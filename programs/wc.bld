@@ -9,7 +9,7 @@ fn count_lines(content: String) -> i64 {
     // GNU wc counts newline characters, not logical lines.
     // split("\n") gives N+1 parts for N newlines, so subtract 1.
     let parts = content.split("\n");
-    let n = parts.len;
+    let n = parts.len();
     if n > 0 {
         n - 1
     } else {
@@ -19,7 +19,7 @@ fn count_lines(content: String) -> i64 {
 
 fn count_words(content: String) -> i64 {
     let parts = content.split_whitespace();
-    let count = parts.len;
+    let count = parts.len();
     count
 }
 
@@ -28,7 +28,7 @@ fn count_bytes(content: String) -> i64 {
     count
 }
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("Usage: qwc [OPTION]... [FILE]...");
     println!("Print newline, word, and byte counts for each FILE.");
     println!("");
@@ -41,7 +41,7 @@ fn print_help() {
     println!("With no OPTION, print lines, words, and bytes.");
 }
 
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     // Parse flags and collect filenames

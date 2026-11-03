@@ -10,7 +10,7 @@
 
 include!("stdlib/lines.bld");
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("qrev -- reverse lines characterwise");
     println!("");
     println!("Usage:");
@@ -41,7 +41,7 @@ fn reverse_line(line: String) -> String {
     out
 }
 
-fn process_content(content: String) {
+fn process_content(content: String) ~ Console {
     let lr = lr_new(content);
     let mut i = 0;
     while i < lr.count {
@@ -51,7 +51,7 @@ fn process_content(content: String) {
     }
 }
 
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     if nargs < 2 {

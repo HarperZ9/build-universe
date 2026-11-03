@@ -19,7 +19,7 @@
 // Exit codes: 0 = true, 1 = false, 2 = usage error.
 // =============================================================================
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("qtest -- evaluate conditional expressions");
     println!("");
     println!("Usage:");
@@ -47,7 +47,7 @@ fn print_help() {
     println!("Exit status: 0 if true, 1 if false, 2 on error.");
 }
 
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     if nargs < 2 {

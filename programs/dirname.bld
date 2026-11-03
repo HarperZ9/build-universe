@@ -9,7 +9,7 @@
 //   qdirname --help                  -> usage
 // =============================================================================
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("qdirname -- strip last component from file name");
     println!("");
     println!("Usage:");
@@ -96,7 +96,7 @@ fn strip_cr(line: String) -> String {
     } else { line }
 }
 
-fn process_stdin() {
+fn process_stdin() ~ Console {
     let content = read_all();
     let clen = content.len();
     let mut pos: i64 = 0;
@@ -117,7 +117,7 @@ fn process_stdin() {
     }
 }
 
-fn main() {
+fn main() ~ Console + Environment + Process {
     let nargs = args_count();
 
     if nargs < 2 {

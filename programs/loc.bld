@@ -10,7 +10,7 @@
 //   qloc --help               -- usage
 // =============================================================================
 
-fn print_help() {
+fn print_help() ~ Console {
     println!("Usage: qloc [PATH]...");
     println!("Count lines of code, comments, and blanks.");
     println!("");
@@ -131,7 +131,7 @@ fn should_skip_dir(name: String) -> bool {
     false
 }
 
-fn print_padded_num(val: i64, width: i64) {
+fn print_padded_num(val: i64, width: i64) ~ Console {
     let s = to_string_i32(val);
     let slen = s.len();
     let pad = width - slen;
@@ -143,7 +143,7 @@ fn print_padded_num(val: i64, width: i64) {
     print!("{}", val);
 }
 
-fn print_padded_str(s: String, width: i64) {
+fn print_padded_str(s: String, width: i64) ~ Console {
     let slen = s.len();
     print!("{}", s);
     if slen < width {
@@ -156,11 +156,11 @@ fn print_padded_str(s: String, width: i64) {
     }
 }
 
-fn print_separator() {
+fn print_separator() ~ Console {
     println!("===============================================================================");
 }
 
-fn main() {
+fn main() ~ Console + Environment + FileSystem + Process {
     let nargs = args_count();
 
     // Default path is current directory
