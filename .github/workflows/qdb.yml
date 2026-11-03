@@ -1,0 +1,94 @@
+name: qdb
+
+# Builds qdb (programs/db.bld) with a pinned buildc and runs its tests:
+#   - programs/tests/test_qdb.sh            SQL regression harness
+#   - programs/tests/test_qdb_differential.py  randomized old-vs-new differential
+#   - programs/tests/test_qdb_wal_recovery.py  truncated-WAL crash recovery
+# The two Python tests run when the revision under test contains them.
+#
+# BUILDLANG_REF pins the compiler: the commit of the buildlang v1.10.0 release.
+# QDB_ORACLE_REF is the reference engine for the differential and recovery
+# tests: the last db.bld before the write-path rewrite (append-only WAL,
+# lazy indexes). A change to the engine must keep its query output and its
+# recovery behaviour byte-identical to that reference, or update the ref with
+# a stated reason.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "programs/db.bld"
+      - "programs/tests/**"
+      - "programs/benchmarks/bench_qdb_load.py"
+      - ".github/workflows/qdb.yml"
+  push:
+    branches: [main]
+    paths:
+      - "programs/db.bld"
+      - "programs/tests/**"
+      - "programs/benchmarks/bench_qdb_load.py"
+      - ".github/workflows/qdb.yml"
+  workflow_dispatch:
+
+env:
+  BUILDLANG_REF: 13580a61d4c9aa0bc1c4a72216fdba73bb30884f  # buildlang v1.10.0
+  QDB_ORACLE_REF: 577abe4119a0146009881b77ac9eb65c3490a126
+
+jobs:
+  qdb:
+    name: Build qdb and run its tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore pinned buildc
+        id: buildc-cache
+        uses: actions/cache@v4
+        with:
+          path: buildc-bin
+          key: buildc-${{ runner.os }}-${{ env.BUILDLANG_REF }}
+
+      - name: Build pinned buildc
+        if: steps.buildc-cache.outputs.cache-hit != 'true'
+        run: |
+          git init -q buildlang-src
+          cd buildlang-src
+          git fetch -q --depth 1 https://github.com/HarperZ9/buildlang.git "$BUILDLANG_REF"
+          git checkout -q FETCH_HEAD
+          cd compiler
+          cargo build --release --locked
+          mkdir -p "$GITHUB_WORKSPACE/buildc-bin"
+          cp target/release/buildc "$GITHUB_WORKSPACE/buildc-bin/"
+
+      - name: Show compiler
+        run: buildc-bin/buildc --version
+
+      - name: Build qdb and the reference engine
+        run: |
+          buildc-bin/buildc programs/db.bld --target c -o "$RUNNER_TEMP/qdb.c"
+          gcc -O2 -w -o programs/qdb.exe "$RUNNER_TEMP/qdb.c" -lm
+          test -x programs/qdb.exe
+          git show "$QDB_ORACLE_REF:programs/db.bld" > "$RUNNER_TEMP/oracle.bld"
+          buildc-bin/buildc "$RUNNER_TEMP/oracle.bld" --target c -o "$RUNNER_TEMP/oracle.c"
+          gcc -O2 -w -o "$RUNNER_TEMP/qdb_oracle" "$RUNNER_TEMP/oracle.c" -lm
+          test -x "$RUNNER_TEMP/qdb_oracle"
+
+      - name: SQL regression harness
+        run: bash programs/tests/test_qdb.sh
+
+      - name: Differential test against the reference engine
+        run: |
+          t=programs/tests/test_qdb_differential.py
+          if [ ! -f "$t" ]; then echo "$t is not in this revision; skipped"; exit 0; fi
+          python3 "$t" "$RUNNER_TEMP/qdb_oracle" programs/qdb.exe --seeds 1,2,3,4,5,6,7,8
+
+      - name: WAL truncation recovery test
+        run: |
+          t=programs/tests/test_qdb_wal_recovery.py
+          if [ ! -f "$t" ]; then echo "$t is not in this revision; skipped"; exit 0; fi
+          python3 "$t" programs/qdb.exe --old "$RUNNER_TEMP/qdb_oracle"

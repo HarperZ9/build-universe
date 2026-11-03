@@ -3,247 +3,140 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BuildLang</title>
+<title>BuildLang: compiler, 62 programs and a SQL engine</title>
+<meta name="description" content="A compiled language with a self-hosting compiler, 62 native programs and a SQL database engine, built from scratch in Rust.">
+<meta name="color-scheme" content="light dark">
 <style>
-:root {
-    --bg: #fdf9f5;
-    --surface: #fff;
-    --border: #ede4da;
-    --text: #443933;
-    --text2: #907e73;
-    --accent: #d4a0a0;
-    --accent2: #b07878;
-    --green: #92ad7e;
-    --cyan: #95b3ba;
-    --yellow: #e0c87a;
-    --mono: "Cascadia Code", "JetBrains Mono", "Fira Code", "Consolas", monospace;
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-    font-family: "Segoe UI Variable", "Inter", -apple-system, sans-serif;
-    background: var(--bg); color: var(--text);
-    line-height: 1.65; -webkit-font-smoothing: antialiased;
-}
-.wrap { max-width: 780px; margin: 0 auto; padding: 3rem 1.5rem 4rem; }
-
-/* header */
-header { margin-bottom: 3rem; }
-header h1 {
-    font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em;
-    color: var(--accent2); margin-bottom: 0.3rem;
-}
-header p { color: var(--text2); font-size: 0.95rem; max-width: 520px; }
-
-/* terminal block */
-.term {
-    background: #1e1e1e; color: #d4d4d4; border-radius: 10px;
-    padding: 1.25rem 1.5rem; font-family: var(--mono); font-size: 0.82rem;
-    line-height: 1.7; overflow-x: auto; margin: 1.5rem 0;
-    box-shadow: 0 4px 20px rgba(100,80,60,0.08);
-}
-.term .prompt { color: var(--green); }
-.term .comment { color: #6a9955; }
-.term .output { color: #9cdcfe; }
-.term .string { color: #ce9178; }
-
-/* sections */
-section { margin-bottom: 2.5rem; }
-section h2 {
-    font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
-    letter-spacing: 0.1em; color: var(--text2); margin-bottom: 1rem;
-}
-
-/* cards */
-.card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 0.75rem;
-}
-.card h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.25rem; }
-.card p { font-size: 0.88rem; color: var(--text2); margin: 0; }
-.card code {
-    background: #f5f0eb; padding: 0.1rem 0.35rem; border-radius: 3px;
-    font-family: var(--mono); font-size: 0.8rem;
-}
-
-/* grid */
-.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-@media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
-
-/* tag row */
-.tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.75rem 0; }
-.tag {
-    font-size: 0.72rem; font-weight: 500; padding: 0.2rem 0.55rem;
-    border-radius: 4px; font-family: var(--mono);
-}
-.tag-warm { background: #f5ebe4; color: var(--accent2); }
-.tag-green { background: #eef5ea; color: #5a7a4a; }
-.tag-blue { background: #eaf1f5; color: #4a6a7a; }
-
-/* inline code */
-p code, li code {
-    background: #f5f0eb; padding: 0.1rem 0.35rem; border-radius: 3px;
-    font-family: var(--mono); font-size: 0.82em;
-}
-
-/* lists */
-ul { padding-left: 1.2rem; margin-bottom: 0.75rem; }
-li { font-size: 0.9rem; margin-bottom: 0.2rem; }
-
-/* links */
-a { color: var(--accent2); text-decoration: none; border-bottom: 1px solid var(--border); }
-a:hover { border-color: var(--accent2); }
-
-/* footer */
-footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
-footer p { font-size: 0.8rem; color: var(--text2); }
+@font-face{font-family:"Hanken Grotesk";src:url("https://harperz9.github.io/system/fonts/hanken-grotesk.woff2") format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Conso";src:url("https://harperz9.github.io/system/fonts/conso-regular.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Conso";src:url("https://harperz9.github.io/system/fonts/conso-semibold.woff2") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+:root{
+  color-scheme:light;
+  --font-sans:"Hanken Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --font-mono:"Conso","JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+  --paper:#ebe5d8;--inset:#e4ddcd;--panel:#e2dac9;--ink:#16130f;--soft:#4a443b;--muted:#5f584d;
+  --line:#c9bfab;--line-strong:#7b7262;--on-ink:#ebe5d8;--verified:#0a6b61;--drift:#8f3a19;
+  --focus:#16130f;--measure:40rem;--frame:64rem;--gutter:clamp(1rem,4vw,2.5rem)}
+@media (prefers-color-scheme:dark){:root{
+  color-scheme:dark;
+  --paper:#060608;--inset:#0c0c0f;--panel:#111114;--ink:#ece5d6;--soft:#b8b0a0;--muted:#958e80;
+  --line:#29282c;--line-strong:#6f6a61;--on-ink:#060608;--verified:#63d4ce;--drift:#e29472;--focus:#ece5d6}}
+@media (forced-colors:active){:root{--paper:Canvas;--inset:Canvas;--panel:Canvas;--ink:CanvasText;--soft:CanvasText;--muted:CanvasText;--line:GrayText;--line-strong:CanvasText;--focus:Highlight}}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;font-synthesis:none;scroll-padding-top:4.5rem}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-sans);font-size:1.0625rem;line-height:1.65;overflow-wrap:break-word}
+a{color:var(--ink);text-decoration-thickness:1px;text-underline-offset:.2em}
+a:hover{text-decoration-thickness:2px}
+:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
+code,pre,kbd,samp{font-family:var(--font-mono);font-size:.9em}
+.skip{position:absolute;left:-999px;top:0;background:var(--ink);color:var(--on-ink);padding:.5rem .9rem;z-index:10}
+.skip:focus{left:1rem;top:1rem}
+.site{border-bottom:1px solid var(--line);background:var(--paper)}
+.site .in{max-width:var(--frame);margin:0 auto;padding:.9rem var(--gutter);display:flex;flex-wrap:wrap;gap:.4rem 1.6rem;align-items:baseline}
+.site .home{font-weight:700;text-decoration:none;margin-right:auto}
+.site nav{display:flex;flex-wrap:wrap;gap:.3rem 1.4rem;font-size:.9375rem}
+.site nav a{color:var(--soft)}
+main{max-width:var(--frame);margin:0 auto;padding:clamp(2rem,6vw,4.5rem) var(--gutter) 3rem}
+h1{font-size:clamp(2.4rem,1.3rem + 4vw,4.25rem);line-height:1.04;letter-spacing:0;font-weight:700;margin:0 0 1rem;text-wrap:balance}
+.dek{font-size:1.25rem;line-height:1.5;color:var(--soft);max-width:var(--measure);margin:0}
+h2{font-size:clamp(1.6rem,1.15rem + 1.6vw,2.4rem);line-height:1.15;font-weight:600;margin:0 0 1rem;text-wrap:balance}
+section{border-top:1px solid var(--line);margin-top:clamp(2.5rem,6vw,4rem);padding-top:clamp(1.5rem,4vw,2.5rem)}
+p,ul,ol{max-width:var(--measure);margin:0 0 1rem}
+.hair{margin:1.2rem 0 0;padding:0;max-width:52rem;border-top:1px solid var(--line)}
+.hair>div{display:grid;grid-template-columns:minmax(9rem,13rem) minmax(0,1fr);gap:.25rem 2rem;padding:.9rem 0;border-bottom:1px solid var(--line)}
+.hair dt{font-weight:600}
+.hair dd{margin:0;color:var(--soft)}
+@media (max-width:40rem){.hair>div{grid-template-columns:1fr}}
+.panel{background:var(--inset);border:1px solid var(--line);padding:1.1rem 1.25rem;margin:1.5rem 0;overflow-x:auto;max-width:52rem}
+.panel pre{margin:0;font-size:.875rem;line-height:1.7;white-space:pre}
+.panel .c{color:var(--muted)}
+.panel .o{color:var(--verified)}
+ul.plain{list-style:none;padding:0}
+ul.plain li{padding:.35rem 0;border-bottom:1px solid var(--line)}
+footer{max-width:var(--frame);margin:0 auto;padding:1.5rem var(--gutter) 3rem;border-top:1px solid var(--line);color:var(--soft);font-size:.9375rem}
+@media print{body{background:#fff;color:#000}.site,.skip{display:none}a{color:#000}}
 </style>
 </head>
 <body>
-<div class="wrap">
+<a class="skip" href="#main">Skip to content</a>
+<header class="site"><div class="in">
+<a class="home" href="https://harperz9.github.io/">Zain Dana Harper</a>
+<nav aria-label="Related">
+<a href="https://harperz9.github.io/buildlang.html">BuildLang on the site</a>
+<a href="https://github.com/HarperZ9/build-universe">Source</a>
+</nav></div></header>
+<main id="main">
+<h1>BuildLang</h1>
+<p class="dek">A compiled language with a self-hosting compiler, 62 native programs and a SQL database engine, built from scratch in Rust.</p>
 
-<header>
-    <h1>BuildLang</h1>
-    <p>A compiled language with a self-hosting compiler, 62 native programs,
-    and a SQL database engine. Built from scratch in Rust.</p>
-</header>
+<div class="panel" role="region" aria-label="Example session" tabindex="0"><pre><span class="c"># compile and run</span>
+$ buildc hello.bld &amp;&amp; ./hello
+Hello, BuildLang!
 
-<div class="term">
-<span class="comment"># compile and run</span><br>
-<span class="prompt">$</span> buildc hello.bld && ./hello<br>
-<span class="output">Hello, BuildLang!</span><br>
-<br>
-<span class="comment"># the self-hosted compiler compiles itself</span><br>
-<span class="prompt">$</span> qcodegen codegen.bld > codegen.c<br>
-<span class="output">2,490 lines .bld → 3,600 lines C</span><br>
-<br>
-<span class="comment"># a real database engine, written in buildlang</span><br>
-<span class="prompt">$</span> qdb app.db <span class="string">"SELECT name, dept FROM employees WHERE salary > 100000 ORDER BY name"</span><br>
-<span class="output">name   | dept</span><br>
-<span class="output">-------+-----</span><br>
-<span class="output">Harper | eng</span><br>
-<span class="output">Zain   | eng</span>
-</div>
+<span class="c"># the self-hosted compiler compiles itself</span>
+$ qcodegen codegen.bld &gt; codegen.c
+2,490 lines .bld -&gt; 3,600 lines C
 
-<section>
-    <h2>What it does</h2>
-    <div class="grid">
-        <div class="card">
-            <h3>Compiler</h3>
-            <p>Rust-based, 80K lines. Lexer, parser, type checker (Hindley-Milner),
-            SSA-based MIR, 8 backends. 507 tests, zero warnings.</p>
-        </div>
-        <div class="card">
-            <h3>Self-Hosting</h3>
-            <p>2,490 lines of BuildLang that compile BuildLang to C.
-            Structs, closures, impl methods, Vec, <code>include!()</code>.
-            Generates valid C for all 62 programs.</p>
-        </div>
-        <div class="card">
-            <h3>Database Engine</h3>
-            <p>SQL with JOIN, GROUP BY, HAVING, DISTINCT, indexes,
-            WAL crash recovery, transactions. 4,600 lines.</p>
-        </div>
-        <div class="card">
-            <h3>62 Programs</h3>
-            <p>Near-complete coreutils: grep, sed, awk, sort, diff, patch,
-            find, jq, calc, base64, markdown→HTML, and more.</p>
-        </div>
-    </div>
+<span class="c"># a real database engine, written in buildlang</span>
+$ qdb app.db "SELECT name, dept FROM employees WHERE salary &gt; 100000 ORDER BY name"
+name   | dept
+-------+-----
+Harper | eng
+Zain   | eng</pre></div>
+
+<section aria-labelledby="does">
+<h2 id="does">What it does</h2>
+<dl class="hair">
+<div><dt>Compiler</dt><dd>Rust-based, 80K lines. Lexer, parser, type checker (Hindley-Milner), SSA-based MIR, 8 backends. 507 tests, zero warnings.</dd></div>
+<div><dt>Self-hosting</dt><dd>2,490 lines of BuildLang that compile BuildLang to C. Structs, closures, impl methods, Vec, <code>include!()</code>. Generates valid C for all 62 programs.</dd></div>
+<div><dt>Database engine</dt><dd>SQL with JOIN, GROUP BY, HAVING, DISTINCT, indexes, WAL crash recovery, transactions. 4,600 lines.</dd></div>
+<div><dt>62 programs</dt><dd>Near-complete coreutils: grep, sed, awk, sort, diff, patch, find, jq, calc, base64, markdown to HTML, and more.</dd></div>
+</dl>
 </section>
 
-<section>
-    <h2>Programs</h2>
-    <div class="tags">
-        <span class="tag tag-warm">qdb</span>
-        <span class="tag tag-warm">qjq</span>
-        <span class="tag tag-warm">qgrep</span>
-        <span class="tag tag-warm">qsed</span>
-        <span class="tag tag-warm">qawk</span>
-        <span class="tag tag-warm">qdiff</span>
-        <span class="tag tag-warm">qpatch</span>
-        <span class="tag tag-warm">qsort</span>
-        <span class="tag tag-warm">qcalc</span>
-        <span class="tag tag-warm">qmd</span>
-        <span class="tag tag-warm">qhttp</span>
-        <span class="tag tag-warm">qmake</span>
-        <span class="tag tag-green">qfmt</span>
-        <span class="tag tag-green">qlint</span>
-        <span class="tag tag-green">qtok</span>
-        <span class="tag tag-green">qparse</span>
-        <span class="tag tag-green">qcheck</span>
-        <span class="tag tag-green">qcodegen</span>
-        <span class="tag tag-green">qc</span>
-        <span class="tag tag-blue">qwc</span>
-        <span class="tag tag-blue">qcut</span>
-        <span class="tag tag-blue">qtr</span>
-        <span class="tag tag-blue">quniq</span>
-        <span class="tag tag-blue">qpaste</span>
-        <span class="tag tag-blue">qfind</span>
-        <span class="tag tag-blue">qloc</span>
-        <span class="tag tag-blue">qcsv</span>
-        <span class="tag tag-blue">qbase64</span>
-        <span class="tag tag-blue">qhex</span>
-    </div>
-    <p style="font-size:0.85rem; color:var(--text2);">
-        <span style="color:var(--accent2);">warm</span> = flagship &nbsp;
-        <span style="color:#5a7a4a;">green</span> = self-hosting tools &nbsp;
-        <span style="color:#4a6a7a;">blue</span> = coreutils
-        &nbsp; + 33 more
-    </p>
+<section aria-labelledby="programs">
+<h2 id="programs">Programs</h2>
+<dl class="hair">
+<div><dt>Flagship</dt><dd><code>qdb qjq qgrep qsed qawk qdiff qpatch qsort qcalc qmd qhttp qmake</code></dd></div>
+<div><dt>Self-hosting tools</dt><dd><code>qfmt qlint qtok qparse qcheck qcodegen qc</code></dd></div>
+<div><dt>Coreutils</dt><dd><code>qwc qcut qtr quniq qpaste qfind qloc qcsv qbase64 qhex</code></dd></div>
+</dl>
+<p style="margin-top:1rem;color:var(--soft)">Plus 33 more.</p>
 </section>
 
-<section>
-    <h2>Architecture</h2>
-    <div class="term" style="font-size:0.78rem;">
-<span class="comment">// compiler pipeline</span><br>
-source.bld → lexer → parser → type checker → MIR → C backend → gcc/MSVC → native<br>
-<br>
-<span class="comment">// shared stdlib (5 modules, 593 lines)</span><br>
-include!(<span class="string">"stdlib/tokenizer.bld"</span>); <span class="comment">// 48 token types, full lexer</span><br>
-include!(<span class="string">"stdlib/chars.bld"</span>);     <span class="comment">// is_alpha, is_digit, ...</span><br>
-include!(<span class="string">"stdlib/lines.bld"</span>);     <span class="comment">// LineReader</span><br>
-include!(<span class="string">"stdlib/string_pool.bld"</span>); <span class="comment">// StringPool (arena pattern)</span>
-    </div>
+<section aria-labelledby="arch">
+<h2 id="arch">Architecture</h2>
+<div class="panel" role="region" aria-label="Compiler pipeline and standard library" tabindex="0"><pre><span class="c">// compiler pipeline</span>
+source.bld -&gt; lexer -&gt; parser -&gt; type checker -&gt; MIR -&gt; C backend -&gt; gcc/MSVC -&gt; native
+
+<span class="c">// shared stdlib (5 modules, 593 lines)</span>
+include!("stdlib/tokenizer.bld");     <span class="c">// 48 token types, full lexer</span>
+include!("stdlib/chars.bld");         <span class="c">// is_alpha, is_digit, ...</span>
+include!("stdlib/lines.bld");         <span class="c">// LineReader</span>
+include!("stdlib/string_pool.bld");   <span class="c">// StringPool (arena pattern)</span></pre></div>
 </section>
 
-<section>
-    <h2>Quality</h2>
-    <ul>
-        <li>507 compiler tests, 0 warnings</li>
-        <li>95 automated program tests</li>
-        <li>1,283 Python tests across 7 packages</li>
-        <li>2,600 lines of duplication removed via stdlib extraction</li>
-        <li>Architecture docs: <a href="https://github.com/HarperZ9/buildlang/blob/main/DESIGN.md">DESIGN.md</a>,
-            ARCHITECTURE.md, CHANGELOG.md</li>
-    </ul>
+<section aria-labelledby="quality">
+<h2 id="quality">Quality</h2>
+<ul class="plain">
+<li>507 compiler tests, 0 warnings</li>
+<li>95 automated program tests</li>
+<li>1,283 Python tests across 7 packages</li>
+<li>2,600 lines of duplication removed through stdlib extraction</li>
+<li>Architecture docs: <a href="https://github.com/HarperZ9/buildlang/blob/main/DESIGN.md">DESIGN.md</a>, ARCHITECTURE.md, CHANGELOG.md</li>
+</ul>
 </section>
 
-<section>
-    <h2>Repositories</h2>
-    <div class="grid">
-        <div class="card">
-            <h3><a href="https://github.com/HarperZ9/build-universe">build-universe</a></h3>
-            <p>62 programs, stdlib, spectrum library, docs</p>
-        </div>
-        <div class="card">
-            <h3><a href="https://github.com/HarperZ9/buildlang">buildlang</a></h3>
-            <p>Rust compiler, 507 tests, 8 backends</p>
-        </div>
-        <div class="card">
-            <h3><a href="https://github.com/HarperZ9/calibrate-pro">calibrate-pro</a></h3>
-            <p>Display calibration, 297 tests</p>
-        </div>
-        <div class="card">
-            <h3><a href="https://github.com/HarperZ9/build-color">build-color</a></h3>
-            <p>Color science library, 457 tests</p>
-        </div>
-    </div>
+<section aria-labelledby="repos">
+<h2 id="repos">Repositories</h2>
+<dl class="hair">
+<div><dt><a href="https://github.com/HarperZ9/build-universe">build-universe</a></dt><dd>62 programs, stdlib, spectrum library, docs</dd></div>
+<div><dt><a href="https://github.com/HarperZ9/buildlang">buildlang</a></dt><dd>Rust compiler, 507 tests, 8 backends</dd></div>
+<div><dt><a href="https://github.com/HarperZ9/calibrate-pro">calibrate-pro</a></dt><dd>Display calibration, 297 tests</dd></div>
+<div><dt><a href="https://github.com/HarperZ9/build-color">build-color</a></dt><dd>Color science library, 457 tests</dd></div>
+</dl>
 </section>
-
-<footer>
-    <p>Built by <a href="https://github.com/HarperZ9">Zain Dana Harper</a></p>
-</footer>
-
-</div>
+</main>
+<footer>Built by <a href="https://harperz9.github.io/">Zain Dana Harper</a>. Source on <a href="https://github.com/HarperZ9/build-universe">GitHub</a>.</footer>
 </body>
 </html>
