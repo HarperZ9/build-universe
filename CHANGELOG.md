@@ -9,6 +9,14 @@ this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 > checker, SVD, Blake3/Ed25519, HTTP/2, Transformers, GARCH/Prophet, etc.).
 > Those are now listed under "Not yet implemented." STATUS.md is canonical.
 
+## [Unreleased]
+
+### Moved
+- qdb (BuildDB, `programs/db.bld`), its tests, benchmarks, architecture notes and
+  workflow moved to HarperZ9/buildlang `bdb/` on 2026-11-09 with their history
+  (author decision: "Move into BuildLang"). `programs/QDB.md` points there; 4a296c1
+  is the last commit here that holds the source.
+
 ## [1.0.0] - 2026
 
 ### Verified - actually ships

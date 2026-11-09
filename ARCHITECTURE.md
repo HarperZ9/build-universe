@@ -121,7 +121,7 @@ canonical detail.
 | Component | Score | What is real |
 |---|---|---|
 | buildlang compiler (C backend) | 6.5 | Full front-to-C pipeline; monomorphization, traits/vtables, one-shot effects; 612 pass / 0 fail |
-| programs/ (56 MSVC exes) | 9.0 | qdb (SQL), qparse, qsed, grep, base64, calc, color_test 12/12 |
+| programs/ (56 MSVC exes) | 9.0 | qdb (SQL, moved to buildlang `bdb/` on 2026-11-09), qparse, qsed, grep, base64, calc, color_test 12/12 |
 | spectrum (color science) | 9.0 | sRGB/XYZ matrices, PQ/HLG EOTFs, 13 tonemappers, verified OKLab constants |
 | chromatic (perceptual color) | 8.0 | LAB/RGB with matrix inversion, gamut mapping via binary search |
 | delta (options pricing) | 8.0 | Black-Scholes exact, full Greeks, Newton-Raphson + Brent IV |

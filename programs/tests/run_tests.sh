@@ -146,12 +146,7 @@ check_output "list"     "echo '- item' | $PROGRAMS_DIR/qmd.exe -f" "<li>item</li
 # =========================================================================
 # 12. qdb — SQLite-like database
 # =========================================================================
-echo "qdb:"
-rm -f /tmp/test_suite.db
-check_exit   "create table" "$PROGRAMS_DIR/qdb.exe /tmp/test_suite.db 'CREATE TABLE t (id INTEGER, name TEXT)'" 0
-check_exit   "insert"       "$PROGRAMS_DIR/qdb.exe /tmp/test_suite.db \"INSERT INTO t VALUES (1, 'Zain')\"" 0
-check_output "select"       "$PROGRAMS_DIR/qdb.exe /tmp/test_suite.db 'SELECT * FROM t'" "Zain"
-rm -f /tmp/test_suite.db
+echo "qdb: moved to HarperZ9/buildlang bdb/ (programs/QDB.md); its tests run there"
 
 # =========================================================================
 # 13. qtr — character translator

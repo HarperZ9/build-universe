@@ -26,7 +26,7 @@ is: the compiler + its native-program pipeline + ~6 verifiable kernels.
 | Component | Score | What is real |
 |---|---|---|
 | buildlang compiler (C backend) | 6.5 | Lexer->parser->typecheck->C-codegen end-to-end; 755 unit tests; monomorphization, traits/vtables, one-shot effects |
-| programs/ (65 src, 56 MSVC exes) | 9.0 | Pipeline ships native binaries: qdb (SQL), qparse, qsed, grep, base64, color_test 12/12 pass |
+| programs/ (65 src, 56 MSVC exes) | 9.0 | Pipeline ships native binaries: qdb (SQL, since moved to buildlang `bdb/`), qparse, qsed, grep, base64, color_test 12/12 pass |
 | spectrum (color science) | 9.0 | Correct sRGB-XYZ matrices, PQ/HLG EOTFs, 13 tonemappers, verified OKLab constants |
 | chromatic (perceptual color) | 8.0 | Real LAB-RGB with matrix inversion, gamut mapping via binary search |
 | delta (options pricing) | 8.0 | Black-Scholes d1/d2 exact, Abramowitz-Stegun erf, full Greeks, Newton-Raphson + Brent IV |

@@ -30,7 +30,7 @@ Narrow and specific. These are the parts an outside reviewer can build, run, and
 - **The C backend for self-contained programs.** `buildc` lexes, type-checks,
   monomorphizes, resolves traits and vtables, lowers one-shot effects, and emits C that
   a C toolchain compiles and runs. `programs/` holds 56 MSVC-clean native executables
-  from 65 `.bld` sources, including qdb (a SQL engine), qparse, qsed, grep, base64, and
+  from 65 `.bld` sources, including qdb (a SQL engine, since moved to the buildlang repository as `bdb/`), qparse, qsed, grep, base64, and
   calc. `color_test` transpiles, compiles `cl`-clean, runs, and passes 12/12 CIE 1976
   self-checks. This end-to-end path is the concrete proof-of-pipeline.
 - **The color-science modules.** spectrum (sRGB/XYZ matrices, PQ/HLG EOTFs, 13

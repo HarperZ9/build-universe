@@ -697,12 +697,12 @@ fn main() ~ Console + Environment + Process {
             print_result(result);
         }
     } else {
-        // REPL mode — same input pattern as db.bld
+        // REPL mode — same input pattern as qdb (buildlang bdb/db.bld)
         let mut go = true;
         while go {
             print!("qcalc> ");
             let mut line = read_line();
-            // Strip trailing \n and \r (same pattern as db.bld REPL)
+            // Strip trailing \n and \r (same pattern as the qdb REPL)
             let clen = line.len();
             if clen > 0 {
                 let last = line.char_at(clen - 1);
