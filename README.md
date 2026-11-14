@@ -7,6 +7,13 @@
 
 BuildLang compiler, standard library, and OS kernel in one repo.
 
+> **Where the compiler is.** The BuildLang compiler is a separate repository,
+> [HarperZ9/buildlang](https://github.com/HarperZ9/buildlang) (crates.io `buildlang`, command `buildc`).
+> The `buildlang/` folder named below is not part of this repository, and the compiler figures on
+> this page were recorded against an earlier compiler version. The Build suite (build-engine,
+> build-ui, build-finance, build-oracle, build-ecosystem) lives in that repository under
+> [`suite/`](https://github.com/HarperZ9/buildlang/tree/main/suite).
+
 [![version: 1.0.2](https://img.shields.io/badge/version-1.0.2-e6e1d6?style=flat-square&labelColor=1a1712)](https://github.com/HarperZ9/build-universe/releases/latest)
 [![CI](https://github.com/HarperZ9/build-universe/actions/workflows/ci.yml/badge.svg)](https://github.com/HarperZ9/build-universe/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-FSL--1.1--MIT-e6e1d6?style=flat-square&labelColor=1a1712)](https://github.com/HarperZ9/build-universe/blob/main/LICENSE)
